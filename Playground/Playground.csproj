@@ -81,9 +81,9 @@
       <Project>{5489e3a4-1031-4568-8b63-a28c64bf7778}</Project>
       <Name>Amica.vNext.Objects</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Amica.vNext.Compatibility\Amica.vNext.Objects.Compatibility.csproj">
+    <ProjectReference Include="..\Amica.vNext.Compatibility\Amica.vNext.Compatibility.csproj">
       <Project>{9e04ee4c-d5e2-4609-a68f-0510ad1d47cc}</Project>
-      <Name>Amica.vNext.Objects.Compatibility</Name>
+      <Name>Amica.vNext.Compatibility</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

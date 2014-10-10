@@ -3,6 +3,7 @@ using System.Data;
 using System.Linq;
 using AutoMapper;
 
+// ReSharper disable once CheckNamespace
 namespace Amica.vNext.Objects
 {
     public class FromAmica

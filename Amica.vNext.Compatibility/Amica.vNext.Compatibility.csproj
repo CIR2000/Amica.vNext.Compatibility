@@ -7,8 +7,8 @@
     <ProjectGuid>{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Amica.vNext.Objects</RootNamespace>
-    <AssemblyName>Amica.vNext.Objects.Compatibility</AssemblyName>
+    <RootNamespace>Amica.vNext.Compatibility</RootNamespace>
+    <AssemblyName>Amica.vNext.Compatibility</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

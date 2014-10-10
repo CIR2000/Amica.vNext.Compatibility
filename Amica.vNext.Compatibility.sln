@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Objects", "..\A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{144B2E19-4455-4073-AA41-A11CD3C8E55A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Objects.Compatibility", "Amica.vNext.Compatibility\Amica.vNext.Objects.Compatibility.csproj", "{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Compatibility", "Amica.vNext.Compatibility\Amica.vNext.Compatibility.csproj", "{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
