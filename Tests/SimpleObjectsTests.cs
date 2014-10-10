@@ -1,0 +1,47 @@
+﻿using System;
+using Amica.Data;
+using Amica.vNext.Objects;
+using NUnit.Framework;
+
+namespace Amica.vNext.Compatibility.Tests
+{
+    [TestFixture]
+    public class SimpleObjectsTests
+    {
+        [Test]
+        public void NazioniDataTableToListOfCountry()
+        {
+            var dp = new companyDataSet();
+
+            var nr = dp.Nazioni.NewNazioniRow();
+            nr.Nome = "nome";
+            nr.Id = 99;
+            dp.Nazioni.AddNazioniRow(nr);
+
+            var countries = FromAmica.ToList<Country>(dp.Nazioni);
+            Assert.AreEqual(countries.Count, 1);
+
+            var country = countries[0];
+            Assert.AreEqual(country.Name, "nome");
+            // TODO are we really sure we want Id to be a string?
+            Assert.AreEqual(Convert.ToInt32(country.Id), 99);
+
+        }
+        [Test]
+        public void NazioniRowToCountry()
+        {
+            var dp = new companyDataSet();
+
+            var nr = dp.Nazioni.NewNazioniRow();
+            nr.Nome = "nome";
+            nr.Id = 99;
+            dp.Nazioni.AddNazioniRow(nr);
+
+            var country = FromAmica.To<Country>(nr);
+            Assert.AreEqual(country.Name, "nome");
+            // TODO are we really sure we want Id to be a string?
+            Assert.AreEqual(Convert.ToInt32(country.Id), 99);
+
+        }
+    }
+}

@@ -1,7 +1,8 @@
 ﻿using Amica.Data;
+using Amica.vNext.Objects;
 using AutoMapper;
 
-namespace Amica.vNext.Objects
+namespace Amica.vNext.Compatibility
 {
     internal class NazioniProfile : Profile
     {
