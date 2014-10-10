@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
 using System.Windows.Forms;
 using Amica.vNext.Objects;
 using Amica.Data;
-using AutoMapper;
 
 namespace Playground
 {
@@ -30,20 +26,14 @@ namespace Playground
             nr.Id = 99;
             dp.Nazioni.AddNazioniRow(nr);
 
+            //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
+            //nr.Nome = "nome";
+            //nr.Id = 99;
+            //dp.AreeGeografiche.AddAreeGeograficheRow(a);
+
             var countries = FromAmica.ToList<Country>(dp.Nazioni);
+            var country = FromAmica.To<Country>(nr);
 
-            //var ent = dp.Anagrafiche.NewAnagraficheRow();
-            //ent.RagioneSociale1 = "r1";
-            //ent.Id = 9;
-            //dp.Anagrafiche.AddAnagraficheRow(ent);
-
-            //var t = (companyDataSet.NazioniDataTable)g.GetChanges(DataRowState.Added);
-            //var t = (companyDataSet.NazioniDataTable)dp.Nazioni.GetChanges(DataRowState.Added);
-            //var countries = Mapper.Map<List<companyDataSet.NazioniRow>, List<Country>>(t.ToList());
-            
-            //var a = (companyDataSet.AnagraficheDataTable) dp.Anagrafiche.GetChanges(DataRowState.Added);
-            //var country = Mapper.Map<Country>(nr);
-            //var c = Mapper.Map(nr, typeof(Country));
         }
     }
 }
