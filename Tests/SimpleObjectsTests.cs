@@ -1,5 +1,4 @@
-﻿using System;
-using Amica.Data;
+﻿using Amica.Data;
 using Amica.vNext.Objects;
 using NUnit.Framework;
 

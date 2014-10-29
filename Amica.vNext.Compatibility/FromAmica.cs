@@ -1,11 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using Amica.vNext.Compatibility;
 using AutoMapper;
 
-// ReSharper disable once CheckNamespace
-namespace Amica.vNext.Objects
+namespace Amica.vNext.Compatibility
 {
     public class FromAmica
     {
