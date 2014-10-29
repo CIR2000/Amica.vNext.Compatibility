@@ -12,7 +12,7 @@ namespace Amica.vNext.Compatibility
 
             CreateMap<companyDataSet.NazioniRow, Country>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Nome))
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
+                .ForMember(dest => dest.CountryId, opt => opt.MapFrom(src => src.Id));
 
 
         }

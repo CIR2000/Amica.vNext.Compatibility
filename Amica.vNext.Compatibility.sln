@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Compatibility",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Compatibility.Tests", "Tests\Amica.vNext.Compatibility.Tests.csproj", "{0D06EE86-A429-4F9B-9000-C04ACD147623}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Http", "..\Amica.vNext.Http\Amica.vNext.Http\Amica.vNext.Http.csproj", "{D0E09787-FEC9-4A6B-92D4-78DB328E749D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{0D06EE86-A429-4F9B-9000-C04ACD147623}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D06EE86-A429-4F9B-9000-C04ACD147623}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0D06EE86-A429-4F9B-9000-C04ACD147623}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
