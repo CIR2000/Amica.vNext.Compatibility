@@ -23,7 +23,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             var country = countries[0];
             Assert.AreEqual(country.Name, "nome");
-            Assert.AreEqual(Convert.ToInt32(country.RemoteId), 99);
+            Assert.AreEqual(Convert.ToInt32(country.CountryId), 99);
 
         }
         [Test]
@@ -39,7 +39,7 @@ namespace Amica.vNext.Compatibility.Tests
             var country = FromAmica.To<Country>(nr);
             Assert.AreEqual(country.Name, "nome");
             // TODO are we really sure we want Id to be a string?
-            Assert.AreEqual(Convert.ToInt32(country.Id), 99);
+            Assert.AreEqual(Convert.ToInt32(country.CountryId), 99);
 
         }
     }
