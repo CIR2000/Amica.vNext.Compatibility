@@ -22,7 +22,6 @@ namespace Amica.vNext.Compatibility.Tests
 
             var country = countries[0];
             Assert.AreEqual(country.Name, "nome");
-            Assert.AreEqual(country.CountryId, 99);
 
         }
         [Test]
@@ -37,7 +36,6 @@ namespace Amica.vNext.Compatibility.Tests
 
             var country = FromAmica.To<Country>(nr);
             Assert.AreEqual(country.Name, "nome");
-            Assert.AreEqual(country.CountryId, 99);
 
         }
     }

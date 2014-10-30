@@ -11,10 +11,7 @@ namespace Amica.vNext.Compatibility
             base.Configure();
 
             CreateMap<companyDataSet.NazioniRow, Country>()
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Nome))
-                .ForMember(dest => dest.CountryId, opt => opt.MapFrom(src => src.Id));
-
-
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Nome));
         }
         public override string ProfileName { get { return GetType().Name; } } }
 }
