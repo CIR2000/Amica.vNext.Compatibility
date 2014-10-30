@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Amica.vNext.Compatibility;
 using Amica.vNext.Objects;
 using Amica.Data;
 
@@ -18,21 +19,22 @@ namespace Playground
 
             //Mapper.Configuration.AddProfile<NazioniProfile>();
 
-            var dp = new companyDataSet();
+            //var dp = new companyDataSet();
 
 
-            var nr = dp.Nazioni.NewNazioniRow();
-            nr.Nome = "nome";
-            nr.Id = 99;
-            dp.Nazioni.AddNazioniRow(nr);
+            //var nr = dp.Nazioni.NewNazioniRow();
+            //nr.Nome = "nome";
+            //nr.Id = 99;
+            //dp.Nazioni.AddNazioniRow(nr);
 
             //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
             //nr.Nome = "nome";
             //nr.Id = 99;
             //dp.AreeGeografiche.AddAreeGeograficheRow(a);
 
-            var countries = FromAmica.ToList<Country>(dp.Nazioni);
-            var country = FromAmica.To<Country>(nr);
+            //var countries = FromAmica.ToList<Country>(dp.Nazioni);
+            //var country = FromAmica.To<Country>(nr);
+            var dp = new HttpDataProvider();
 
         }
     }
