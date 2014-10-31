@@ -9,7 +9,7 @@ using SQLite;
 namespace Amica.vNext.Compatibility
 {
 
-    public class AmicaToAdam
+    public class HttpMapping
     {
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
@@ -28,35 +28,34 @@ namespace Amica.vNext.Compatibility
     {
         private const string DbName = "HttpMapping.db";
         private readonly Dictionary<string, string> _resourcesMapping;
-        private SQLiteConnection _db;
+        private readonly SQLiteConnection _db;
 
         public HttpDataProvider()
         {
-            _resourcesMapping = new Dictionary<string, string>
-            {
-                {"Nazioni", "countries"}
+            _resourcesMapping = new Dictionary<string, string> {
+                {"Aziende", "companies"}
             };
 
             _db = new SQLiteConnection(DbName);
-            _db.CreateTable<AmicaToAdam>();
+            _db.CreateTable<HttpMapping>();
         }
 
-        public async Task UpdateNazioniAsync(DataRow row)
-        {
-            await UpdateAsync<Country>(row);
-        }
-        
-        private async Task<T> UpdateAsync<T>(DataRow row)
+        private async Task<T> UpdateAsync<T>(DataRow row) where T: class
         {
             var obj = FromAmica.To<T>(row);
+            var localId = Int32.Parse(row["Id"].ToString());
             var resource = _resourcesMapping[row.Table.TableName];
 
-            var rc = new RestClient();
+
+            var rc = new RestClient("http://amica-test.herokuapp.com", new BasicAuthenticator("token1", ""));
             var value = default(T);
 
             switch (row.RowState) {
                 case DataRowState.Added:
                     value = await rc.PostAsync<T>(resource, obj);
+                    if (value != null) { 
+                            LogNewRow(resource, localId, value);
+                    }
                     break;
                 case DataRowState.Modified:
                     break;
@@ -65,5 +64,34 @@ namespace Amica.vNext.Compatibility
             }
             return value;
         }
+
+        private void LogNewRow(string resource, int localId, object item )
+        {
+            var source = (BaseClass)item;
+            if (source == null) {
+                throw new ArgumentException("item");
+            }
+
+            _db.Insert(new HttpMapping
+            {
+                LocalId = localId,
+                LocalTable = resource,
+                ETag = source.ETag,
+                RemoteId = source.UniqueId,
+                LastUpdated = source.Updated
+            });
+
+        }
+        public async Task UpdateNazioniAsync(DataRow row)
+        {
+            await UpdateAsync<Country>(row);
+        }
+        
+        public async Task UpdateAziendaAsync(DataRow row)
+        {
+            await UpdateAsync<Company>(row);
+        }
+        
+
     }
 }

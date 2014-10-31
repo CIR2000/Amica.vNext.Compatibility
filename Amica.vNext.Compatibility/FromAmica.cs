@@ -10,6 +10,7 @@ namespace Amica.vNext.Compatibility
         static FromAmica()
         {
             Mapper.Configuration.AddProfile<NazioniProfile>();
+            Mapper.Configuration.AddProfile<CompanyProfile>();
         }
 
         /// <summary>

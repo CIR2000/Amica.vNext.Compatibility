@@ -1,20 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Amica.vNext.Compatibility;
+using Amica.vNext.Objects;
+using Amica.Data;
 
-namespace Playground
+namespace ConsoleApplication1
 {
-    static class Program
+    class Program
     {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static void Main()
+        static  void Main(string[] args)
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+
+            Test().Wait();
+        }
+
+        static async Task Test()
+        {
+            var dp = new configDataSet();
+
+
+            var nr = dp.Aziende.NewAziendeRow();
+            nr.Nome = "nome";
+            nr.Id = 99;
+            dp.Aziende.AddAziendeRow(nr);
+
+            //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
+            //nr.Nome = "nome";
+            //nr.Id = 99;
+            //dp.AreeGeografiche.AddAreeGeograficheRow(a);
+
+            //var countries = FromAmica.ToList<Country>(dp.Nazioni);
+            //var country = FromAmica.To<Country>(nr);
+            var hdp = new HttpDataProvider();
+            await hdp.UpdateAziendaAsync(nr);
+            
         }
     }
 }
