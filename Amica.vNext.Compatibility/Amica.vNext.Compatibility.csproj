@@ -66,8 +66,9 @@
   <ItemGroup>
     <Compile Include="FromAmica.cs" />
     <Compile Include="HttpDataProvider.cs" />
-    <Compile Include="CompanyProfile.cs" />
-    <Compile Include="NazioniProfile.cs" />
+    <Compile Include="Profiles\CompanyProfile.cs" />
+    <Compile Include="HttpMapping.cs" />
+    <Compile Include="Profiles\NazioniProfile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLite.cs" />
     <Compile Include="SQLiteAsync.cs" />

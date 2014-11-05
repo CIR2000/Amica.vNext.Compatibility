@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Amica.vNext.Compatibility.Profiles;
+using AutoMapper;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using AutoMapper;
 
 namespace Amica.vNext.Compatibility
 {
+    /// <summary>
+    /// Allows to cast Amica 10 ADO DataRows to corresponding Amica.vNext.Objects instances.
+    /// </summary>
     public class FromAmica
     {
         static FromAmica()

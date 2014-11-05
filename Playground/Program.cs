@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,6 +27,9 @@ namespace ConsoleApplication1
             nr.Nome = "nome";
             nr.Id = 99;
             dp.Aziende.AddAziendeRow(nr);
+            nr.AcceptChanges();
+            //nr.Delete();
+            nr.SetModified();
 
             //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
             //nr.Nome = "nome";

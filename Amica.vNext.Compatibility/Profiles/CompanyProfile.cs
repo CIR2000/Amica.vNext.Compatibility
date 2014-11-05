@@ -2,15 +2,18 @@
 using Amica.vNext.Objects;
 using AutoMapper;
 
-namespace Amica.vNext.Compatibility
+namespace Amica.vNext.Compatibility.Profiles
 {
-    internal class NazioniProfile : Profile
+    /// <summary>
+    /// Maps a configDataSet.AziendeRow to a Amica.vNext.Objects.Company object.
+    /// </summary>
+    internal class CompanyProfile : Profile
     {
         protected override void Configure()
         {
             base.Configure();
 
-            CreateMap<companyDataSet.NazioniRow, Country>()
+            CreateMap<configDataSet.AziendeRow, Company>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Nome));
         }
         public override string ProfileName { get { return GetType().Name; } } }
