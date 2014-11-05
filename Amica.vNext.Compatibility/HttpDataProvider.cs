@@ -49,15 +49,20 @@ namespace Amica.vNext.Compatibility
             };
 
             var value = default(T);
-            switch (row.RowState) {
-                case DataRowState.Added:
+            switch (mapping.RemoteId) {
+                case null:
                     value = await rc.PostAsync<T>(obj);
                     break;
-                case DataRowState.Modified:
-                    value = await rc.PutAsync<T>(obj);
-                    break;
-                case DataRowState.Deleted:
-                    await rc.DeleteAsync(obj);
+                default:
+                    switch (row.RowState)
+                    {
+                        case DataRowState.Modified:
+                            value = await rc.PutAsync<T>(obj);
+                            break;
+                        case DataRowState.Deleted:
+                            await rc.DeleteAsync(obj);
+                            break;
+                    }
                     break;
             }
 
@@ -140,7 +145,8 @@ namespace Amica.vNext.Compatibility
                     entry =
                         _db.Table<HttpMapping>()
                             .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
-                            .FirstOrDefault(); 
+                            .FirstOrDefault() ?? new HttpMapping { LocalId = localId, Resource = resource };
+
                     break;
             }
             return entry;
