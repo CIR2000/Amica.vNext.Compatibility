@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
@@ -59,6 +60,8 @@ namespace Amica.vNext.Compatibility
                     await rc.DeleteAsync(obj);
                     break;
             }
+
+            HttpResponse = rc.HttpResponse;
 
             if (value != null) {
                 // POST or PUT
@@ -171,9 +174,14 @@ namespace Amica.vNext.Compatibility
         /// Stores a configDataSet.AziendeDataTable.AziendeRow to a remote API endpoint.
         /// </summary>
         /// <param name="row">Source DataRow</param>
-        public async Task UpdateAziendaAsync(DataRow row)
+        public async Task UpdateAziendeAsync(DataRow row)
         {
             await UpdateAsync<Company>(row);
         }
+
+        /// <summary>
+        /// HttpResponseMessage returned by the latest UpdateAsync method invoked.
+        /// </summary>
+        public HttpResponseMessage HttpResponse { get; private set; }
     }
 }
