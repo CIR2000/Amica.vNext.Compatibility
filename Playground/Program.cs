@@ -26,8 +26,8 @@ namespace ConsoleApplication1
 
 
             var nr = dp.Aziende.NewAziendeRow();
-            nr.Nome = "serena";
-            nr.Id = 100;
+            nr.Nome = "anna";
+            nr.Id = 105;
             dp.Aziende.AddAziendeRow(nr);
             //nr.AcceptChanges();
             //nr.Delete();

@@ -45,6 +45,8 @@ namespace Amica.vNext.Compatibility
         }
         #endregion
 
+        private delegate int DelegateDbMethod(object obj);
+
         /// <summary>
         /// Casts a DataRow to the appropriate object tyoe and then stores it on a remote API endpoint.
         /// </summary>
@@ -56,90 +58,50 @@ namespace Amica.vNext.Compatibility
         {
             var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
+            // 'cast' source DataRow into the corresponding object instance.
             object obj = FromAmica.To<T>(targetRow);
+
+            // retrieve remote meta field values from mapping datastore.
             var mapping = GetMapping(targetRow);
-            MergeMappingData(ref obj, mapping);
+            // and update corresponding properties.
+            ((BaseClass)obj).UniqueId = mapping.RemoteId;
+            ((BaseClass)obj).ETag = mapping.ETag;
 
-            var rc = new RestClient(BaseAddress, Authenticator)
-            {
-                ResourceName = mapping.Resource
-            };
+            var rc = new RestClient(BaseAddress, Authenticator);
 
-            var value = default(T);
+            var retObj = default(T);
+            DelegateDbMethod dbMethod;
             switch (mapping.RemoteId) {
                 case null:
-                    value = await rc.PostAsync<T>(obj);
+                    retObj = await rc.PostAsync<T>(mapping.Resource, obj);
+                    dbMethod = _db.Insert;
                     break;
                 default:
-                    switch (row.RowState)
-                    {
+                    switch (row.RowState) {
                         case DataRowState.Modified:
-                            value = await rc.PutAsync<T>(obj);
+                            retObj = await rc.PutAsync<T>(mapping.Resource, obj);
+                            dbMethod = _db.Update;
                             break;
                         case DataRowState.Deleted:
-                            await rc.DeleteAsync(obj);
+                            await rc.DeleteAsync(mapping.Resource, obj);
+                            dbMethod = _db.Delete;
                             break;
+                        default:
+                            // TODO better exception.. or maybe just fail sinlently?
+                            throw new Exception("Cannot determine how the DataRow should be processed.");
                     }
                     break;
             }
-
             HttpResponse = rc.HttpResponse;
 
-            if (value != null) {
-                // POST or PUT
-                UpdateMapping(mapping, value);
+            if (retObj != null) {
+                // update mapping datatore with remote service meta fields.
+                mapping.RemoteId = ((BaseClass)((object)retObj)).UniqueId;
+                mapping.ETag = ((BaseClass)((object)retObj)).ETag;
+                mapping.LastUpdated = ((BaseClass)((object)retObj)).Updated;
+                dbMethod(mapping);
             }
-            else {
-                // DELETE
-                if (rc.HttpResponse.StatusCode == System.Net.HttpStatusCode.OK) {
-                    DeleteMaping(mapping);
-                }
-            }
-            return value;
-        }
-
-        /// <summary>
-        /// Updates the Object=>DataRow mapping and persists it.
-        /// </summary>
-        /// <param name="mapping">The HttpMapping instance to update.</param>
-        /// <param name="item">The instnace of the object mapped.</param>
-        private void UpdateMapping(HttpMapping mapping, object item )
-        {
-            var source = (BaseClass)item;
-
-            mapping.RemoteId = source.UniqueId;
-            mapping.ETag = source.ETag;
-            mapping.LastUpdated = source.Updated;
-
-            _db.InsertOrReplace(mapping);
-
-        }
-
-        /// <summary>
-        /// Deletes an Object=>DataRow mapping from the mapping database.
-        /// </summary>
-        /// <param name="mapping">The HttpMapping to remove.</param>
-        private void DeleteMaping(HttpMapping mapping)
-        {
-            _db.Delete<HttpMapping>(mapping.Id);
-        }
-
-        /// <summary>
-        /// Updates an object with data from a HttpMapping instance.
-        /// </summary>
-        /// <param name="obj">Object to update.</param>
-        /// <param name="mapping">HttpMapping to merge.</param>
-        ///<remarks>This is invoked after the object has been casted from a DataRow and before it is sent to the remote. 
-        /// DataRow does not contain API metadata so these are retrieved from the mapping database.</remarks>
-        private static void MergeMappingData(ref object obj, HttpMapping mapping)
-        {
-            var t = obj.GetType();
-
-            var uniqueId = t.GetProperty("UniqueId");
-            uniqueId.SetValue(obj, mapping.RemoteId, null);
-
-            var eTag = t.GetProperty("ETag");
-            eTag.SetValue(obj, mapping.ETag, null);
+            return retObj;
         }
 
         /// <summary>
@@ -155,14 +117,14 @@ namespace Amica.vNext.Compatibility
             HttpMapping entry;
             switch (row.RowState) {
                 case DataRowState.Added:
-                    entry = new HttpMapping { LocalId = localId, Resource = resource };
+                    entry = new HttpMapping { LocalId = localId, Resource = resource};
                     break;
                 default:
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
                     entry =
                         _db.Table<HttpMapping>()
                             .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
-                            .FirstOrDefault() ?? new HttpMapping { LocalId = localId, Resource = resource };
+                            .FirstOrDefault() ?? new HttpMapping { LocalId = localId, Resource = resource};
 
                     break;
             }
