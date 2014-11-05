@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Amica.vNext.Compatibility;
+using Amica.vNext.Http;
 using Amica.vNext.Objects;
 using Amica.Data;
 
@@ -24,12 +26,12 @@ namespace ConsoleApplication1
 
 
             var nr = dp.Aziende.NewAziendeRow();
-            nr.Nome = "nome";
-            nr.Id = 99;
+            nr.Nome = "serena";
+            nr.Id = 100;
             dp.Aziende.AddAziendeRow(nr);
-            nr.AcceptChanges();
+            //nr.AcceptChanges();
             //nr.Delete();
-            nr.SetModified();
+            //nr.SetModified();
 
             //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
             //nr.Nome = "nome";
@@ -38,9 +40,19 @@ namespace ConsoleApplication1
 
             //var countries = FromAmica.ToList<Country>(dp.Nazioni);
             //var country = FromAmica.To<Country>(nr);
-            var hdp = new HttpDataProvider();
-            await hdp.UpdateAziendaAsync(nr);
-            
+            var hdp = new HttpDataProvider("http://amica-test.herokuapp.com", new BasicAuthenticator("token1", ""));
+
+            try
+            {
+                await hdp.UpdateAziendeAsync(nr);
+            }
+            catch (Exception e) 
+            {
+                throw e;
+            }
+
+            Console.WriteLine(hdp.HttpResponse.StatusCode);
+
         }
     }
 }

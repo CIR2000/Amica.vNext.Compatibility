@@ -18,6 +18,8 @@ namespace Amica.vNext.Compatibility
         private readonly Dictionary<string, string> _resourcesMapping;
         private readonly SQLiteConnection _db;
 
+        #region "C O N S T R U C T O R S"
+
         public HttpDataProvider()
         {
             _resourcesMapping = new Dictionary<string, string> {
@@ -27,6 +29,21 @@ namespace Amica.vNext.Compatibility
             _db = new SQLiteConnection(DbName);
             _db.CreateTable<HttpMapping>();
         }
+
+        public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator) : this()
+        {
+            BaseAddress = baseAddress;
+            Authenticator = authenticator;
+        }
+        public HttpDataProvider(string baseAddress) : this()
+        {
+            BaseAddress = baseAddress;
+        }
+        public HttpDataProvider(BasicAuthenticator authenticator) : this()
+        {
+            Authenticator = authenticator;
+        }
+        #endregion
 
         /// <summary>
         /// Casts a DataRow to the appropriate object tyoe and then stores it on a remote API endpoint.
@@ -43,7 +60,7 @@ namespace Amica.vNext.Compatibility
             var mapping = GetMapping(targetRow);
             MergeMappingData(ref obj, mapping);
 
-            var rc = new RestClient("http://amica-test.herokuapp.com", new BasicAuthenticator("token1", ""))
+            var rc = new RestClient(BaseAddress, Authenticator)
             {
                 ResourceName = mapping.Resource
             };
@@ -189,5 +206,17 @@ namespace Amica.vNext.Compatibility
         /// HttpResponseMessage returned by the latest UpdateAsync method invoked.
         /// </summary>
         public HttpResponseMessage HttpResponse { get; private set; }
+
+		/// <summary>
+		/// Gets or sets the remote service base address.
+		/// </summary>
+		/// <value>The remote service base address.</value>
+        public string BaseAddress { get; set; }
+
+		/// <summary>
+		/// Gets or sets the authenticator.
+		/// </summary>
+		/// <value>The authenticator.</value>
+        public BasicAuthenticator Authenticator { get; set; }
     }
 }
