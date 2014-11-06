@@ -151,6 +151,8 @@ namespace Amica.vNext.Compatibility
             return dr;
         }
 
+        #region "U P D A T E  M E T H O D S"
+
         /// <summary>
         /// Stores a companyDataSet.NazioniDataTable.NazioniRow to a remote API endpoint.
         /// </summary>
@@ -168,6 +170,10 @@ namespace Amica.vNext.Compatibility
         {
             await UpdateAsync<Company>(row);
         }
+
+        #endregion
+
+        #region "P R O P E R T I E S"
 
         /// <summary>
         /// HttpResponseMessage returned by the latest UpdateAsync method invoked.
@@ -190,6 +196,8 @@ namespace Amica.vNext.Compatibility
         /// Returns the name of the local database used for keeping Amica and remote service in sync.
         /// </summary>
         public string SyncDatabaseName { get { return DbName; } }
+
+        #endregion
 
     }
 }
