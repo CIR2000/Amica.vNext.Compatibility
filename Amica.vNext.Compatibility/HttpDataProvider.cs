@@ -180,5 +180,11 @@ namespace Amica.vNext.Compatibility
 		/// </summary>
 		/// <value>The authenticator.</value>
         public BasicAuthenticator Authenticator { get; set; }
+
+        /// <summary>
+        /// Returns the name of the local database used for keeping Amica and remote service in sync.
+        /// </summary>
+        public string SyncDatabaseName { get { return DbName; } }
+
     }
 }
