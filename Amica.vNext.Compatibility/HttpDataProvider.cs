@@ -12,7 +12,7 @@ namespace Amica.vNext.Compatibility
     /// <summary>
     /// Provides a compatibilty layer between Amica 10's ADO storage system and Eve REST APIs.
     /// </summary>
-    public class HttpDataProvider
+    public class HttpDataProvider : IDisposable
     {
         private const string DbName = "HttpMapping.db";
         private readonly Dictionary<string, string> _resourcesMapping;
@@ -44,6 +44,11 @@ namespace Amica.vNext.Compatibility
             Authenticator = authenticator;
         }
         #endregion
+
+        public void Dispose()
+        {
+            _db.Dispose();
+        }
 
         private delegate int DelegateDbMethod(object obj);
 
