@@ -101,7 +101,9 @@ namespace Amica.vNext.Compatibility.Tests
 
         private static HttpDataProvider GetHttpDataProvider()
         {
-            return new HttpDataProvider("http://amica-test.herokuapp.com", new BasicAuthenticator("token1", ""));
+            // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
+            // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
+            return new HttpDataProvider("http://10.0.2.2:5000/");
         }
 
     }
