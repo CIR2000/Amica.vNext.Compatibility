@@ -45,7 +45,9 @@ namespace Amica.vNext.Compatibility
 
         public void Dispose()
         {
-            //Dispose();
+            if (_db != null) {
+                _db.Dispose();
+            }
         }
 
         private delegate int DelegateDbMethod(object obj);
