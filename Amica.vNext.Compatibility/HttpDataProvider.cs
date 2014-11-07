@@ -16,7 +16,7 @@ namespace Amica.vNext.Compatibility
     {
         private const string DbName = "HttpMapping.db";
         private readonly Dictionary<string, string> _resourcesMapping;
-        private readonly SQLiteConnection _db;
+        private SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
 
@@ -26,8 +26,6 @@ namespace Amica.vNext.Compatibility
                 {"Aziende", "companies"}
             };
 
-            _db = new SQLiteConnection(DbName);
-            _db.CreateTable<HttpMapping>();
         }
 
         public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator) : this()
@@ -47,7 +45,7 @@ namespace Amica.vNext.Compatibility
 
         public void Dispose()
         {
-            _db.Dispose();
+            //Dispose();
         }
 
         private delegate int DelegateDbMethod(object obj);
@@ -61,52 +59,59 @@ namespace Amica.vNext.Compatibility
         /// <remarks>The type of operation to be performed is inferred by DataRow's RowState property value.</remarks>
         private async Task<T> UpdateAsync<T>(DataRow row) where T: class
         {
-            var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
-            // 'cast' source DataRow into the corresponding object instance.
-            object obj = FromAmica.To<T>(targetRow);
+            using (_db = new SQLiteConnection(DbName))
+            {
+                // ensure table there
+                _db.CreateTable<HttpMapping>();
+                
+                var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
-            // retrieve remote meta field values from mapping datastore.
-            var mapping = GetMapping(targetRow);
-            // and update corresponding properties.
-            ((BaseClass)obj).UniqueId = mapping.RemoteId;
-            ((BaseClass)obj).ETag = mapping.ETag;
+                // 'cast' source DataRow into the corresponding object instance.
+                object obj = FromAmica.To<T>(targetRow);
 
-            var rc = new RestClient(BaseAddress, Authenticator);
+                // retrieve remote meta field values from mapping datastore.
+                var mapping = GetMapping(targetRow);
+                // and update corresponding properties.
+                ((BaseClass)obj).UniqueId = mapping.RemoteId;
+                ((BaseClass)obj).ETag = mapping.ETag;
 
-            var retObj = default(T);
-            DelegateDbMethod dbMethod;
-            switch (mapping.RemoteId) {
-                case null:
-                    retObj = await rc.PostAsync<T>(mapping.Resource, obj);
-                    dbMethod = _db.Insert;
-                    break;
-                default:
-                    switch (row.RowState) {
-                        case DataRowState.Modified:
-                            retObj = await rc.PutAsync<T>(mapping.Resource, obj);
-                            dbMethod = _db.Update;
-                            break;
-                        case DataRowState.Deleted:
-                            await rc.DeleteAsync(mapping.Resource, obj);
-                            dbMethod = _db.Delete;
-                            break;
-                        default:
-                            // TODO better exception.. or maybe just fail sinlently?
-                            throw new Exception("Cannot determine how the DataRow should be processed.");
-                    }
-                    break;
+                var rc = new RestClient(BaseAddress, Authenticator);
+
+                var retObj = default(T);
+                DelegateDbMethod dbMethod;
+                switch (mapping.RemoteId) {
+                    case null:
+                        retObj = await rc.PostAsync<T>(mapping.Resource, obj);
+                        dbMethod = _db.Insert;
+                        break;
+                    default:
+                        switch (row.RowState) {
+                            case DataRowState.Modified:
+                                retObj = await rc.PutAsync<T>(mapping.Resource, obj);
+                                dbMethod = _db.Update;
+                                break;
+                            case DataRowState.Deleted:
+                                await rc.DeleteAsync(mapping.Resource, obj);
+                                dbMethod = _db.Delete;
+                                break;
+                            default:
+                                // TODO better exception.. or maybe just fail sinlently?
+                                throw new Exception("Cannot determine how the DataRow should be processed.");
+                        }
+                        break;
+                }
+                HttpResponse = rc.HttpResponse;
+
+                if (retObj != null) {
+                    // update mapping datatore with remote service meta fields.
+                    mapping.RemoteId = ((BaseClass)((object)retObj)).UniqueId;
+                    mapping.ETag = ((BaseClass)((object)retObj)).ETag;
+                    mapping.LastUpdated = ((BaseClass)((object)retObj)).Updated;
+                    dbMethod(mapping);
+                }
+                return retObj;
             }
-            HttpResponse = rc.HttpResponse;
-
-            if (retObj != null) {
-                // update mapping datatore with remote service meta fields.
-                mapping.RemoteId = ((BaseClass)((object)retObj)).UniqueId;
-                mapping.ETag = ((BaseClass)((object)retObj)).ETag;
-                mapping.LastUpdated = ((BaseClass)((object)retObj)).Updated;
-                dbMethod(mapping);
-            }
-            return retObj;
         }
 
         /// <summary>
