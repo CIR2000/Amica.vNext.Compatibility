@@ -137,7 +137,6 @@ namespace Amica.vNext.Compatibility
                         _db.Table<HttpMapping>()
                             .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
                             .FirstOrDefault() ?? new HttpMapping { LocalId = localId, Resource = resource};
-
                     break;
             }
             return entry;

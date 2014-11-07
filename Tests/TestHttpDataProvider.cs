@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
+using System.Data;
 using System.Reflection;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Amica.Data;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using SQLite;
 using Amica.vNext.Http;
+using Amica.vNext.Objects;
 
 namespace Amica.vNext.Compatibility.Tests
 {
@@ -16,6 +20,9 @@ namespace Amica.vNext.Compatibility.Tests
     public class TestHttpDataProvider
     {
         private SQLiteConnection _db;
+        // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
+        // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
+        private const string Service = "http://10.0.2.2:5000/";
 
         [SetUp]
         public void Init()
@@ -82,28 +89,59 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
-        public  void NewAziendeRow()
+        public void NewAziendeRow()
         {
+
+            var ds = new configDataSet();
+            var n = ds.Aziende.NewAziendeRow();
+            n.Nome = "company";
+            n.Id = 99;
+            ds.Aziende.AddAziendeRow(n);
+            NewRow<Company>(n, "companies");
+        }
+
+        public  void NewRow<T>(DataRow r, string endpoint)
+        {
+
+            int localId;
+            Int32.TryParse(r["Id"].ToString(), out localId);
+
+            // make sure remote remote endpoint is completely empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.OK);
+
             using (var dp = GetHttpDataProvider()) {
 
-                var ds = new configDataSet();
-                var n = ds.Aziende.NewAziendeRow();
-                n.Nome = "company";
-                n.Id = 99;
-                ds.Aziende.AddAziendeRow(n);
-
-                dp.UpdateAziendeAsync(n).Wait();
-
+                dp.UpdateAziendeAsync(r).Wait();
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
+
+                // test that row mapping record is actually stored in syncdb.
+                var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
+                Assert.AreEqual(objs.Count(), 1);
+
+                // test that mapping is valid.
+                var mapping = objs.First();
+                Assert.IsNotNull(mapping.RemoteId);
+                Assert.IsNotNull(mapping.ETag);
+                Assert.IsNotNull(mapping.LastUpdated);
+                Assert.IsTrue(mapping.Id > 0);
+                // next two asserts are superfluous, we just add them for coherence
+                Assert.AreEqual(mapping.LocalId, 99);
+                Assert.AreEqual(mapping.Resource, endpoint);
+
+                // test that remote item exists at the specified endpoint.
+                var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
+                Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+
+                // TODO test remote property values too?
             }
-            
         }
 
         private static HttpDataProvider GetHttpDataProvider()
         {
             // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
             // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
-            return new HttpDataProvider("http://10.0.2.2:5000/");
+            return new HttpDataProvider(Service);
         }
 
     }
