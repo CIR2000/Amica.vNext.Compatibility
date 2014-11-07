@@ -15,21 +15,23 @@ namespace Amica.vNext.Compatibility.Tests
     [TestFixture]
     public class TestHttpDataProvider
     {
-        /// <summary>
-        /// Test that a database is actually created when an instance of HttpDataProvider is initiated.
-        /// </summary>
-        [Test]
-        public void DatabaseCreatedOnInstantation()
+        private SQLiteConnection _db;
+
+        [SetUp]
+        public void Init()
         {
-            const string dbName = "HttpMapping.db";
-
             // ensure the file does not exist before instantiaton.
-            var dbFileName = Path.Combine(Environment.CurrentDirectory, dbName);
-            File.Delete(dbFileName);
+            var dbFileName = Path.Combine(Environment.CurrentDirectory, "HttpMapping.db");
+            File.Delete("HttpMapping.db");
 
-            using (var dp = new HttpDataProvider()) {
-                Assert.IsTrue(File.Exists(dbFileName));
-            }
+            _db = new SQLiteConnection("HttpMapping.db");
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _db.Dispose();
+
         }
 
         /// <summary>
@@ -39,14 +41,12 @@ namespace Amica.vNext.Compatibility.Tests
         public void DatabaseStructure() 
         {
             using (var dp = new HttpDataProvider()) {
-                var db = new SQLiteConnection(dp.SyncDatabaseName);
 
                 var props = typeof (HttpMapping).GetProperties();
-                var tableInfo = db.GetTableInfo("HttpMapping");
+                var tableInfo = _db.GetTableInfo("HttpMapping");
                 for (var i = 0; i < tableInfo.Count; i++) {
                     Assert.AreEqual(tableInfo[i].Name, props[i].Name);
                 }
-                dp.Dispose();
             }
         }
 
@@ -81,30 +81,20 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
-        [Test][NUnit.Framework.Ignore]
-        public async void NewNazioniRow()
+        [Test]
+        public  void NewAziendeRow()
         {
             using (var dp = GetHttpDataProvider()) {
 
-                var ds = new companyDataSet();
-                var n = ds.Nazioni.NewNazioniRow();
-                n.Nome = "nazione";
+                var ds = new configDataSet();
+                var n = ds.Aziende.NewAziendeRow();
+                n.Nome = "company";
                 n.Id = 99;
-                ds.Nazioni.AddNazioniRow(n);
+                ds.Aziende.AddAziendeRow(n);
 
-                await dp.UpdateNazioniAsync(n);
+                dp.UpdateAziendeAsync(n).Wait();
 
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
-
-                //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
-                //nr.Nome = "nome";
-                //nr.Id = 99;
-                //dp.AreeGeografiche.AddAreeGeograficheRow(a);
-
-                //var countries = FromAmica.ToList<Country>(dp.Nazioni);
-                //var country = FromAmica.To<Country>(nr);
-                //var hdp = new HttpDataProvider();
-                //hdp.UpdateNazioniAsync(nr);
             }
             
         }
