@@ -1,18 +1,12 @@
-﻿using System;
-using System.Net;
-using System.Net.Http;
-using System.Data;
-using System.Reflection;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Amica.Data;
-using Newtonsoft.Json;
+﻿using Amica.Data;
+using Amica.vNext.Http;
 using NUnit.Framework;
 using SQLite;
-using Amica.vNext.Http;
-using Amica.vNext.Objects;
+using System;
+using System.Data;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 
 namespace Amica.vNext.Compatibility.Tests
 {
@@ -28,7 +22,6 @@ namespace Amica.vNext.Compatibility.Tests
         public void Init()
         {
             // ensure the file does not exist before instantiaton.
-            var dbFileName = Path.Combine(Environment.CurrentDirectory, "HttpMapping.db");
             File.Delete("HttpMapping.db");
 
             _db = new SQLiteConnection("HttpMapping.db");
@@ -45,10 +38,9 @@ namespace Amica.vNext.Compatibility.Tests
         /// Test that the databases structure is aligned with the current HttpMapping class structure.
         /// </summary>
         [Test]
-        public void DatabaseStructure() 
+        public void DatabaseStructure()
         {
-            using (var dp = new HttpDataProvider()) {
-
+            using (new HttpDataProvider()) {
                 var props = typeof (HttpMapping).GetProperties();
                 var tableInfo = _db.GetTableInfo("HttpMapping");
                 for (var i = 0; i < tableInfo.Count; i++) {
@@ -88,19 +80,61 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
+        /// <summary>
+        /// Test that a new datarow is properly processed
+        /// </summary>
         [Test]
-        public void NewAziendeRow()
+        public void UnknownNewAziendeRow()
+        {
+            var ds = new configDataSet();
+            var row = ds.Aziende.NewAziendeRow();
+            row.Nome = "company";
+            row.Id = 99;
+            ds.Aziende.AddAziendeRow(row);
+            ValidateUnknownRow(row, "companies");
+        }
+
+        /// <summary>
+        /// Test that a modified datarow which is not existing in the sync system is properly processed.
+        /// </summary>
+        [Test]
+        public void UnknownModifiedAziendeRow()
         {
 
+            var ds = new configDataSet();
+            var row = ds.Aziende.NewAziendeRow();
+            row.Nome = "company";
+            row.Id = 99;
+            ds.Aziende.AddAziendeRow(row);
+            row.AcceptChanges();
+            row.SetModified();
+            ValidateUnknownRow(row, "companies");
+        }
+
+        /// <summary>
+        /// Test that a modified datarow that already exists in the sync systems is properly processed.
+        /// </summary>
+        [Test]
+        public void KnownModifiedAziendeRow()
+        {
             var ds = new configDataSet();
             var n = ds.Aziende.NewAziendeRow();
             n.Nome = "company";
             n.Id = 99;
             ds.Aziende.AddAziendeRow(n);
-            NewRow<Company>(n, "companies");
-        }
+            using (var dp = GetHttpDataProvider())
+            {
+                dp.UpdateAziendeAsync(n).Wait();
+                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
 
-        public  void NewRow<T>(DataRow r, string endpoint)
+                n.AcceptChanges();
+                n.SetModified();
+
+                n.Nome = "modified company";
+                ValidateKnownRow(n, "companies");
+            }
+        }
+        public  void ValidateUnknownRow(DataRow r, string endpoint)
         {
 
             int localId;
@@ -112,31 +146,50 @@ namespace Amica.vNext.Compatibility.Tests
 
             using (var dp = GetHttpDataProvider()) {
 
+                // perform the operation
                 dp.UpdateAziendeAsync(r).Wait();
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
-
-                // test that row mapping record is actually stored in syncdb.
-                var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
-                Assert.AreEqual(objs.Count(), 1);
-
-                // test that mapping is valid.
-                var mapping = objs.First();
-                Assert.IsNotNull(mapping.RemoteId);
-                Assert.IsNotNull(mapping.ETag);
-                Assert.IsNotNull(mapping.LastUpdated);
-                Assert.IsTrue(mapping.Id > 0);
-                // next two asserts are superfluous, we just add them for coherence
-                Assert.AreEqual(mapping.LocalId, 99);
-                Assert.AreEqual(mapping.Resource, endpoint);
-
-                // test that remote item exists at the specified endpoint.
-                var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
-                Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
-
-                // TODO test remote property values too?
             }
+            ValidateSyncDb(r, endpoint);
         }
 
+        public  void ValidateKnownRow(DataRow r, string endpoint)
+        {
+            using (var dp = GetHttpDataProvider()) {
+                // perform the operation
+                dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
+            }
+            ValidateSyncDb(r, endpoint);
+        }
+
+        private void ValidateSyncDb(DataRow r, string endpoint)
+        {
+            int localId;
+            Int32.TryParse(r["Id"].ToString(), out localId);
+
+            // test that row mapping record is actually stored in syncdb.
+            var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
+            Assert.AreEqual(objs.Count(), 1);
+
+            // test that mapping is valid.
+            var mapping = objs.First();
+            Assert.IsNotNull(mapping.RemoteId);
+            Assert.IsNotNull(mapping.ETag);
+            Assert.IsNotNull(mapping.LastUpdated);
+            Assert.IsTrue(mapping.Id > 0);
+            // next two asserts are superfluous, we just add them for coherence
+            Assert.AreEqual(mapping.LocalId, 99);
+            Assert.AreEqual(mapping.Resource, endpoint);
+
+            // test that remote item exists at the specified endpoint.
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+
+            // TODO test remote property values too?
+        
+        }
         private static HttpDataProvider GetHttpDataProvider()
         {
             // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
