@@ -30,7 +30,9 @@ namespace Amica.vNext.Compatibility.Tests
         [TearDown]
         public void TearDown()
         {
-            _db.Dispose();
+            if (_db != null) {
+                _db.Dispose();
+            }
 
         }
 
@@ -87,11 +89,11 @@ namespace Amica.vNext.Compatibility.Tests
         public void UnknownNewAziendeRow()
         {
             var ds = new configDataSet();
-            var row = ds.Aziende.NewAziendeRow();
-            row.Nome = "company";
-            row.Id = 99;
-            ds.Aziende.AddAziendeRow(row);
-            ValidateUnknownRow(row, "companies");
+            var r = ds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            ds.Aziende.AddAziendeRow(r);
+            ValidateUnknownRow(r, "companies");
         }
 
         /// <summary>
@@ -133,6 +135,18 @@ namespace Amica.vNext.Compatibility.Tests
                 n.Nome = "modified company";
                 ValidateKnownRow(n, "companies");
             }
+        }
+
+        [Test]
+        public void DeleteAziendeRow()
+        {
+            
+            var ds = new configDataSet();
+            var row = ds.Aziende.NewAziendeRow();
+            row.Nome = "company";
+            row.Id = 99;
+            ds.Aziende.AddAziendeRow(row);
+            ValidateDeletedRow(row, "companies");
         }
         public  void ValidateUnknownRow(DataRow r, string endpoint)
         {
@@ -187,8 +201,44 @@ namespace Amica.vNext.Compatibility.Tests
             var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
 
-            // TODO test remote property values too?
+            // TODO compare local datarow with remote property values too?
+            // maybe do this when GetAsync is implemented in RestClient.
         
+        }
+
+        private void ValidateDeletedRow(DataRow r, string endpoint)
+        {
+            using (var dp = GetHttpDataProvider())
+            {
+                dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
+
+                int localId;
+                Int32.TryParse(r["Id"].ToString(), out localId);
+
+                // test that row mapping record is actually stored in syncdb.
+                var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
+                Assert.AreEqual(objs.Count(), 1);
+
+                var mapping = objs.First();
+
+                r.AcceptChanges();
+                r.Delete();
+
+                // perform the operation
+                dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
+
+                // test that row mapping record has been removed
+                objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
+                Assert.AreEqual(objs.Count(), 0);
+
+                // test that remote item exists at the specified endpoint.
+                var rc = new HttpClient {BaseAddress = new Uri(Service)};
+                var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
+                Assert.AreEqual(response.StatusCode, HttpStatusCode.NotFound);
+            }
+            
         }
         private static HttpDataProvider GetHttpDataProvider()
         {
