@@ -22,10 +22,10 @@ namespace Amica.vNext.Compatibility
 
         public HttpDataProvider()
         {
+            ActionPerformed = ActionPerformed.NoAction;
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"}
             };
-
         }
 
         public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator) : this()
@@ -64,16 +64,21 @@ namespace Amica.vNext.Compatibility
 
             using (_db = new SQLiteConnection(DbName))
             {
-                // ensure table there
+                ActionPerformed = ActionPerformed.NoAction;
+                HttpResponse = null;
+
+                // ensure table exists 
                 _db.CreateTable<HttpMapping>();
-                
+
                 var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
                 // 'cast' source DataRow into the corresponding object instance.
                 object obj = FromAmica.To<T>(targetRow);
 
                 // retrieve remote meta field values from mapping datastore.
-                var mapping = GetMapping(targetRow);
+                var mapping = GetMapping(row);
+                if (mapping == null) return default(T);
+
                 // and update corresponding properties.
                 ((BaseClass)obj).UniqueId = mapping.RemoteId;
                 ((BaseClass)obj).ETag = mapping.ETag;
@@ -81,21 +86,24 @@ namespace Amica.vNext.Compatibility
                 var rc = new RestClient(BaseAddress, Authenticator);
 
                 var retObj = default(T);
-                DelegateDbMethod dbMethod;
+                DelegateDbMethod dbMethod = null;
                 switch (mapping.RemoteId) {
                     case null:
                         retObj = await rc.PostAsync<T>(mapping.Resource, obj);
                         dbMethod = _db.Insert;
+                        ActionPerformed = ActionPerformed.Added;
                         break;
                     default:
                         switch (row.RowState) {
                             case DataRowState.Modified:
                                 retObj = await rc.PutAsync<T>(mapping.Resource, obj);
                                 dbMethod = _db.Update;
+                                ActionPerformed = ActionPerformed.Modified;
                                 break;
                             case DataRowState.Deleted:
                                 await rc.DeleteAsync(mapping.Resource, obj);
-                                dbMethod = _db.Delete;
+                                _db.Delete(mapping);
+                                ActionPerformed = ActionPerformed.Deleted;
                                 break;
                             default:
                                 // TODO better exception.. or maybe just fail sinlently?
@@ -123,7 +131,7 @@ namespace Amica.vNext.Compatibility
         /// <returns>An HttpMapping object relative to the provided DataRow.</returns>
         private HttpMapping GetMapping(DataRow row)
         {
-            var localId = Int32.Parse(row["Id"].ToString());
+            var localId = (row.RowState != DataRowState.Deleted) ? (int) row["Id"] : (int) row["Id", DataRowVersion.Original];
             var resource = _resourcesMapping[row.Table.TableName];
 
             HttpMapping entry;
@@ -131,12 +139,22 @@ namespace Amica.vNext.Compatibility
                 case DataRowState.Added:
                     entry = new HttpMapping { LocalId = localId, Resource = resource};
                     break;
-                default:
+                case DataRowState.Modified:
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
                     entry =
                         _db.Table<HttpMapping>()
                             .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
                             .FirstOrDefault() ?? new HttpMapping { LocalId = localId, Resource = resource};
+                    break;
+                case DataRowState.Deleted:
+                    // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
+                    entry =
+                        _db.Table<HttpMapping>()
+                            .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
+                            .FirstOrDefault();
+                    break;
+                default:
+                    entry = null;
                     break;
             }
             return entry;
@@ -202,6 +220,11 @@ namespace Amica.vNext.Compatibility
         /// Returns the name of the local database used for keeping Amica and remote service in sync.
         /// </summary>
         public string SyncDatabaseName { get { return DbName; } }
+
+        /// <summary>
+        /// Returns the action performed by the latest Update method invoked.
+        /// </summary>
+        public ActionPerformed ActionPerformed { get; internal set; }
 
         #endregion
 

@@ -64,6 +64,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActionPerformed.cs" />
     <Compile Include="FromAmica.cs" />
     <Compile Include="HttpDataProvider.cs" />
     <Compile Include="Profiles\CompanyProfile.cs" />

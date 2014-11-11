@@ -58,6 +58,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.IsNull(dp.BaseAddress);
                 Assert.IsNull(dp.Authenticator);
                 Assert.IsNull(dp.HttpResponse);
+                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
                 Assert.AreEqual(dp.SyncDatabaseName, "HttpMapping.db");
             }
         }
@@ -138,7 +139,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
-        public void DeleteAziendeRow()
+        public void DeleteKnownAziendeRow()
         {
             
             var ds = new configDataSet();
@@ -146,8 +147,31 @@ namespace Amica.vNext.Compatibility.Tests
             row.Nome = "company";
             row.Id = 99;
             ds.Aziende.AddAziendeRow(row);
-            ValidateDeletedRow(row, "companies");
+
+            using (var dp = GetHttpDataProvider()) {
+                dp.UpdateAziendeAsync(row).Wait();
+
+                row.AcceptChanges();
+                row.Delete();
+            }
+            ValidateKnownDeletedRow(row, "companies");
         }
+
+        [Test]
+        public void DeleteUnknownAziendeRow()
+        {
+            
+            var ds = new configDataSet();
+            var row = ds.Aziende.NewAziendeRow();
+            row.Nome = "company";
+            row.Id = 99;
+            ds.Aziende.AddAziendeRow(row);
+
+            row.AcceptChanges();
+            row.Delete();
+            ValidateUnknownDeletedRow(row, "companies");
+        }
+
         public  void ValidateUnknownRow(DataRow r, string endpoint)
         {
 
@@ -197,49 +221,55 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.AreEqual(mapping.Resource, endpoint);
 
             // test that remote item exists at the specified endpoint.
-            var rc = new HttpClient {BaseAddress = new Uri(Service)};
-            var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
+            var rc = new RestClient (Service);
+            var response = rc.GetAsync(endpoint, mapping.RemoteId).Result;
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
-
-            // TODO compare local datarow with remote property values too?
-            // maybe do this when GetAsync is implemented in RestClient.
-        
         }
 
-        private void ValidateDeletedRow(DataRow r, string endpoint)
+        private void ValidateKnownDeletedRow(DataRow r, string endpoint)
         {
             using (var dp = GetHttpDataProvider())
             {
-                dp.UpdateAziendeAsync(r).Wait();
-                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
+                var localId = (int) r["Id", DataRowVersion.Original];
 
-                int localId;
-                Int32.TryParse(r["Id"].ToString(), out localId);
-
-                // test that row mapping record is actually stored in syncdb.
                 var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
-                Assert.AreEqual(objs.Count(), 1);
-
                 var mapping = objs.First();
-
-                r.AcceptChanges();
-                r.Delete();
 
                 // perform the operation
                 dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Deleted);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
 
                 // test that row mapping record has been removed
-                objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
+                objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);
                 Assert.AreEqual(objs.Count(), 0);
 
-                // test that remote item exists at the specified endpoint.
-                var rc = new HttpClient {BaseAddress = new Uri(Service)};
-                var response = rc.GetAsync(string.Format("/{1}/{0}", mapping.RemoteId, endpoint)).Result;
+                // test that remote item does not exist at its previous endpoint.
+                var rc = new RestClient { BaseAddress = new Uri(Service) };
+                var response = rc.GetAsync(endpoint, mapping.RemoteId).Result;
                 Assert.AreEqual(response.StatusCode, HttpStatusCode.NotFound);
             }
             
         }
+        private void ValidateUnknownDeletedRow(DataRow r, string endpoint)
+        {
+            using (var dp = GetHttpDataProvider())
+            {
+                var localId = (int) r["Id", DataRowVersion.Original];
+
+                // perform the operation
+                dp.UpdateAziendeAsync(r).Wait();
+                // since we did not have this row we did no action at all
+                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
+                // therefore, we got no HttpResponse back.
+                Assert.IsNull(dp.HttpResponse);
+
+                // test that row mapping record is still non-existant
+                var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);
+                Assert.AreEqual(objs.Count(), 0);
+            }
+        }
+
         private static HttpDataProvider GetHttpDataProvider()
         {
             // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
