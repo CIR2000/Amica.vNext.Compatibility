@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
@@ -86,25 +87,31 @@ namespace Amica.vNext.Compatibility
 
                 var rc = new RestClient(BaseAddress, Authenticator);
 
-                var retObj = default(T);
+                HttpStatusCode statusCode;
+                ActionPerformed action;
                 DelegateDbMethod dbMethod = null;
+                var retObj = default(T);
+
                 switch (mapping.RemoteId) {
                     case null:
                         retObj = await rc.PostAsync<T>(mapping.Resource, obj);
                         dbMethod = _db.Insert;
-                        ActionPerformed = ActionPerformed.Added;
+                        action = ActionPerformed.Added;
+                        statusCode = HttpStatusCode.Created;
                         break;
                     default:
                         switch (row.RowState) {
                             case DataRowState.Modified:
                                 retObj = await rc.PutAsync<T>(mapping.Resource, obj);
                                 dbMethod = _db.Update;
-                                ActionPerformed = ActionPerformed.Modified;
+                                action = ActionPerformed.Modified;
+                                statusCode = HttpStatusCode.OK;
                                 break;
                             case DataRowState.Deleted:
                                 await rc.DeleteAsync(mapping.Resource, obj);
                                 _db.Delete(mapping);
-                                ActionPerformed = ActionPerformed.Deleted;
+                                action = ActionPerformed.Deleted;
+                                statusCode = HttpStatusCode.OK;
                                 break;
                             default:
                                 // TODO better exception.. or maybe just fail sinlently?
@@ -113,6 +120,7 @@ namespace Amica.vNext.Compatibility
                         break;
                 }
                 HttpResponse = rc.HttpResponse;
+                ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
 
                 if (retObj != null) {
                     // update mapping datatore with remote service meta fields.

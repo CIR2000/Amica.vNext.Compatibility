@@ -6,5 +6,6 @@
         Modified,
         Deleted,
         NoAction,
+        Aborted,
     }
 }

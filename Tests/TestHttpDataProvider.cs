@@ -176,9 +176,6 @@ namespace Amica.vNext.Compatibility.Tests
         public  void ValidateUnknownRow(DataRow r, string endpoint)
         {
 
-            int localId;
-            Int32.TryParse(r["Id"].ToString(), out localId);
-
             // make sure remote remote endpoint is completely empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.OK);
