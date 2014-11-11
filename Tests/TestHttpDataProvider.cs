@@ -17,14 +17,15 @@ namespace Amica.vNext.Compatibility.Tests
         // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
         // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
         private const string Service = "http://10.0.2.2:5000/";
+        private const string DbName = "HttpSync.db";
 
         [SetUp]
         public void Init()
         {
             // ensure the file does not exist before instantiaton.
-            File.Delete("HttpMapping.db");
+            File.Delete(DbName);
 
-            _db = new SQLiteConnection("HttpMapping.db");
+            _db = new SQLiteConnection(DbName);
         }
 
         [TearDown]
@@ -59,7 +60,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.IsNull(dp.Authenticator);
                 Assert.IsNull(dp.HttpResponse);
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
-                Assert.AreEqual(dp.SyncDatabaseName, "HttpMapping.db");
+                Assert.AreEqual(dp.SyncDatabaseName, DbName);
             }
         }
 

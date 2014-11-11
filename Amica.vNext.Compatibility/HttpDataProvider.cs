@@ -14,7 +14,7 @@ namespace Amica.vNext.Compatibility
     /// </summary>
     public class HttpDataProvider : IDisposable
     {
-        private const string DbName = "HttpMapping.db";
+        private const string DbName = "HttpSync.db";
         private readonly Dictionary<string, string> _resourcesMapping;
         private SQLiteConnection _db;
 
