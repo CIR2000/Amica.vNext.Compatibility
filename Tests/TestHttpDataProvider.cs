@@ -186,6 +186,7 @@ namespace Amica.vNext.Compatibility.Tests
 
                 // perform the operation
                 dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Added);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
             }
             ValidateSyncDb(r, endpoint);
@@ -196,6 +197,7 @@ namespace Amica.vNext.Compatibility.Tests
             using (var dp = GetHttpDataProvider()) {
                 // perform the operation
                 dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Modified);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
             }
             ValidateSyncDb(r, endpoint);
