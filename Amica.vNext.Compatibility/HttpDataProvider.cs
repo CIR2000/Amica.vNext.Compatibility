@@ -24,7 +24,8 @@ namespace Amica.vNext.Compatibility
         {
             ActionPerformed = ActionPerformed.NoAction;
             _resourcesMapping = new Dictionary<string, string> {
-                {"Aziende", "companies"}
+                {"Aziende", "companies"},
+                {"Nazioni", "countries"}
             };
         }
 
