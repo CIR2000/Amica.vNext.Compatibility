@@ -30,6 +30,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Amica.vNext.Compatibility.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="AutoMapper">
       <HintPath>packages\AutoMapper.3.2.1\lib\net40\AutoMapper.dll</HintPath>
@@ -89,6 +95,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Amica.vNext.Compatibility.snk" />
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
