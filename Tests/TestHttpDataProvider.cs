@@ -98,6 +98,17 @@ namespace Amica.vNext.Compatibility.Tests
             ValidateUnknownRow(r, "companies");
         }
 
+        [Test]
+        public void UnknownBadNewAziendeRow()
+        {
+            
+            var ds = new configDataSet();
+            var r = ds.Aziende.NewAziendeRow();
+            r.Nome = string.Empty;
+            r.Id = 99;
+            ds.Aziende.AddAziendeRow(r);
+            ValidateBadUnknownRow(r, "companies");
+        }
         /// <summary>
         /// Test that a modified datarow which is not existing in the sync system is properly processed.
         /// </summary>
@@ -184,8 +195,8 @@ namespace Amica.vNext.Compatibility.Tests
 
                 // perform the operation
                 dp.UpdateAziendeAsync(r).Wait();
-                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Added);
-                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
+                Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
+                Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
             }
             ValidateSyncDb(r, endpoint);
         }
@@ -199,6 +210,25 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
             }
             ValidateSyncDb(r, endpoint);
+        }
+
+        public  void ValidateBadUnknownRow(DataRow r, string endpoint)
+        {
+
+            // make sure remote remote endpoint is completely empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.OK);
+
+            using (var dp = GetHttpDataProvider()) {
+
+                // perform the operation
+                dp.UpdateAziendeAsync(r).Wait();
+                Assert.AreEqual(ActionPerformed.Aborted, dp.ActionPerformed);
+                Assert.AreEqual(422, (int) dp.HttpResponse.StatusCode);
+
+                // test that row mapping record is still non-existant
+                Assert.AreEqual(_db.Table<HttpMapping>().Count(), 0);
+            }
         }
 
         private void ValidateSyncDb(DataRow r, string endpoint)
