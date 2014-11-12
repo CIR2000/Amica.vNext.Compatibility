@@ -88,7 +88,7 @@ namespace Amica.vNext.Compatibility.Tests
         /// Test that a new datarow is properly processed
         /// </summary>
         [Test]
-        public void UnknownNewAziendeRow()
+        public void AddUnknownAziendeRow()
         {
             var ds = new configDataSet();
             var r = ds.Aziende.NewAziendeRow();
@@ -99,7 +99,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
-        public void UnknownBadNewAziendeRow()
+        public void AddBadAziendeRow()
         {
             
             var ds = new configDataSet();
@@ -113,7 +113,7 @@ namespace Amica.vNext.Compatibility.Tests
         /// Test that a modified datarow which is not existing in the sync system is properly processed.
         /// </summary>
         [Test]
-        public void UnknownModifiedAziendeRow()
+        public void ModifyUnknownAziendeRow()
         {
 
             var ds = new configDataSet();
@@ -130,7 +130,7 @@ namespace Amica.vNext.Compatibility.Tests
         /// Test that a modified datarow that already exists in the sync systems is properly processed.
         /// </summary>
         [Test]
-        public void KnownModifiedAziendeRow()
+        public void ModifyKnownAziendeRow()
         {
             var ds = new configDataSet();
             var n = ds.Aziende.NewAziendeRow();
