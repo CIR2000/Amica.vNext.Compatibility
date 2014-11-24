@@ -85,9 +85,9 @@
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Amica.vNext.Http\Amica.vNext.Http\Amica.vNext.Http.csproj">
+    <ProjectReference Include="..\..\..\Eve.NET\Eve.Client\Eve.Client.csproj">
       <Project>{d0e09787-fec9-4a6b-92d4-78db328e749d}</Project>
-      <Name>Amica.vNext.Http</Name>
+      <Name>Eve.Client</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Amica.vNext.Objects\Amica.vNext.Objects\Amica.vNext.Objects.csproj">
       <Project>{5489e3a4-1031-4568-8b63-a28c64bf7778}</Project>

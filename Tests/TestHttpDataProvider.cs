@@ -1,5 +1,5 @@
 ﻿using Amica.Data;
-using Amica.vNext.Http;
+using Eve;
 using NUnit.Framework;
 using SQLite;
 using System;
@@ -251,7 +251,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.AreEqual(mapping.Resource, endpoint);
 
             // test that remote item exists at the specified endpoint.
-            var rc = new RestClient (Service);
+            var rc = new EveClient (Service);
             var response = rc.GetAsync(endpoint, mapping.RemoteId).Result;
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
         }
@@ -275,9 +275,9 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.AreEqual(objs.Count(), 0);
 
                 // test that remote item does not exist at its previous endpoint.
-                var rc = new RestClient { BaseAddress = new Uri(Service) };
-                var response = rc.GetAsync(endpoint, mapping.RemoteId).Result;
-                Assert.AreEqual(response.StatusCode, HttpStatusCode.NotFound);
+                var rc = new EveClient { BaseAddress = new Uri(Service) };
+                var response = rc.GetAsync(string.Format("{0}/{1}", endpoint, mapping.RemoteId)).Result;
+                Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
             }
             
         }

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Amica.vNext.Compatibility;
-using Amica.vNext.Http;
 using Amica.vNext.Objects;
 using Amica.Data;
 

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 using Amica.vNext.Objects;
-using Amica.vNext.Http;
+using Eve;
 using SQLite;
 
 namespace Amica.vNext.Compatibility
@@ -85,7 +85,7 @@ namespace Amica.vNext.Compatibility
                 ((BaseClass)obj).UniqueId = mapping.RemoteId;
                 ((BaseClass)obj).ETag = mapping.ETag;
 
-                var rc = new RestClient(BaseAddress, Authenticator);
+                var rc = new EveClient(BaseAddress, Authenticator);
 
                 HttpStatusCode statusCode;
                 ActionPerformed action;
