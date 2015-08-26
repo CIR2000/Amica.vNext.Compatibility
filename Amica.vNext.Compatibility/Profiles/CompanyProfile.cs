@@ -1,5 +1,5 @@
 ﻿using Amica.Data;
-using Amica.vNext.Objects;
+using Amica.vNext.Models;
 using AutoMapper;
 
 namespace Amica.vNext.Compatibility.Profiles

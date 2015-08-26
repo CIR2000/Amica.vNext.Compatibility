@@ -76,9 +76,13 @@
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Amica.vNext.Objects\Amica.vNext.Objects\Amica.vNext.Objects.csproj">
-      <Project>{5489e3a4-1031-4568-8b63-a28c64bf7778}</Project>
-      <Name>Amica.vNext.Objects</Name>
+    <ProjectReference Include="..\..\..\Eve.NET\Eve.NET.Net4\Eve.NET.Net4.csproj">
+      <Project>{d405d3c5-de1c-4db1-b920-2e7cd7f450af}</Project>
+      <Name>Eve.NET.Net4</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Amica.vNext.Models\Amica.vNext.Models.Net4\Amica.vNext.Models.Net4.csproj">
+      <Project>{b4788993-7148-4d66-9cd8-6bb7dae2b9bc}</Project>
+      <Name>Amica.vNext.Models.Net4</Name>
     </ProjectReference>
     <ProjectReference Include="..\Amica.vNext.Compatibility\Amica.vNext.Compatibility.csproj">
       <Project>{9e04ee4c-d5e2-4609-a68f-0510ad1d47cc}</Project>

@@ -6,8 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Amica.vNext.Compatibility;
-using Amica.vNext.Objects;
+using Amica.vNext.Models;
 using Amica.Data;
+using Eve;
 
 namespace ConsoleApplication1
 {

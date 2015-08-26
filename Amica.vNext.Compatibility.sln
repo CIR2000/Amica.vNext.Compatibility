@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Data Provider", "..\..\amica\Amica Data Provider\Data Provider.vbproj", "{67306CA6-7F03-4D04-9F95-0607C4DC2A89}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Objects", "..\Amica.vNext.Objects\Amica.vNext.Objects\Amica.vNext.Objects.csproj", "{5489E3A4-1031-4568-8B63-A28C64BF7778}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Compatibility", "Amica.vNext.Compatibility\Amica.vNext.Compatibility.csproj", "{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}"
 EndProject
@@ -13,7 +11,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Compatibility.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{D4EE5A96-ACB7-4A02-B412-20CB02022BE2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eve.Client", "..\..\Eve.NET\Eve.Client\Eve.Client.csproj", "{D0E09787-FEC9-4A6B-92D4-78DB328E749D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eve.NET.Net4", "..\..\Eve.NET\Eve.NET.Net4\Eve.NET.Net4.csproj", "{D405D3C5-DE1C-4DB1-B920-2E7CD7F450AF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Models.Net4", "..\Amica.vNext.Models\Amica.vNext.Models.Net4\Amica.vNext.Models.Net4.csproj", "{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,10 +25,6 @@ Global
 		{67306CA6-7F03-4D04-9F95-0607C4DC2A89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67306CA6-7F03-4D04-9F95-0607C4DC2A89}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67306CA6-7F03-4D04-9F95-0607C4DC2A89}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5489E3A4-1031-4568-8B63-A28C64BF7778}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5489E3A4-1031-4568-8B63-A28C64BF7778}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5489E3A4-1031-4568-8B63-A28C64BF7778}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5489E3A4-1031-4568-8B63-A28C64BF7778}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E04EE4C-D5E2-4609-A68F-0510AD1D47CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -41,10 +37,14 @@ Global
 		{D4EE5A96-ACB7-4A02-B412-20CB02022BE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4EE5A96-ACB7-4A02-B412-20CB02022BE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4EE5A96-ACB7-4A02-B412-20CB02022BE2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D0E09787-FEC9-4A6B-92D4-78DB328E749D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D405D3C5-DE1C-4DB1-B920-2E7CD7F450AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D405D3C5-DE1C-4DB1-B920-2E7CD7F450AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D405D3C5-DE1C-4DB1-B920-2E7CD7F450AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D405D3C5-DE1C-4DB1-B920-2E7CD7F450AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

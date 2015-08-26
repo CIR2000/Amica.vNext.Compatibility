@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
-using Amica.vNext.Objects;
+using Amica.vNext.Models;
 using Eve;
 using SQLite;
 
@@ -82,8 +82,8 @@ namespace Amica.vNext.Compatibility
                 if (mapping == null) return default(T);
 
                 // and update corresponding properties.
-                ((BaseClass)obj).UniqueId = mapping.RemoteId;
-                ((BaseClass)obj).ETag = mapping.ETag;
+                ((BaseModel)obj).UniqueId = mapping.RemoteId;
+                ((BaseModel)obj).ETag = mapping.ETag;
 
                 var rc = new EveClient(BaseAddress, Authenticator);
 
@@ -124,9 +124,9 @@ namespace Amica.vNext.Compatibility
 
                 if (retObj != null) {
                     // update mapping datatore with remote service meta fields.
-                    mapping.RemoteId = ((BaseClass)((object)retObj)).UniqueId;
-                    mapping.ETag = ((BaseClass)((object)retObj)).ETag;
-                    mapping.LastUpdated = ((BaseClass)((object)retObj)).Updated;
+                    mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
+                    mapping.ETag = ((BaseModel)((object)retObj)).ETag;
+                    mapping.LastUpdated = ((BaseModel)((object)retObj)).Updated;
                     dbMethod(mapping);
                 }
                 return retObj;
