@@ -23,27 +23,30 @@ namespace ConsoleApplication1
         static async Task Test()
         {
             var dp = new configDataSet();
+            //var dp = new companyDataSet();
 
 
             var nr = dp.Aziende.NewAziendeRow();
-            nr.Nome = "anna";
-            nr.Id = 105;
+            nr.Nome = "newanna";
+            nr.Id = 106;
             dp.Aziende.AddAziendeRow(nr);
             //nr.AcceptChanges();
             //nr.Delete();
             //nr.SetModified();
 
-            //var a = dp.AreeGeografiche.NewAreeGeograficheRow();
+            //var nr = dp.Nazioni.NewNazioniRow();
             //nr.Nome = "nome";
-            //nr.Id = 99;
-            //dp.AreeGeografiche.AddAreeGeograficheRow(a);
+            //nr.Id = 100;
+            //dp.Nazioni.AddNazioniRow(nr);
 
             //var countries = FromAmica.ToList<Country>(dp.Nazioni);
             //var country = FromAmica.To<Country>(nr);
-            var hdp = new HttpDataProvider("http://amica-test.herokuapp.com", new BasicAuthenticator("token1", ""));
+            var hdp = new HttpDataProvider("http://10.0.2.2:5000");
 
             try
             {
+
+                //await hdp.UpdateNazioniAsync(nr);
                 await hdp.UpdateAziendeAsync(nr);
             }
             catch (Exception e) 

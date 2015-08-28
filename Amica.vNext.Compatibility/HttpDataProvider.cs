@@ -17,27 +17,49 @@ namespace Amica.vNext.Compatibility
     {
         private const string DbName = "HttpSync.db";
         private readonly Dictionary<string, string> _resourcesMapping;
-        private SQLiteConnection _db;
+        private int? _localCompanyId;
+        private bool _hasCompanyIdChanged;
 
         #region "C O N S T R U C T O R S"
+
 
         public HttpDataProvider()
         {
             ActionPerformed = ActionPerformed.NoAction;
+
+            _hasCompanyIdChanged = true;
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
                 {"Nazioni", "countries"}
             };
         }
 
+        public HttpDataProvider(int companyId) : this()
+        {
+            LocalCompanyId = companyId;
+        }
+
+        public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator, int companyId) : this(companyId)
+        {
+            BaseAddress = baseAddress;
+            Authenticator = authenticator;
+        }
         public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator) : this()
         {
             BaseAddress = baseAddress;
             Authenticator = authenticator;
         }
-        public HttpDataProvider(string baseAddress) : this()
+        public HttpDataProvider(string baseAddress, int companyId): this(companyId)
         {
             BaseAddress = baseAddress;
+        }
+        public HttpDataProvider(string baseAddress): this()
+        {
+            BaseAddress = baseAddress;
+        }
+        public HttpDataProvider(BasicAuthenticator authenticator, int companyId) : this(companyId)
+        {
+            Authenticator = authenticator;
         }
         public HttpDataProvider(BasicAuthenticator authenticator) : this()
         {
@@ -45,13 +67,8 @@ namespace Amica.vNext.Compatibility
         }
         #endregion
 
-        public void Dispose()
-        {
-            if (_db != null) {
-                _db.Dispose();
-            }
-        }
-
+        public void Dispose() { }
+            
         private delegate int DelegateDbMethod(object obj);
 
         /// <summary>
@@ -64,38 +81,42 @@ namespace Amica.vNext.Compatibility
         private async Task<T> UpdateAsync<T>(DataRow row) where T: class
         {
 
-            using (_db = new SQLiteConnection(DbName))
+            using (var db = new SQLiteConnection(DbName))
             {
                 ActionPerformed = ActionPerformed.NoAction;
                 HttpResponse = null;
 
                 // ensure table exists 
-                _db.CreateTable<HttpMapping>();
+                db.CreateTable<HttpMapping>();
 
                 var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
                 // 'cast' source DataRow into the corresponding object instance.
                 object obj = FromAmica.To<T>(targetRow);
+                var shouldRetrieveRemoteCompanyId = (obj is BaseModelWithCompanyId);
 
                 // retrieve remote meta field values from mapping datastore.
-                var mapping = GetMapping(row);
+                var mapping = GetMapping(targetRow, db, shouldRetrieveRemoteCompanyId);
                 if (mapping == null) return default(T);
 
                 // and update corresponding properties.
                 ((BaseModel)obj).UniqueId = mapping.RemoteId;
                 ((BaseModel)obj).ETag = mapping.ETag;
+                if (shouldRetrieveRemoteCompanyId) {
+                    ((BaseModelWithCompanyId) obj).CompanyId = mapping.RemoteCompanyId;
+                }
 
                 var rc = new EveClient(BaseAddress, Authenticator);
 
                 HttpStatusCode statusCode;
                 ActionPerformed action;
-                DelegateDbMethod dbMethod = null;
+                DelegateDbMethod dbMethod;
                 var retObj = default(T);
 
                 switch (mapping.RemoteId) {
                     case null:
                         retObj = await rc.PostAsync<T>(mapping.Resource, obj);
-                        dbMethod = _db.Insert;
+                        dbMethod = db.Insert;
                         action = ActionPerformed.Added;
                         statusCode = HttpStatusCode.Created;
                         break;
@@ -103,18 +124,18 @@ namespace Amica.vNext.Compatibility
                         switch (row.RowState) {
                             case DataRowState.Modified:
                                 retObj = await rc.PutAsync<T>(mapping.Resource, obj);
-                                dbMethod = _db.Update;
+                                dbMethod = db.Update;
                                 action = ActionPerformed.Modified;
                                 statusCode = HttpStatusCode.OK;
                                 break;
                             case DataRowState.Deleted:
                                 await rc.DeleteAsync(mapping.Resource, obj);
-                                _db.Delete(mapping);
+                                dbMethod = db.Delete;
                                 action = ActionPerformed.Deleted;
-                                statusCode = HttpStatusCode.OK;
+                                statusCode = HttpStatusCode.NoContent;
                                 break;
                             default:
-                                // TODO better exception.. or maybe just fail sinlently?
+                                // TODO better exception.. or maybe just fail silently?
                                 throw new Exception("Cannot determine how the DataRow should be processed.");
                         }
                         break;
@@ -122,11 +143,13 @@ namespace Amica.vNext.Compatibility
                 HttpResponse = rc.HttpResponse;
                 ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
 
-                if (retObj != null) {
-                    // update mapping datatore with remote service meta fields.
-                    mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
-                    mapping.ETag = ((BaseModel)((object)retObj)).ETag;
-                    mapping.LastUpdated = ((BaseModel)((object)retObj)).Updated;
+                if (action != ActionPerformed.Aborted) {
+                    if (retObj != null) { 
+                        // update mapping datatore with remote service meta fields.
+                        mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
+                        mapping.ETag = ((BaseModel)((object)retObj)).ETag;
+                        mapping.LastUpdated = ((BaseModel)((object)retObj)).Updated;
+                    }
                     dbMethod(mapping);
                 }
                 return retObj;
@@ -137,36 +160,87 @@ namespace Amica.vNext.Compatibility
         /// Retrieves the HttpMapping which maps to a specific DataRow.
         /// </summary>
         /// <param name="row">DataRow for which an HttpMapping is needed.</param>
+        /// <param name="db">SQLiteConnection to be used for the lookup.</param>
+        /// <param name="shouldRetrieveRemoteCompanyId">Wether the remote company id should be retrieved or not.</param>
         /// <returns>An HttpMapping object relative to the provided DataRow.</returns>
-        private HttpMapping GetMapping(DataRow row)
+        private HttpMapping GetMapping(DataRow row, SQLiteConnection db, bool shouldRetrieveRemoteCompanyId)
         {
-            var localId = (row.RowState != DataRowState.Deleted) ? (int) row["Id"] : (int) row["Id", DataRowVersion.Original];
+            var localId = (int)row["id"];
             var resource = _resourcesMapping[row.Table.TableName];
 
             HttpMapping entry;
             switch (row.RowState) {
                 case DataRowState.Added:
-                    entry = new HttpMapping { LocalId = localId, Resource = resource};
+                    int? localCompanyId = null;
+                    string remoteCompanyId = null;
+                    if (shouldRetrieveRemoteCompanyId) {
+                        if (_hasCompanyIdChanged) {
+                            RetrieveRemoteCompanyId(db);
+                        }
+                        remoteCompanyId = RemoteCompanyId;
+                        localCompanyId = LocalCompanyId;
+                    }
+                    entry = new HttpMapping { 
+                        LocalId = localId, 
+                        Resource = resource, 
+                        LocalCompanyId = localCompanyId, 
+                        RemoteCompanyId = remoteCompanyId
+                    };
                     break;
                 case DataRowState.Modified:
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
-                    entry =
-                        _db.Table<HttpMapping>()
-                            .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
-                            .FirstOrDefault() ?? new HttpMapping { LocalId = localId, Resource = resource};
+                    entry = db.Table<HttpMapping>()
+                        .Where(v => 
+                            v.LocalId.Equals(localId) && 
+                            v.Resource.Equals(resource) && 
+                            v.LocalCompanyId.Equals(LocalCompanyId)
+                            )
+                        .FirstOrDefault() ?? new HttpMapping {
+                            LocalId = localId, 
+                            Resource = resource, 
+                            LocalCompanyId = LocalCompanyId
+                        };
                     break;
-                case DataRowState.Deleted:
+                case DataRowState.Detached:
+                    // if the row is Deleted, it will come in in Detached state
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
-                    entry =
-                        _db.Table<HttpMapping>()
-                            .Where(v => v.LocalId.Equals(localId) && v.Resource.Equals(resource))
-                            .FirstOrDefault();
+                    entry = db.Table<HttpMapping>()
+                        .Where(v => 
+                            v.LocalId.Equals(localId) && 
+                            v.Resource.Equals(resource) && 
+                            v.LocalCompanyId.Equals(LocalCompanyId)
+                            )
+                        .FirstOrDefault();
                     break;
                 default:
                     entry = null;
                     break;
             }
             return entry;
+        }
+
+        /// <summary>
+        /// Retrieves the RemoteCompanyId which matches a LocalCompanyId and sets the corresponding property.
+        /// </summary>
+        /// <param name="db">SQLiteConnection to be used for the lookup.</param>
+        private void RetrieveRemoteCompanyId(SQLiteConnection db)
+        {
+            if (LocalCompanyId == null) {
+                // ReSharper disable once NotResolvedInText
+                throw new ArgumentNullException("LocalCompanyId","Parameter cannot be null for this datasource.");
+            }
+            var company = db.Table<HttpMapping>()
+                .Where(v => 
+                    v.LocalId.Equals(LocalCompanyId) && 
+                    v.Resource.Equals("companies")
+                    )
+                    .FirstOrDefault();
+            if (company == null){
+                // TODO custom exception?
+                throw new Exception("Cannot locate parent company record for this datarow.");
+            }
+            RemoteCompanyId = company.RemoteId;
+            _hasCompanyIdChanged = false;
         }
 
         /// <summary>
@@ -235,6 +309,27 @@ namespace Amica.vNext.Compatibility
         /// </summary>
         public ActionPerformed ActionPerformed { get; internal set; }
 
+        /// <summary>
+        /// Gets or sets the local company id.
+        /// </summary>
+        public int? LocalCompanyId {
+            get { 
+                return _localCompanyId; 
+            }
+            set {
+                if (value == _localCompanyId) {
+                    return;
+                }
+                _localCompanyId = value;
+                _hasCompanyIdChanged = true;
+            }
+        }
+
+
+        /// <summary>
+        ///  Gets or sets the remote company id.
+        /// </summary>
+        public string RemoteCompanyId { get; private set; }
         #endregion
 
     }
