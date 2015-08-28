@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Amica.vNext.Models;
 using Eve;
@@ -280,6 +281,65 @@ namespace Amica.vNext.Compatibility
 
         #endregion
 
+        #region "G E T  M E T H O D S"
+
+        private async Task GetAsync<T>(DataTable dt) where T : class
+        {
+            using (var db = new SQLiteConnection(DbName))
+            {
+                var resource = _resourcesMapping[dt.TableName];
+
+                // ensure table exists 
+                db.CreateTable<HttpMapping>();
+
+                Expression<Func<HttpMapping, bool>> filter;
+
+                var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
+                if (shouldQueryOnCompanyId)
+                {
+                    RetrieveRemoteCompanyId(db);
+                    filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
+                }
+                else
+                {
+                    filter = m => m.Resource.Equals(resource);
+                }
+
+                // retrieve IMS
+                var imsEntry = db.Table<HttpMapping>()
+                    .Where(filter)
+                    .OrderByDescending(v =>
+                        v.LastUpdated
+                    )
+                    .FirstOrDefault();
+                var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
+
+
+                
+
+                // request changes
+                var rc = new EveClient(BaseAddress, Authenticator);
+                var changes = await rc.GetAsync<T>(resource, ims);
+
+
+                // compare downstream changes with sync db
+
+                // add and edit rows accordingly; updating the sync db accordignly
+
+                HttpResponse = rc.HttpResponse;
+                ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? ActionPerformed.Read :  ActionPerformed.Aborted;
+            }
+        }
+
+        public async Task GetAziendeAsync(DataTable dt)
+        {
+            await GetAsync<Company>(dt);
+        }
+        public async Task GetNazioniAsync(DataTable dt)
+        {
+            await GetAsync<Country>(dt);
+        }
+        #endregion
         #region "P R O P E R T I E S"
 
         /// <summary>

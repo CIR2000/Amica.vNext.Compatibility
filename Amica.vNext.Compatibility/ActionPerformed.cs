@@ -7,5 +7,6 @@
         Deleted,
         NoAction,
         Aborted,
+        Read
     }
 }
