@@ -292,17 +292,21 @@ namespace Amica.vNext.Compatibility
                 // ensure table exists 
                 db.CreateTable<HttpMapping>();
 
+                // determine proper filter, depending on the base model type
                 Expression<Func<HttpMapping, bool>> filter;
+                string rawQuery;
+
 
                 var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
-                if (shouldQueryOnCompanyId)
-                {
-                    RetrieveRemoteCompanyId(db);
+                if (shouldQueryOnCompanyId) {
                     filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
+                    // we also want to match documents which belongs to the current company
+                    RetrieveRemoteCompanyId(db);
+                    rawQuery = string.Format(@"{{""c"": ""{0}""}}", RemoteCompanyId);
                 }
-                else
-                {
+                else {
                     filter = m => m.Resource.Equals(resource);
+                    rawQuery = null;
                 }
 
                 // retrieve IMS
@@ -314,12 +318,9 @@ namespace Amica.vNext.Compatibility
                     .FirstOrDefault();
                 var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
 
-
-                
-
                 // request changes
                 var rc = new EveClient(BaseAddress, Authenticator);
-                var changes = await rc.GetAsync<T>(resource, ims);
+                var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
 
 
                 // compare downstream changes with sync db

@@ -22,8 +22,8 @@ namespace ConsoleApplication1
 
         static async Task Test()
         {
-            //var dp = new configDataSet();
-            var dp = new companyDataSet();
+            var dp = new configDataSet();
+            //var dp = new companyDataSet();
 
 
             //var nr = dp.Aziende.NewAziendeRow();
@@ -48,8 +48,8 @@ namespace ConsoleApplication1
 
                 //await hdp.UpdateNazioniAsync(nr);
                 //await hdp.UpdateAziendeAsync(nr);
-                //await hdp.GetAziendeAsync(dp.Aziende);
-                await hdp.GetNazioniAsync(dp.Nazioni);
+                await hdp.GetAziendeAsync(dp.Aziende);
+                //await hdp.GetNazioniAsync(dp.Nazioni);
             }
             catch (Exception e) 
             {
