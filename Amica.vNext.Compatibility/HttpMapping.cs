@@ -4,7 +4,7 @@ using SQLite;
 namespace Amica.vNext.Compatibility
 {
     /// <summary>
-    /// Maps a DataRow to a Amica.vNext.Objects instance.
+    /// Map a DataRow to a Amica.vNext.Objects instance.
     /// </summary>
     public class HttpMapping
     {

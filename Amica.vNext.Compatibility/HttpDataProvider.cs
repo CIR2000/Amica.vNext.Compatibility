@@ -79,7 +79,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="row">DataRow to store.</param>
         /// <returns>T instance updated with API metadata, Or null if the operation was a delete.</returns>
         /// <remarks>The type of operation to be performed is inferred by DataRow's RowState property value.</remarks>
-        private async Task<T> UpdateAsync<T>(DataRow row) where T: class
+        private async Task<T> UpdateAsync<T>(DataRow row) where T: new()
         {
 
             using (var db = new SQLiteConnection(DbName))
@@ -93,8 +93,9 @@ namespace Amica.vNext.Compatibility
                 var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
                 // 'cast' source DataRow into the corresponding object instance.
-                object obj = FromAmica.To<T>(targetRow);
+                object obj = Map.To<T>(targetRow);
                 var shouldRetrieveRemoteCompanyId = (obj is BaseModelWithCompanyId);
+                
 
                 // retrieve remote meta field values from mapping datastore.
                 var mapping = GetMapping(targetRow, db, shouldRetrieveRemoteCompanyId);

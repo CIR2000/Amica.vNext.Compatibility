@@ -33,29 +33,29 @@ namespace ConsoleApplication1
             //nr.Delete();
             //nr.SetModified();
 
-            //var nr = dp.Nazioni.NewNazioniRow();
-            //nr.Nome = "nome";
-            //nr.Id = 100;
-            //dp.Nazioni.AddNazioniRow(nr);
+            var nr = dp.Nazioni.NewNazioniRow();
+            nr.Nome = "italia";
+            nr.Id = 100;
+            dp.Nazioni.AddNazioniRow(nr);
 
-            //var countries = FromAmica.ToList<Country>(dp.Nazioni);
+            //var countries = FromAmica2.ToList<Country>(dp.Nazioni);
             //var country = FromAmica.To<Country>(nr);
-            var hdp = new HttpDataProvider("http://10.0.2.2:5000", 105);
+            var hdp = new HttpDataProvider("http://10.0.2.2:5000", 106);
 
-            try
-            {
+            //try
+            //{
 
-                //await hdp.UpdateNazioniAsync(nr);
-                //await hdp.UpdateAziendeAsync(nr);
+            await hdp.UpdateNazioniAsync(nr);
+            //await hdp.UpdateAziendeAsync(nr);
                 //await hdp.GetAziendeAsync(dp.Aziende);
-                await hdp.GetNazioniAsync(dp.Nazioni);
-            }
-            catch (Exception e) 
-            {
-                throw e;
-            }
+                //await hdp.GetNazioniAsync(dp.Nazioni);
+            //}
+            //catch (Exception e) 
+            //{
+                //throw e;
+            //}
 
-            Console.WriteLine(hdp.HttpResponse.StatusCode);
+            //Console.WriteLine(hdp.HttpResponse.StatusCode);
 
         }
     }
