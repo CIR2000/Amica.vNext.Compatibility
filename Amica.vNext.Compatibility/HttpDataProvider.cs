@@ -283,11 +283,10 @@ namespace Amica.vNext.Compatibility
 
         #region "G E T  M E T H O D S"
 
-        private async Task GetAsync<T>(DataTable dt) where T : class
+        private async Task<List<T>> GetAsync<T>(string resource) where T : class
         {
             using (var db = new SQLiteConnection(DbName))
             {
-                var resource = _resourcesMapping[dt.TableName];
 
                 // ensure table exists 
                 db.CreateTable<HttpMapping>();
@@ -301,6 +300,7 @@ namespace Amica.vNext.Compatibility
                 if (shouldQueryOnCompanyId) {
                     filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
                     // we also want to match documents which belongs to the current company
+                    // TODO use a pattern object instead of raw query as soon as it is available in Eve.NET
                     RetrieveRemoteCompanyId(db);
                     rawQuery = string.Format(@"{{""c"": ""{0}""}}", RemoteCompanyId);
                 }
@@ -322,23 +322,20 @@ namespace Amica.vNext.Compatibility
                 var rc = new EveClient(BaseAddress, Authenticator);
                 var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
 
-
-                // compare downstream changes with sync db
-
-                // add and edit rows accordingly; updating the sync db accordignly
-
                 HttpResponse = rc.HttpResponse;
                 ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? ActionPerformed.Read :  ActionPerformed.Aborted;
+
+                return changes;
             }
         }
 
         public async Task GetAziendeAsync(DataTable dt)
         {
-            await GetAsync<Company>(dt);
+            var changes = await GetAsync<Company>(_resourcesMapping[dt.TableName]);
         }
         public async Task GetNazioniAsync(DataTable dt)
         {
-            await GetAsync<Country>(dt);
+            var changes = await GetAsync<Country>(_resourcesMapping[dt.TableName]);
         }
         #endregion
         #region "P R O P E R T I E S"
