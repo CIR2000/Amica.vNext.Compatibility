@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Amica.vNext.Models;
 using Eve;
@@ -78,7 +79,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="row">DataRow to store.</param>
         /// <returns>T instance updated with API metadata, Or null if the operation was a delete.</returns>
         /// <remarks>The type of operation to be performed is inferred by DataRow's RowState property value.</remarks>
-        private async Task<T> UpdateAsync<T>(DataRow row) where T: class
+        private async Task<T> UpdateAsync<T>(DataRow row) where T: new()
         {
 
             using (var db = new SQLiteConnection(DbName))
@@ -92,8 +93,9 @@ namespace Amica.vNext.Compatibility
                 var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
                 // 'cast' source DataRow into the corresponding object instance.
-                object obj = FromAmica.To<T>(targetRow);
+                object obj = Map.To<T>(targetRow);
                 var shouldRetrieveRemoteCompanyId = (obj is BaseModelWithCompanyId);
+                
 
                 // retrieve remote meta field values from mapping datastore.
                 var mapping = GetMapping(targetRow, db, shouldRetrieveRemoteCompanyId);
@@ -280,6 +282,63 @@ namespace Amica.vNext.Compatibility
 
         #endregion
 
+        #region "G E T  M E T H O D S"
+
+        private async Task<List<T>> GetAsync<T>(string resource) where T : class
+        {
+            using (var db = new SQLiteConnection(DbName))
+            {
+
+                // ensure table exists 
+                db.CreateTable<HttpMapping>();
+
+                // determine proper filter, depending on the base model type
+                Expression<Func<HttpMapping, bool>> filter;
+                string rawQuery;
+
+
+                var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
+                if (shouldQueryOnCompanyId) {
+                    filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
+                    // we also want to match documents which belongs to the current company
+                    // TODO use a pattern object instead of raw query as soon as it is available in Eve.NET
+                    RetrieveRemoteCompanyId(db);
+                    rawQuery = string.Format(@"{{""c"": ""{0}""}}", RemoteCompanyId);
+                }
+                else {
+                    filter = m => m.Resource.Equals(resource);
+                    rawQuery = null;
+                }
+
+                // retrieve IMS
+                var imsEntry = db.Table<HttpMapping>()
+                    .Where(filter)
+                    .OrderByDescending(v =>
+                        v.LastUpdated
+                    )
+                    .FirstOrDefault();
+                var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
+
+                // request changes
+                var rc = new EveClient(BaseAddress, Authenticator);
+                var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
+
+                HttpResponse = rc.HttpResponse;
+                ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? ActionPerformed.Read :  ActionPerformed.Aborted;
+
+                return changes;
+            }
+        }
+
+        public async Task GetAziendeAsync(DataTable dt)
+        {
+            var changes = await GetAsync<Company>(_resourcesMapping[dt.TableName]);
+        }
+        public async Task GetNazioniAsync(DataTable dt)
+        {
+            var changes = await GetAsync<Country>(_resourcesMapping[dt.TableName]);
+        }
+        #endregion
         #region "P R O P E R T I E S"
 
         /// <summary>

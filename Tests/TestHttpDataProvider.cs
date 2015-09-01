@@ -217,7 +217,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             // make sure remote remote endpoint is completely empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
-            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.OK);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.NoContent);
 
             using (var dp = GetHttpDataProvider()) {
 
