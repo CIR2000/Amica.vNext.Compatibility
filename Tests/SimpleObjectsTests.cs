@@ -17,7 +17,7 @@ namespace Amica.vNext.Compatibility.Tests
             nr.Id = 99;
             dp.Nazioni.AddNazioniRow(nr);
 
-            var countries = FromAmica.ToList<Country>(dp.Nazioni);
+            var countries = Map.ToList<Country>(dp.Nazioni);
             Assert.AreEqual(countries.Count, 1);
 
             var country = countries[0];
@@ -34,7 +34,7 @@ namespace Amica.vNext.Compatibility.Tests
             nr.Id = 99;
             dp.Nazioni.AddNazioniRow(nr);
 
-            var country = FromAmica.To<Country>(nr);
+            var country = Map.To<Country>(nr);
             Assert.AreEqual(country.Name, "nome");
 
         }

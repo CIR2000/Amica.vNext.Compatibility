@@ -6,7 +6,7 @@ using Amica.vNext.Models;
 
 namespace Amica.vNext.Compatibility
 {
-    class Map
+    public class Map
     {
         private static readonly Dictionary<Type, Map<string, string>> Topology =
             new Dictionary<Type, Map<string, string>>();

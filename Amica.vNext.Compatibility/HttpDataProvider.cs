@@ -145,7 +145,7 @@ namespace Amica.vNext.Compatibility
                 HttpResponse = rc.HttpResponse;
                 ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
 
-                if (action != ActionPerformed.Aborted) {
+                if (ActionPerformed != ActionPerformed.Aborted) {
                     if (retObj != null) { 
                         // update mapping datatore with remote service meta fields.
                         mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
@@ -192,16 +192,16 @@ namespace Amica.vNext.Compatibility
                 case DataRowState.Modified:
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
                     entry = db.Table<HttpMapping>()
-                        .Where(v => 
-                            v.LocalId.Equals(localId) && 
-                            v.Resource.Equals(resource) && 
-                            v.LocalCompanyId.Equals(LocalCompanyId)
+                        .Where(v =>
+                            v.LocalId.Equals(localId) &&
+                            v.Resource.Equals(resource) &&
+                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId)) || true
                             )
-                        .FirstOrDefault() ?? new HttpMapping {
-                            LocalId = localId, 
-                            Resource = resource, 
-                            LocalCompanyId = LocalCompanyId
-                        };
+                            .FirstOrDefault() ?? new HttpMapping {
+                                LocalId = localId,
+                                Resource = resource,
+                                LocalCompanyId = LocalCompanyId
+                            };
                     break;
                 case DataRowState.Detached:
                     // if the row is Deleted, it will come in in Detached state
@@ -210,9 +210,9 @@ namespace Amica.vNext.Compatibility
                         .Where(v => 
                             v.LocalId.Equals(localId) && 
                             v.Resource.Equals(resource) && 
-                            v.LocalCompanyId.Equals(LocalCompanyId)
+                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId)) || true
                             )
-                        .FirstOrDefault();
+                            .FirstOrDefault();
                     break;
                 default:
                     entry = null;

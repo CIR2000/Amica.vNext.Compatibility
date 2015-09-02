@@ -189,7 +189,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             // make sure remote remote endpoint is completely empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
-            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.OK);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.NoContent);
 
             using (var dp = GetHttpDataProvider()) {
 
@@ -227,7 +227,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.AreEqual(422, (int) dp.HttpResponse.StatusCode);
 
                 // test that row mapping record is still non-existant
-                Assert.AreEqual(_db.Table<HttpMapping>().Count(), 0);
+                Assert.AreEqual(0, _db.Table<HttpMapping>().Count());
             }
         }
 
@@ -267,8 +267,8 @@ namespace Amica.vNext.Compatibility.Tests
 
                 // perform the operation
                 dp.UpdateAziendeAsync(r).Wait();
-                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Deleted);
-                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
+                Assert.AreEqual(ActionPerformed.Deleted, dp.ActionPerformed);
+                Assert.AreEqual(HttpStatusCode.NoContent, dp.HttpResponse.StatusCode);
 
                 // test that row mapping record has been removed
                 objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);
