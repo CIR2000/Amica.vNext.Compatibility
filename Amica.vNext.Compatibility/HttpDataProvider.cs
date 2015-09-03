@@ -22,6 +22,7 @@ namespace Amica.vNext.Compatibility
         private readonly Dictionary<string, string> _resourcesMapping;
         private int? _localCompanyId;
         private bool _hasCompanyIdChanged;
+        private readonly SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
 
@@ -35,6 +36,8 @@ namespace Amica.vNext.Compatibility
                 {"Aziende", "companies"},
                 {"Nazioni", "countries"}
             };
+
+            _db = new SQLiteConnection(DbName);
         }
 
         public HttpDataProvider(int companyId) : this()
@@ -70,7 +73,10 @@ namespace Amica.vNext.Compatibility
         }
         #endregion
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+            _db.Dispose();
+        }
             
         private delegate int DelegateDbMethod(object obj);
 
@@ -84,90 +90,86 @@ namespace Amica.vNext.Compatibility
         private async Task<T> UpdateAsync<T>(DataRow row) where T: new()
         {
 
-            using (var db = new SQLiteConnection(DbName))
-            {
-                ActionPerformed = ActionPerformed.NoAction;
-                HttpResponse = null;
+            ActionPerformed = ActionPerformed.NoAction;
+            HttpResponse = null;
 
-                // ensure table exists 
-                db.CreateTable<HttpMapping>();
+            // ensure table exists 
+            _db.CreateTable<HttpMapping>();
 
-                var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
+            var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
-                // 'cast' source DataRow into the corresponding object instance.
-                object obj = Map.To<T>(targetRow);
-                var shouldRetrieveRemoteCompanyId = (obj is BaseModelWithCompanyId);
-                
+            // 'cast' source DataRow into the corresponding object instance.
+            object obj = Map.To<T>(targetRow);
+            var shouldRetrieveRemoteCompanyId = (obj is BaseModelWithCompanyId);
+            
 
-                // retrieve remote meta field values from mapping datastore.
-                var mapping = GetMapping(targetRow, db, shouldRetrieveRemoteCompanyId);
-                if (mapping == null) return default(T);
+            // retrieve remote meta field values from mapping datastore.
+            var mapping = GetMapping(targetRow, shouldRetrieveRemoteCompanyId);
+            if (mapping == null) return default(T);
 
-                // and update corresponding properties.
-                ((BaseModel)obj).UniqueId = mapping.RemoteId;
-                ((BaseModel)obj).ETag = mapping.ETag;
-                if (shouldRetrieveRemoteCompanyId) {
-                    ((BaseModelWithCompanyId) obj).CompanyId = mapping.RemoteCompanyId;
-                }
-
-                var rc = new EveClient(BaseAddress, Authenticator);
-
-                HttpStatusCode statusCode;
-                ActionPerformed action;
-                DelegateDbMethod dbMethod;
-                var retObj = default(T);
-
-                switch (mapping.RemoteId) {
-                    case null:
-                        retObj = await rc.PostAsync<T>(mapping.Resource, obj);
-                        dbMethod = db.Insert;
-                        action = ActionPerformed.Added;
-                        statusCode = HttpStatusCode.Created;
-                        break;
-                    default:
-                        switch (row.RowState) {
-                            case DataRowState.Modified:
-                                retObj = await rc.PutAsync<T>(mapping.Resource, obj);
-                                dbMethod = db.Update;
-                                action = ActionPerformed.Modified;
-                                statusCode = HttpStatusCode.OK;
-                                break;
-                            case DataRowState.Deleted:
-                                await rc.DeleteAsync(mapping.Resource, obj);
-                                dbMethod = db.Delete;
-                                action = ActionPerformed.Deleted;
-                                statusCode = HttpStatusCode.NoContent;
-                                break;
-                            default:
-                                // TODO better exception.. or maybe just fail silently?
-                                throw new Exception("Cannot determine how the DataRow should be processed.");
-                        }
-                        break;
-                }
-                HttpResponse = rc.HttpResponse;
-                ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
-
-                if (ActionPerformed != ActionPerformed.Aborted) {
-                    if (retObj != null) { 
-                        // update mapping datatore with remote service meta fields.
-                        mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
-                        mapping.ETag = ((BaseModel)((object)retObj)).ETag;
-                        mapping.LastUpdated = ((BaseModel)((object)retObj)).Updated;
-                    }
-                    dbMethod(mapping);
-                }
-                return retObj;
+            // and update corresponding properties.
+            ((BaseModel)obj).UniqueId = mapping.RemoteId;
+            ((BaseModel)obj).ETag = mapping.ETag;
+            if (shouldRetrieveRemoteCompanyId) {
+                ((BaseModelWithCompanyId) obj).CompanyId = mapping.RemoteCompanyId;
             }
+
+            var rc = new EveClient(BaseAddress, Authenticator);
+
+            HttpStatusCode statusCode;
+            ActionPerformed action;
+            DelegateDbMethod dbMethod;
+            var retObj = default(T);
+
+            switch (mapping.RemoteId) {
+                case null:
+                    retObj = await rc.PostAsync<T>(mapping.Resource, obj);
+                    dbMethod = _db.Insert;
+                    action = ActionPerformed.Added;
+                    statusCode = HttpStatusCode.Created;
+                    break;
+                default:
+                    switch (row.RowState) {
+                        case DataRowState.Modified:
+                            retObj = await rc.PutAsync<T>(mapping.Resource, obj);
+                            dbMethod = _db.Update;
+                            action = ActionPerformed.Modified;
+                            statusCode = HttpStatusCode.OK;
+                            break;
+                        case DataRowState.Deleted:
+                            await rc.DeleteAsync(mapping.Resource, obj);
+                            dbMethod = _db.Delete;
+                            action = ActionPerformed.Deleted;
+                            statusCode = HttpStatusCode.NoContent;
+                            break;
+                        default:
+                            // TODO better exception.. or maybe just fail silently?
+                            throw new Exception("Cannot determine how the DataRow should be processed.");
+                    }
+                    break;
+            }
+            HttpResponse = rc.HttpResponse;
+            ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
+
+            if (ActionPerformed != ActionPerformed.Aborted) {
+                if (retObj != null) { 
+                    // update mapping datatore with remote service meta fields.
+                    mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
+                    mapping.ETag = ((BaseModel)((object)retObj)).ETag;
+                    mapping.LastUpdated = ((BaseModel)((object)retObj)).Updated;
+                }
+                dbMethod(mapping);
+            }
+            return retObj;
         }
 
         /// <summary>
         /// Retrieves the HttpMapping which maps to a specific DataRow.
         /// </summary>
         /// <param name="row">DataRow for which an HttpMapping is needed.</param>
-        /// <param name="db">SQLiteConnection to be used for the lookup.</param>
         /// <param name="shouldRetrieveRemoteCompanyId">Wether the remote company id should be retrieved or not.</param>
         /// <returns>An HttpMapping object relative to the provided DataRow.</returns>
-        private HttpMapping GetMapping(DataRow row, SQLiteConnection db, bool shouldRetrieveRemoteCompanyId)
+        private HttpMapping GetMapping(DataRow row, bool shouldRetrieveRemoteCompanyId)
         {
             var localId = (int)row["id"];
             var resource = _resourcesMapping[row.Table.TableName];
@@ -179,7 +181,7 @@ namespace Amica.vNext.Compatibility
                     string remoteCompanyId = null;
                     if (shouldRetrieveRemoteCompanyId) {
                         if (_hasCompanyIdChanged) {
-                            RetrieveRemoteCompanyId(db);
+                            RetrieveRemoteCompanyId();
                         }
                         remoteCompanyId = RemoteCompanyId;
                         localCompanyId = LocalCompanyId;
@@ -193,7 +195,7 @@ namespace Amica.vNext.Compatibility
                     break;
                 case DataRowState.Modified:
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
-                    entry = db.Table<HttpMapping>()
+                    entry = _db.Table<HttpMapping>()
                         .Where(v =>
                             v.LocalId.Equals(localId) &&
                             v.Resource.Equals(resource) &&
@@ -208,7 +210,7 @@ namespace Amica.vNext.Compatibility
                 case DataRowState.Detached:
                     // if the row is Deleted, it will come in in Detached state
                     // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
-                    entry = db.Table<HttpMapping>()
+                    entry = _db.Table<HttpMapping>()
                         .Where(v => 
                             v.LocalId.Equals(localId) && 
                             v.Resource.Equals(resource) && 
@@ -226,19 +228,17 @@ namespace Amica.vNext.Compatibility
         /// <summary>
         /// Retrieves the RemoteCompanyId which matches a LocalCompanyId and sets the corresponding property.
         /// </summary>
-        /// <param name="db">SQLiteConnection to be used for the lookup.</param>
-        private void RetrieveRemoteCompanyId(SQLiteConnection db)
+        private void RetrieveRemoteCompanyId()
         {
             if (LocalCompanyId == null) {
                 // ReSharper disable once NotResolvedInText
                 throw new ArgumentNullException("LocalCompanyId","Parameter cannot be null for this datasource.");
             }
-            var company = db.Table<HttpMapping>()
-                .Where(v => 
-                    v.LocalId.Equals(LocalCompanyId) && 
-                    v.Resource.Equals("companies")
+            var company = _db
+                .Table<HttpMapping>(
                     )
-                    .FirstOrDefault();
+                    .FirstOrDefault(v => v.LocalId.Equals(LocalCompanyId) && 
+                    v.Resource.Equals("companies"));
             if (company == null){
                 // TODO custom exception?
                 throw new Exception("Cannot locate parent company record for this datarow.");
@@ -306,48 +306,44 @@ namespace Amica.vNext.Compatibility
         /// <returns>A list of changed objects.</returns>
         private async Task<List<T>> GetAsync<T>(string resource) where T : class
         {
-            using (var db = new SQLiteConnection(DbName))
-            {
+            // ensure table exists 
+            _db.CreateTable<HttpMapping>();
 
-                // ensure table exists 
-                db.CreateTable<HttpMapping>();
-
-                // determine proper filter, depending on the base model type
-                Expression<Func<HttpMapping, bool>> filter;
-                string rawQuery;
+            // determine proper filter, depending on the base model type
+            Expression<Func<HttpMapping, bool>> filter;
+            string rawQuery;
 
 
-                var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
-                if (shouldQueryOnCompanyId) {
-                    filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
-                    // we also want to match documents which belongs to the current company
-                    // TODO use a pattern object instead of raw query as soon as it is available in Eve.NET
-                    RetrieveRemoteCompanyId(db);
-                    rawQuery = string.Format(@"{{""c"": ""{0}""}}", RemoteCompanyId);
-                }
-                else {
-                    filter = m => m.Resource.Equals(resource);
-                    rawQuery = null;
-                }
-
-                // retrieve IMS
-                var imsEntry = db.Table<HttpMapping>()
-                    .Where(filter)
-                    .OrderByDescending(v =>
-                        v.LastUpdated
-                    )
-                    .FirstOrDefault();
-                var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
-
-                // request changes
-                var rc = new EveClient(BaseAddress, Authenticator);
-                var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
-
-                HttpResponse = rc.HttpResponse;
-                ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? ActionPerformed.Read :  ActionPerformed.Aborted;
-
-                return changes;
+            var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
+            if (shouldQueryOnCompanyId) {
+                filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
+                // we also want to match documents which belongs to the current company
+                // TODO use a pattern object instead of raw query as soon as it is available in Eve.NET
+                RetrieveRemoteCompanyId();
+                rawQuery = string.Format(@"{{""c"": ""{0}""}}", RemoteCompanyId);
             }
+            else {
+                filter = m => m.Resource.Equals(resource);
+                rawQuery = null;
+            }
+
+            // retrieve IMS
+            var imsEntry = _db.Table<HttpMapping>()
+                .Where(filter)
+                .OrderByDescending(v =>
+                    v.LastUpdated
+                )
+                .FirstOrDefault();
+            var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
+
+            // request changes
+            var rc = new EveClient(BaseAddress, Authenticator);
+            var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
+
+            HttpResponse = rc.HttpResponse;
+            ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? ActionPerformed.Read :  ActionPerformed.Aborted;
+
+            return changes;
         }
 
         /// <summary>
@@ -359,52 +355,47 @@ namespace Amica.vNext.Compatibility
         /// <param name="changes">The actual downstream changes.</param>
         private void SyncTable<T>(string resource, DataTable dt, IEnumerable<T> changes)
         {
-            using (var db = new SQLiteConnection(DbName))
+            foreach (var obj in changes)
             {
-                foreach (var obj in changes)
-                {
-                    var baseObj = obj as BaseModel;
-                    if (baseObj == null) continue;  // should never happen. maybe trow an exception.
-                    HttpMapping entry = db
-                        .Table<HttpMapping>()
-                        .FirstOrDefault(v => v.RemoteId.Equals(baseObj.UniqueId)) ??  new HttpMapping();
+                var baseObj = obj as BaseModel;
+                if (baseObj == null) continue;  // should never happen. maybe trow an exception.
+                HttpMapping entry = _db
+                    .Table<HttpMapping>()
+                    .FirstOrDefault(v => v.RemoteId.Equals(baseObj.UniqueId)) ??  new HttpMapping();
 
-                    // address the weird lack of primary key on configDataSet tables.
-                    if (dt.PrimaryKey.Length == 0)
-                        // should probably be using "id" as index, but we always
-                        // have id as the first column in our datasets.
-                        dt.PrimaryKey = new[] {dt.Columns[0]};
+                // address the weird lack of primary key on configDataSet tables.
+                if (dt.PrimaryKey.Length == 0)
+                    // should probably be using "id" as index, but we always
+                    // have id as the first column in our datasets.
+                    dt.PrimaryKey = new[] {dt.Columns[0]};
 
-                    //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
-                    var row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
-                    if (row == null)
-                        throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");
+                //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
+                var row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
+                if (row == null)
+                    throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");
 
-                    Map.From<T>(row, obj);
+                Map.From<T>(row, obj);
 
-                    if (row.RowState == DataRowState.Detached) dt.Rows.Add(row);
+                if (row.RowState == DataRowState.Detached) dt.Rows.Add(row);
 
-                    // update the fresh new entry, or refresh existing one.
-                    entry.LocalId = (int) row[dt.PrimaryKey[0]];
-                    entry.ETag = baseObj.ETag;
-                    entry.LastUpdated = baseObj.Updated;
-                    entry.RemoteId = baseObj.UniqueId;
-                    entry.Resource = resource;
+                // update the fresh new entry, or refresh existing one.
+                entry.LocalId = (int) row[dt.PrimaryKey[0]];
+                entry.ETag = baseObj.ETag;
+                entry.LastUpdated = baseObj.Updated;
+                entry.RemoteId = baseObj.UniqueId;
+                entry.Resource = resource;
 
-                    var exObj = obj as BaseModelWithCompanyId;
-                    if (exObj != null) {
-                        entry.RemoteCompanyId = exObj.CompanyId;
-                        entry.LocalCompanyId = LocalCompanyId;
-                    }
-
-                    if (entry.Id == 0)
-                        db.Insert(entry);
-                    else
-                        db.Update(entry);
-
+                var exObj = obj as BaseModelWithCompanyId;
+                if (exObj != null) {
+                    entry.RemoteCompanyId = exObj.CompanyId;
+                    entry.LocalCompanyId = LocalCompanyId;
                 }
-            } 
-            
+
+                if (entry.Id == 0)
+                    _db.Insert(entry);
+                else
+                    _db.Update(entry);
+            }
         }
 
         /// <summary>
