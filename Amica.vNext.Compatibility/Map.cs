@@ -58,32 +58,21 @@ namespace Amica.vNext.Compatibility
 
 #endregion
 
-        private static void LoadDataRow<T>(DataTable table, T instance)
+        public static void From<T>(DataRow row, object obj)
         {
-            // TODO
-
             var type = typeof (T);
             var map =  Topology[type];
-            var fields = type.GetFields();
-            object[] values;
-            foreach (var field in fields)
-            {
-                var columnName = map.Reverse[field.Name];
-                if (columnName == null) {
-                    continue;
-                }
-            // WIP
-            }
-        }
 
-        public static void From<T>(DataTable table, List<T> list)
-        {
-            // TODO
-            foreach (var obj in list)
+            foreach (DataColumn c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
             {
-                LoadDataRow(table, obj);
+                var fieldName = map.Forward[c.ColumnName];
+                if (fieldName == null) continue;
+                var prop = type.GetProperty(fieldName);
+                if (prop == null) continue;
+                //var val = Convert.ChangeType(dr[c], propInfo.PropertyType);
+                var value = prop.GetValue(obj, null);
+                row[c.ColumnName] = value;
             }
-            // WIP
         }
     }
 }

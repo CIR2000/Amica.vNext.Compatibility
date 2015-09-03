@@ -3,8 +3,10 @@ using System.Net;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Amica.Data;
 using Amica.vNext.Models;
 using Eve;
 using SQLite;
@@ -284,6 +286,24 @@ namespace Amica.vNext.Compatibility
 
         #region "G E T  M E T H O D S"
 
+        /// <summary>
+        ///  Implements the Download Changes and Sync them logic.
+        /// </summary>
+        /// <typeparam name="T">Type of objects to be downloaded.</typeparam>
+        /// <param name="dt">DataTable to be synced.</param>
+        private async Task GetAndSync<T>(DataTable dt) where T : class
+        {
+            var resource = _resourcesMapping[dt.TableName];
+            var changes = await GetAsync<T>(resource);
+            SyncTable(resource, dt, changes);
+        }
+
+        /// <summary>
+        /// Downloads changes happened on a remote resource.
+        /// </summary>
+        /// <typeparam name="T">Type of the objects to be downloaded.</typeparam>
+        /// <param name="resource">Remote resource name.</param>
+        /// <returns>A list of changed objects.</returns>
         private async Task<List<T>> GetAsync<T>(string resource) where T : class
         {
             using (var db = new SQLiteConnection(DbName))
@@ -330,15 +350,84 @@ namespace Amica.vNext.Compatibility
             }
         }
 
-        public async Task GetAziendeAsync(DataTable dt)
+        /// <summary>
+        /// Updates a DataTable with downstream changes.
+        /// </summary>
+        /// <typeparam name="T">Type of downstream changes.</typeparam>
+        /// <param name="resource">Remote resource name.</param>
+        /// <param name="dt">DataTable to be updated with downstream changes.</param>
+        /// <param name="changes">The actual downstream changes.</param>
+        private void SyncTable<T>(string resource, DataTable dt, IEnumerable<T> changes)
         {
-            var changes = await GetAsync<Company>(_resourcesMapping[dt.TableName]);
+            using (var db = new SQLiteConnection(DbName))
+            {
+                foreach (var obj in changes)
+                {
+                    var baseObj = obj as BaseModel;
+                    if (baseObj == null) continue;  // should never happen. maybe trow an exception.
+                    HttpMapping entry = db
+                        .Table<HttpMapping>()
+                        .FirstOrDefault(v => v.RemoteId.Equals(baseObj.UniqueId)) ??  new HttpMapping();
+
+                    // address the weird lack of primary key on configDataSet tables.
+                    if (dt.PrimaryKey.Length == 0)
+                        // should probably be using "id" as index, but we always
+                        // have id as the first column in our datasets.
+                        dt.PrimaryKey = new[] {dt.Columns[0]};
+
+                    //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
+                    var row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
+                    if (row == null)
+                        throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");
+
+                    Map.From<T>(row, obj);
+
+                    if (row.RowState == DataRowState.Detached) dt.Rows.Add(row);
+
+                    // update the fresh new entry, or refresh existing one.
+                    entry.LocalId = (int) row[dt.PrimaryKey[0]];
+                    entry.ETag = baseObj.ETag;
+                    entry.LastUpdated = baseObj.Updated;
+                    entry.RemoteId = baseObj.UniqueId;
+                    entry.Resource = resource;
+
+                    var exObj = obj as BaseModelWithCompanyId;
+                    if (exObj != null) {
+                        entry.RemoteCompanyId = exObj.CompanyId;
+                        entry.LocalCompanyId = LocalCompanyId;
+                    }
+
+                    if (entry.Id == 0)
+                        db.Insert(entry);
+                    else
+                        db.Update(entry);
+
+                }
+            } 
+            
         }
-        public async Task GetNazioniAsync(DataTable dt)
+
+        /// <summary>
+        /// Downloads and merges changes from the server.
+        /// </summary>
+        /// <param name="dataSet">configDataSet instance.</param>
+        public async Task GetAziendeAsync(configDataSet dataSet)
         {
-            var changes = await GetAsync<Country>(_resourcesMapping[dt.TableName]);
+            await GetAndSync<Company>(dataSet.Aziende);
+
         }
+
+        /// <summary>
+        /// Downloads and merges changes from the server.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        public async Task GetNazioniAsync(companyDataSet dataSet)
+        {
+            await GetAndSync<Country>(dataSet.Nazioni);
+        }
+
         #endregion
+
         #region "P R O P E R T I E S"
 
         /// <summary>
