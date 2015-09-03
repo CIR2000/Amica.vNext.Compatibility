@@ -70,17 +70,34 @@ namespace Amica.vNext.Compatibility.Tests
             const string baseAddress = "baseaddress";
             var auth = new BasicAuthenticator("username", "password");
 
+            using (var dp = new HttpDataProvider(1)) {
+                Assert.AreEqual(dp.LocalCompanyId, 1);
+            }
+
             using (var dp = new HttpDataProvider(auth)) {
                 Assert.AreEqual(dp.Authenticator, auth);
+            }
+            using (var dp = new HttpDataProvider(auth, 1)) {
+                Assert.AreEqual(dp.Authenticator, auth);
+                Assert.AreEqual(dp.LocalCompanyId, 1);
             }
 
             using (var dp = new HttpDataProvider(baseAddress)) {
                 Assert.AreEqual(dp.BaseAddress, baseAddress);
             }
+            using (var dp = new HttpDataProvider(baseAddress, 1)) {
+                Assert.AreEqual(dp.BaseAddress, baseAddress);
+                Assert.AreEqual(dp.LocalCompanyId, 1);
+            }
 
             using (var dp = new HttpDataProvider(baseAddress, auth)) {
                 Assert.AreEqual(dp.Authenticator, auth);
                 Assert.AreEqual(dp.BaseAddress, baseAddress);
+            }
+            using (var dp = new HttpDataProvider(baseAddress, auth, 1)) {
+                Assert.AreEqual(dp.Authenticator, auth);
+                Assert.AreEqual(dp.BaseAddress, baseAddress);
+                Assert.AreEqual(dp.LocalCompanyId, 1);
             }
         }
 
