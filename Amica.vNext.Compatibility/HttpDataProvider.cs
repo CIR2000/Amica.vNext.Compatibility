@@ -343,7 +343,8 @@ namespace Amica.vNext.Compatibility
             var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
 
             HttpResponse = rc.HttpResponse;
-            ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? ActionPerformed.Read :  ActionPerformed.Aborted;
+            ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? 
+                ((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) :  ActionPerformed.Aborted;
 
             return changes;
         }

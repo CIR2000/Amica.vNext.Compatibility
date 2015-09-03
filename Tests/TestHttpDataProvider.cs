@@ -7,6 +7,7 @@ using System.Data;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using Amica.vNext.Models;
 
 namespace Amica.vNext.Compatibility.Tests
 {
@@ -201,6 +202,96 @@ namespace Amica.vNext.Compatibility.Tests
             ValidateUnknownDeletedRow(row, "companies");
         }
 
+        [Test]
+        public void GetRemoteChangesAndSyncThemLocally()
+        {
+            // clear remote endpoints
+            using (var client = new HttpClient {BaseAddress = new Uri(Service)}) {
+                Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+                Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent); 
+            }
+            
+            var rc = new EveClient {BaseAddress = new Uri(Service)};
+
+            // post a new company 
+            var company = rc.PostAsync<Company>("companies", new Company() {Name = "Company"}).Result;
+            Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
+
+            // post a new country which holds a reference to the previously posted company
+            var country = rc.PostAsync<Country>("countries", new Country() {Name = "Country", CompanyId = company.UniqueId}).Result;
+
+            using (var dp = GetHttpDataProvider())
+            {
+                // test that we can download and sync with a new company being posted on the remote
+                var configDs = new configDataSet();
+                dp.GetAziendeAsync(configDs).Wait();
+                // we downloaded one new object and added it to the corresponding table
+                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
+                Assert.AreEqual(1, configDs.Aziende.Count);
+
+                // we actually downloaded to right object
+                var aziendeRow = configDs.Aziende[0];
+                Assert.AreEqual(company.Name, aziendeRow.Nome);
+                ValidateSyncDb(aziendeRow, "companies", false);
+
+                // if we try a sync again we don't get anything new since there have been no changes on the remote
+                dp.GetAziendeAsync(configDs).Wait();
+                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
+                Assert.AreEqual(1, configDs.Aziende.Count);
+
+                // test that if the remote object is updated...
+                company.Name = "We changed name";
+                company = rc.PutAsync<Company>("companies", company).Result;
+
+                // ... we can then sync it down effortlessly
+                dp.GetAziendeAsync(configDs).Wait();
+                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
+                aziendeRow = configDs.Aziende[0];
+                Assert.AreEqual(company.Name, aziendeRow.Nome);
+                ValidateSyncDb(aziendeRow, "companies", false);
+
+                // if we try a sync again we don't get anything new since there have been no changes on the remote
+                dp.GetAziendeAsync(configDs).Wait();
+                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
+                Assert.AreEqual(1, configDs.Aziende.Count);
+
+                dp.LocalCompanyId = aziendeRow.Id;
+
+                // test that we can download and sync with a new company being posted on the remote
+                var companyDs = new companyDataSet();
+                dp.GetNazioniAsync(companyDs).Wait();
+
+                // we downloaded one new object and added it to the corresponding table
+                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
+                Assert.AreEqual(1, companyDs.Nazioni.Count);
+                var nazioniRow = companyDs.Nazioni[0];
+                Assert.AreEqual(country.Name, nazioniRow.Nome);
+                ValidateSyncDb(nazioniRow, "countries", false);
+
+                // if we try a sync again we don't get anything new since there have been no changes on the remote
+                dp.GetNazioniAsync(companyDs).Wait();
+                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
+                Assert.AreEqual(1, companyDs.Nazioni.Count);
+
+                // test that if the remote object is updated...
+                country.Name = "We changed name";
+                country = rc.PutAsync<Country>("countries", country).Result;
+
+                // ... we can then sync it down effortlessly
+                dp.GetNazioniAsync(companyDs).Wait();
+                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
+                nazioniRow = companyDs.Nazioni[0];
+                Assert.AreEqual(country.Name, nazioniRow.Nome);
+                ValidateSyncDb(aziendeRow, "countries", false);
+
+                // if we try a sync again we don't get anything new since there have been no changes on the remote
+                dp.GetNazioniAsync(companyDs).Wait();
+                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
+                Assert.AreEqual(1, companyDs.Nazioni.Count);
+            }
+
+        }
+
         public  void ValidateUnknownRow(DataRow r, string endpoint)
         {
 
@@ -248,7 +339,7 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
-        private void ValidateSyncDb(DataRow r, string endpoint)
+        private void ValidateSyncDb(DataRow r, string endpoint, bool shouldTestRemote = true)
         {
             int localId;
             Int32.TryParse(r["Id"].ToString(), out localId);
@@ -263,10 +354,9 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsNotNull(mapping.ETag);
             Assert.IsNotNull(mapping.LastUpdated);
             Assert.IsTrue(mapping.Id > 0);
-            // next two asserts are superfluous, we just add them for coherence
-            Assert.AreEqual(mapping.LocalId, 99);
             Assert.AreEqual(mapping.Resource, endpoint);
 
+            if (!shouldTestRemote) return;
             // test that remote item exists at the specified endpoint.
             var rc = new EveClient (Service);
             var response = rc.GetAsync(endpoint, mapping.RemoteId).Result;
