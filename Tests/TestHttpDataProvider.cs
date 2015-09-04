@@ -24,9 +24,10 @@ namespace Amica.vNext.Compatibility.Tests
         public void Init()
         {
             // ensure the file does not exist before instantiaton.
-            File.Delete(DbName);
+            //File.Delete(DbName);
 
             _db = new SQLiteConnection(DbName);
+            _db.DeleteAll<HttpMapping>();
         }
 
         [TearDown]
@@ -219,6 +220,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             // post a new country which holds a reference to the previously posted company
             var country = rc.PostAsync<Country>("countries", new Country() {Name = "Country", CompanyId = company.UniqueId}).Result;
+            Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
             using (var dp = GetHttpDataProvider())
             {
@@ -257,7 +259,7 @@ namespace Amica.vNext.Compatibility.Tests
 
                 dp.LocalCompanyId = aziendeRow.Id;
 
-                // test that we can download and sync with a new company being posted on the remote
+                // test that we can download and sync with a new country posted on the remote
                 var companyDs = new companyDataSet();
                 dp.GetNazioniAsync(companyDs).Wait();
 
@@ -288,6 +290,18 @@ namespace Amica.vNext.Compatibility.Tests
                 dp.GetNazioniAsync(companyDs).Wait();
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, companyDs.Nazioni.Count);
+
+                System.Threading.Thread.Sleep(1000);
+
+                // if we delete an object on remote...
+                var r = rc.DeleteAsync("countries", country).Result;
+                Assert.AreEqual(HttpStatusCode.NoContent, r.StatusCode);
+
+
+                // ... we can then sync the delete down.
+                dp.GetNazioniAsync(companyDs).Wait();
+                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
+                Assert.AreEqual(0, companyDs.Nazioni.Count);
             }
 
         }
@@ -346,7 +360,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             // test that row mapping record is actually stored in syncdb.
             var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId ==  localId); 
-            Assert.AreEqual(objs.Count(), 1);
+            Assert.AreEqual(1, objs.Count());
 
             // test that mapping is valid.
             var mapping = objs.First();

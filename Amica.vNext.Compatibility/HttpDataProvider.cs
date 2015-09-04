@@ -338,9 +338,12 @@ namespace Amica.vNext.Compatibility
                 .FirstOrDefault();
             var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
 
+            // explicit is better than implicit (The Zen of Python)
+            const bool showDeleted = true;
+
             // request changes
             var rc = new EveClient(BaseAddress, Authenticator);
-            var changes = await rc.GetAsync<T>(resource, ims, rawQuery);
+            var changes = await rc.GetAsync<T>(resource, ims, showDeleted, rawQuery);
 
             HttpResponse = rc.HttpResponse;
             ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? 
@@ -361,8 +364,8 @@ namespace Amica.vNext.Compatibility
             foreach (var obj in changes)
             {
                 var baseObj = obj as BaseModel;
-                if (baseObj == null) continue;  // should never happen. maybe trow an exception.
-                HttpMapping entry = _db
+                if (baseObj == null) continue;  // TODO should never happen. maybe trow an exception.
+                var entry = _db
                     .Table<HttpMapping>()
                     .FirstOrDefault(v => v.RemoteId.Equals(baseObj.UniqueId)) ??  new HttpMapping();
 
@@ -372,12 +375,19 @@ namespace Amica.vNext.Compatibility
                     // have id as the first column in our datasets.
                     dt.PrimaryKey = new[] {dt.Columns[0]};
 
-                //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
-                var row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
+
+                DataRow row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
                 if (row == null)
+                    // TODO should we properly address this, instead of just throwing an exception?
                     throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");
 
                 Map.From<T>(row, obj);
+
+                if (baseObj.Deleted) {
+                    row.Delete();
+                    _db.Delete(entry);
+                    continue;
+                }
 
                 if (row.RowState == DataRowState.Detached) dt.Rows.Add(row);
 
