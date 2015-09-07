@@ -68,9 +68,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
-    <Compile Include="BidirectionalMap.cs" />
-    <Compile Include="Maps\Company.cs" />
-    <Compile Include="Maps\Country.cs" />
+    <Compile Include="Maps\Companies.cs" />
+    <Compile Include="Maps\Countries.cs" />
     <Compile Include="HttpDataProvider.cs" />
     <Compile Include="Map.cs" />
     <Compile Include="HttpMapping.cs" />

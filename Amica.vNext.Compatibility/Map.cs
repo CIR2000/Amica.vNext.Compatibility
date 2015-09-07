@@ -2,19 +2,21 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using Amica.vNext.Compatibility.Maps;
 using Amica.vNext.Models;
+using Company = Amica.vNext.Models.Company;
 
 namespace Amica.vNext.Compatibility
 {
     public class Map
     {
-        private static readonly Dictionary<Type, Map<string, string>> Topology =
-            new Dictionary<Type, Map<string, string>>();
+        private static readonly Dictionary<Type, Dictionary<string, string>> Topology =
+            new Dictionary<Type, Dictionary<string, string>>();
 
         static Map()
         {
-            Topology.Add(typeof (Country), Maps.Country.Make());
-            Topology.Add(typeof (Company), Maps.Company.Make());
+            Topology.Add(typeof (Country), new Countries());
+            Topology.Add(typeof (Company), new Companies());
         }
 
 #region "T O"
@@ -44,12 +46,10 @@ namespace Amica.vNext.Compatibility
             var instance = new T();
             foreach (DataColumn c in dr.Table.Columns)
             {
-                var propName = map.Forward[c.ColumnName];
-                if (propName == null) {
-                    continue;
-                }
-                var propInfo = type.GetProperty(propName);
+                var propName = c.ColumnName;
+                if (!map.ContainsKey(propName)) continue;
 
+                var propInfo = type.GetProperty(map[propName]);
                 var val = Convert.ChangeType(dr[c], propInfo.PropertyType);
                 propInfo.SetValue(instance, val, null);
             }
@@ -65,11 +65,12 @@ namespace Amica.vNext.Compatibility
 
             foreach (DataColumn c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
             {
-                var fieldName = map.Forward[c.ColumnName];
-                if (fieldName == null) continue;
-                var prop = type.GetProperty(fieldName);
+                var fieldName = c.ColumnName;
+                if (!map.ContainsKey(fieldName)) continue;
+
+                var prop = type.GetProperty(map[fieldName]);
                 if (prop == null) continue;
-                //var val = Convert.ChangeType(dr[c], propInfo.PropertyType);
+
                 var value = prop.GetValue(obj, null);
                 row[c.ColumnName] = value;
             }

@@ -4,7 +4,6 @@ using NUnit.Framework;
 using SQLite;
 using System;
 using System.Data;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using Amica.vNext.Models;
@@ -278,6 +277,8 @@ namespace Amica.vNext.Compatibility.Tests
                 // test that if the remote object is updated...
                 country.Name = "We changed name";
                 country = rc.PutAsync<Country>("countries", country).Result;
+
+                System.Threading.Thread.Sleep(1000);
 
                 // ... we can then sync it down effortlessly
                 dp.GetNazioniAsync(companyDs).Wait();
