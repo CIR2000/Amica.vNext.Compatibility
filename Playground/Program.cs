@@ -52,9 +52,9 @@ namespace ConsoleApplication1
             //try
             //{
 
-            //await hdp.UpdateNazioniAsync(nr);
+            await hdp.UpdateNazioniAsync(nr);
             //await hdp.UpdateAziendeAsync(nr);
-            await hdp.GetAziendeAsync(dp);
+            //await hdp.GetAziendeAsync(dp);
             //await hdp.GetNazioniAsync(dp);
             //}
             //catch (Exception e) 
