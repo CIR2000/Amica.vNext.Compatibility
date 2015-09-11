@@ -205,6 +205,11 @@ namespace Amica.vNext.Compatibility.Tests
         [Test]
         public void GetRemoteChangesAndSyncThemLocally()
         {
+	    // Note that in this test we are using the most generic GetAsync.
+	    // This is slower but makes sure that refletion code in GetAsync is tested
+	    // and also, since that code runs most specialized Get<T>Async methods,
+	    // tests all the other variants.
+
             // clear remote endpoints
             using (var client = new HttpClient {BaseAddress = new Uri(Service)}) {
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
@@ -225,7 +230,7 @@ namespace Amica.vNext.Compatibility.Tests
             {
                 // test that we can download and sync with a new company being posted on the remote
                 var configDs = new configDataSet();
-                dp.GetAziendeAsync(configDs).Wait();
+                dp.GetAsync((DataSet)configDs).Wait();
                 // we downloaded one new object and added it to the corresponding table
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 Assert.AreEqual(1, configDs.Aziende.Count);
@@ -236,7 +241,7 @@ namespace Amica.vNext.Compatibility.Tests
                 ValidateSyncDb(aziendeRow, "companies", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetAziendeAsync(configDs).Wait();
+                dp.GetAsync((DataSet)configDs).Wait();
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, configDs.Aziende.Count);
 
@@ -247,14 +252,14 @@ namespace Amica.vNext.Compatibility.Tests
                 System.Threading.Thread.Sleep(1000);
 
                 // ... we can then sync it down effortlessly
-                dp.GetAziendeAsync(configDs).Wait();
+                dp.GetAsync((DataSet)configDs).Wait();
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 aziendeRow = configDs.Aziende[0];
                 Assert.AreEqual(company.Name, aziendeRow.Nome);
                 ValidateSyncDb(aziendeRow, "companies", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetAziendeAsync(configDs).Wait();
+                dp.GetAsync((DataSet)configDs).Wait();
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, configDs.Aziende.Count);
 
@@ -262,7 +267,7 @@ namespace Amica.vNext.Compatibility.Tests
 
                 // test that we can download and sync with a new country posted on the remote
                 var companyDs = new companyDataSet();
-                dp.GetNazioniAsync(companyDs).Wait();
+                dp.GetAsync((DataSet)companyDs).Wait();
 
                 // we downloaded one new object and added it to the corresponding table
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
@@ -272,7 +277,7 @@ namespace Amica.vNext.Compatibility.Tests
                 ValidateSyncDb(nazioniRow, "countries", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetNazioniAsync(companyDs).Wait();
+                dp.GetAsync((DataSet)companyDs).Wait();
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, companyDs.Nazioni.Count);
 
@@ -283,14 +288,14 @@ namespace Amica.vNext.Compatibility.Tests
                 System.Threading.Thread.Sleep(1000);
 
                 // ... we can then sync it down effortlessly
-                dp.GetNazioniAsync(companyDs).Wait();
+                dp.GetAsync((DataSet)companyDs).Wait();
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 nazioniRow = companyDs.Nazioni[0];
                 Assert.AreEqual(country.Name, nazioniRow.Nome);
-                ValidateSyncDb(aziendeRow, "countries", false);
+                ValidateSyncDb(nazioniRow, "countries", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetNazioniAsync(companyDs).Wait();
+                dp.GetAsync((DataSet)companyDs).Wait();
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, companyDs.Nazioni.Count);
 
@@ -302,7 +307,7 @@ namespace Amica.vNext.Compatibility.Tests
 
 
                 // ... we can then sync the delete down.
-                dp.GetNazioniAsync(companyDs).Wait();
+                dp.GetAsync((DataSet)companyDs).Wait();
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 Assert.AreEqual(0, companyDs.Nazioni.Count);
             }
