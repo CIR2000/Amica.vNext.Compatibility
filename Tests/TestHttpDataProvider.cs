@@ -244,6 +244,8 @@ namespace Amica.vNext.Compatibility.Tests
                 company.Name = "We changed name";
                 company = rc.PutAsync<Company>("companies", company).Result;
 
+                System.Threading.Thread.Sleep(1000);
+
                 // ... we can then sync it down effortlessly
                 dp.GetAziendeAsync(configDs).Wait();
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
