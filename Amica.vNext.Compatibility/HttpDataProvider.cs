@@ -284,6 +284,21 @@ namespace Amica.vNext.Compatibility
             await UpdateAsync<Company>(row);
         }
 
+        public async Task UpateAsync(DataSet dataSet)
+        {
+            var changes = dataSet.GetChanges();
+            if (changes == null) return;
+
+            foreach (DataTable dt in changes.Tables)
+            {
+                if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
+                var methodName = string.Format("Update{0}Async", dt.TableName);
+                foreach (DataRow row in dt.Rows) {
+                    await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row}));
+                }
+            }
+        }
+
         #endregion
 
         #region "G E T  M E T H O D S"
@@ -295,6 +310,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="dt">DataTable to be synced.</param>
         private async Task GetAndSync<T>(DataTable dt) where T : class
         {
+            if (!_resourcesMapping.ContainsKey(dt.TableName)) return;
             var resource = _resourcesMapping[dt.TableName];
             var changes = await GetAsync<T>(resource);
             SyncTable(resource, dt, changes);
@@ -412,7 +428,7 @@ namespace Amica.vNext.Compatibility
         }
 
         /// <summary>
-        /// Downloads and merges changes from the server.
+        /// Downloads Companies changes from the server and merges them to the Aziende table on the local dataset.
         /// </summary>
         /// <param name="dataSet">configDataSet instance.</param>
         public async Task GetAziendeAsync(configDataSet dataSet)
@@ -422,7 +438,7 @@ namespace Amica.vNext.Compatibility
         }
 
         /// <summary>
-        /// Downloads and merges changes from the server.
+        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
         /// </summary>
         /// <param name="dataSet">companyDataSet instance.</param>
         public async Task GetNazioniAsync(companyDataSet dataSet)
@@ -430,6 +446,41 @@ namespace Amica.vNext.Compatibility
             await GetAndSync<Country>(dataSet.Nazioni);
         }
 
+        /// <summary>
+        /// Downloads all changes from the server and merges them to a local DataSet instance.
+        /// </summary>
+        /// <param name="dataSet">Local DataSet.</param>
+	/// <remarks>Be careful that this will send a request for each table which has a corresponding endpoint on the remote server.</remarks>
+        public async Task GetAsync(DataSet dataSet)
+        {
+	    // TODO: query the Eve OpLog to know which resources/tables have updates, 
+	    // should greatly reduce the number of superfluous requests.
+
+            foreach (DataTable dt in dataSet.Tables)
+            {
+                if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
+                var methodName = string.Format("Get{0}Async", dt.TableName);
+		await (Task) GetType().GetMethod(methodName).Invoke(this, new object[] {dataSet});
+            }
+        }
+
+        /// <summary>
+        /// Downloads all changes from the server and merges them to a local companyDataSet instance.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        public async Task GetAsync(companyDataSet dataSet)
+        {
+            await GetNazioniAsync(dataSet);
+        }
+
+        /// <summary>
+        /// Downloads all cheanges from the server and merges them to a local configDataSet instance.
+        /// </summary>
+        /// <param name="dataSet">configDataSet instance.</param>
+        public async Task GetAsync(configDataSet dataSet)
+        {
+            await GetAziendeAsync(dataSet);
+        }
         #endregion
 
         #region "P R O P E R T I E S"
