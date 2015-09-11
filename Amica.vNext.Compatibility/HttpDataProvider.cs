@@ -293,6 +293,7 @@ namespace Amica.vNext.Compatibility
             {
                 if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
                 var methodName = string.Format("Update{0}Async", dt.TableName);
+
                 foreach (DataRow row in dt.Rows) {
                     await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row}));
                 }
@@ -453,8 +454,10 @@ namespace Amica.vNext.Compatibility
 	/// <remarks>Be careful that this will send a request for each table which has a corresponding endpoint on the remote server.</remarks>
         public async Task GetAsync(DataSet dataSet)
         {
-	    // TODO: query the Eve OpLog to know which resources/tables have updates, 
-	    // should greatly reduce the number of superfluous requests.
+            // TODO: query the Eve OpLog to know which resources/tables have updates, 
+            // should greatly reduce the number of superfluous requests.
+
+            dataSet.EnforceConstraints = false;
 
             foreach (DataTable dt in dataSet.Tables)
             {
@@ -462,6 +465,9 @@ namespace Amica.vNext.Compatibility
                 var methodName = string.Format("Get{0}Async", dt.TableName);
 		await (Task) GetType().GetMethod(methodName).Invoke(this, new object[] {dataSet});
             }
+
+	    // good luck
+            dataSet.EnforceConstraints = true;
         }
 
         /// <summary>
@@ -470,7 +476,12 @@ namespace Amica.vNext.Compatibility
         /// <param name="dataSet">companyDataSet instance.</param>
         public async Task GetAsync(companyDataSet dataSet)
         {
+            dataSet.EnforceConstraints = false;
+
             await GetNazioniAsync(dataSet);
+	    // ...
+
+            dataSet.EnforceConstraints = true;
         }
 
         /// <summary>
@@ -479,7 +490,12 @@ namespace Amica.vNext.Compatibility
         /// <param name="dataSet">configDataSet instance.</param>
         public async Task GetAsync(configDataSet dataSet)
         {
+            dataSet.EnforceConstraints = false;
+
             await GetAziendeAsync(dataSet);
+	    // ..
+
+            dataSet.EnforceConstraints = true;
         }
         #endregion
 
