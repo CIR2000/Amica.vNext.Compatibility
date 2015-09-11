@@ -203,10 +203,29 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
+        public void GenericUpdateAsync()
+        {
+            var ds = new configDataSet();
+            var row = ds.Aziende.NewAziendeRow();
+            row.Nome = "company";
+            row.Id = 99;
+            ds.Aziende.AddAziendeRow(row);
+
+            using (var dp = GetHttpDataProvider()) {
+
+                // perform the operation
+                dp.UpateAsync(ds).Wait();
+                Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
+                Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
+            }
+            ValidateSyncDb(row, "companies", false);
+        }
+
+        [Test]
         public void GetRemoteChangesAndSyncThemLocally()
         {
 	    // Note that in this test we are using the most generic GetAsync.
-	    // This is slower but makes sure that refletion code in GetAsync is tested
+	    // This is slower but makes sure that reflection code in GetAsync is tested
 	    // and also, since that code runs most specialized Get<T>Async methods,
 	    // tests all the other variants.
 
