@@ -21,6 +21,7 @@ namespace Amica.vNext.Compatibility
         private const string DbName = "HttpSync.db";
         private readonly Dictionary<string, string> _resourcesMapping;
         private int? _localCompanyId;
+        private DataProvider _dataProvider;
         private bool _hasCompanyIdChanged;
         private readonly SQLiteConnection _db;
 
@@ -40,12 +41,12 @@ namespace Amica.vNext.Compatibility
             _db = new SQLiteConnection(DbName);
         }
 
-        public HttpDataProvider(int companyId) : this()
+        public HttpDataProvider(DataProvider dataProvider) : this()
         {
-            LocalCompanyId = companyId;
+            DataProvider = dataProvider;
         }
 
-        public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator, int companyId) : this(companyId)
+        public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator, DataProvider dataProvider) : this(dataProvider)
         {
             BaseAddress = baseAddress;
             Authenticator = authenticator;
@@ -55,7 +56,7 @@ namespace Amica.vNext.Compatibility
             BaseAddress = baseAddress;
             Authenticator = authenticator;
         }
-        public HttpDataProvider(string baseAddress, int companyId): this(companyId)
+        public HttpDataProvider(string baseAddress, DataProvider dataProvider): this(dataProvider)
         {
             BaseAddress = baseAddress;
         }
@@ -63,7 +64,7 @@ namespace Amica.vNext.Compatibility
         {
             BaseAddress = baseAddress;
         }
-        public HttpDataProvider(BasicAuthenticator authenticator, int companyId) : this(companyId)
+        public HttpDataProvider(BasicAuthenticator authenticator, DataProvider dataProvider) : this(dataProvider)
         {
             Authenticator = authenticator;
         }
@@ -75,9 +76,8 @@ namespace Amica.vNext.Compatibility
 
         public void Dispose()
         {
-            if (_db != null) {
-                _db.Dispose();
-            }
+            if (_db != null) _db.Dispose(); 
+            if (_dataProvider != null) _dataProvider.Dispose();
         }
             
         private delegate int DelegateDbMethod(object obj);
@@ -428,6 +428,11 @@ namespace Amica.vNext.Compatibility
             }
         }
 
+        private void PersistChanges(DataTable dt)
+        {
+
+        }
+
         /// <summary>
         /// Downloads Companies changes from the server and merges them to the Aziende table on the local dataset.
         /// </summary>
@@ -463,7 +468,7 @@ namespace Amica.vNext.Compatibility
             {
                 if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
                 var methodName = string.Format("Get{0}Async", dt.TableName);
-		await (Task) GetType().GetMethod(methodName).Invoke(this, new object[] {dataSet});
+		        await (Task) GetType().GetMethod(methodName).Invoke(this, new object[] {dataSet});
             }
 
 	    // good luck
@@ -549,6 +554,17 @@ namespace Amica.vNext.Compatibility
         ///  Gets or sets the remote company id.
         /// </summary>
         public string RemoteCompanyId { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the DataProvider to be used to persist data downloaded from the remote server.
+        /// </summary>
+        public DataProvider DataProvider {
+            get { return _dataProvider; }
+            set {
+                _dataProvider = value;
+                LocalCompanyId = DataProvider.ActiveCompanyId;
+            }
+        }
         #endregion
 
     }

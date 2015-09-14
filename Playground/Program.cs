@@ -40,7 +40,7 @@ namespace ConsoleApplication1
             //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
             //var countries = FromAmica2.ToList<Country>(dp.Nazioni);
             //var country = FromAmica.To<Country>(nr);
-            var hdp = new HttpDataProvider("http://10.0.2.2:5000", 1);
+            var hdp = new HttpDataProvider("http://10.0.2.2:5000", new DataProvider());
 
             //try
             //{

@@ -71,14 +71,15 @@ namespace Amica.vNext.Compatibility.Tests
             const string baseAddress = "baseaddress";
             var auth = new BasicAuthenticator("username", "password");
 
-            using (var dp = new HttpDataProvider(1)) {
+            var dataProvider = new DataProvider {ActiveCompanyId = 1};
+            using (var dp = new HttpDataProvider(dataProvider)) {
                 Assert.AreEqual(dp.LocalCompanyId, 1);
             }
 
             using (var dp = new HttpDataProvider(auth)) {
                 Assert.AreEqual(dp.Authenticator, auth);
             }
-            using (var dp = new HttpDataProvider(auth, 1)) {
+            using (var dp = new HttpDataProvider(auth, dataProvider)) {
                 Assert.AreEqual(dp.Authenticator, auth);
                 Assert.AreEqual(dp.LocalCompanyId, 1);
             }
@@ -86,7 +87,7 @@ namespace Amica.vNext.Compatibility.Tests
             using (var dp = new HttpDataProvider(baseAddress)) {
                 Assert.AreEqual(dp.BaseAddress, baseAddress);
             }
-            using (var dp = new HttpDataProvider(baseAddress, 1)) {
+            using (var dp = new HttpDataProvider(baseAddress, dataProvider)) {
                 Assert.AreEqual(dp.BaseAddress, baseAddress);
                 Assert.AreEqual(dp.LocalCompanyId, 1);
             }
@@ -95,7 +96,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.AreEqual(dp.Authenticator, auth);
                 Assert.AreEqual(dp.BaseAddress, baseAddress);
             }
-            using (var dp = new HttpDataProvider(baseAddress, auth, 1)) {
+            using (var dp = new HttpDataProvider(baseAddress, auth, dataProvider)) {
                 Assert.AreEqual(dp.Authenticator, auth);
                 Assert.AreEqual(dp.BaseAddress, baseAddress);
                 Assert.AreEqual(dp.LocalCompanyId, 1);
@@ -148,7 +149,7 @@ namespace Amica.vNext.Compatibility.Tests
         /// Test that a modified datarow that already exists in the sync systems is properly processed.
         /// </summary>
         [Test]
-        public void ModifyKnownAziendeRow()
+        public async void ModifyKnownAziendeRow()
         {
             var ds = new configDataSet();
             var n = ds.Aziende.NewAziendeRow();
@@ -157,7 +158,7 @@ namespace Amica.vNext.Compatibility.Tests
             ds.Aziende.AddAziendeRow(n);
             using (var dp = GetHttpDataProvider())
             {
-                dp.UpdateAziendeAsync(n).Wait();
+                await dp.UpdateAziendeAsync(n);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
 
                 n.AcceptChanges();
@@ -169,7 +170,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
-        public void DeleteKnownAziendeRow()
+        public async void DeleteKnownAziendeRow()
         {
             
             var ds = new configDataSet();
@@ -178,8 +179,9 @@ namespace Amica.vNext.Compatibility.Tests
             row.Id = 99;
             ds.Aziende.AddAziendeRow(row);
 
-            using (var dp = GetHttpDataProvider()) {
-                dp.UpdateAziendeAsync(row).Wait();
+            using (var dp = GetHttpDataProvider())
+            {
+                await dp.UpdateAziendeAsync(row);
 
                 row.AcceptChanges();
                 row.Delete();
@@ -203,7 +205,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
-        public void GenericUpdateAsync()
+        public async void GenericUpdateAsync()
         {
             var ds = new configDataSet();
             var row = ds.Aziende.NewAziendeRow();
@@ -214,7 +216,7 @@ namespace Amica.vNext.Compatibility.Tests
             using (var dp = GetHttpDataProvider()) {
 
                 // perform the operation
-                dp.UpateAsync(ds).Wait();
+                await dp.UpateAsync(ds);
                 Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
                 Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
             }
@@ -222,7 +224,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
         [Test]
-        public void GetRemoteChangesAndSyncThemLocally()
+        public async void GetRemoteChangesAndSyncThemLocally()
         {
 	    // Note that in this test we are using the most generic GetAsync.
 	    // This is slower but makes sure that reflection code in GetAsync is tested
@@ -249,7 +251,7 @@ namespace Amica.vNext.Compatibility.Tests
             {
                 // test that we can download and sync with a new company being posted on the remote
                 var configDs = new configDataSet();
-                dp.GetAsync((DataSet)configDs).Wait();
+                await dp.GetAsync((DataSet) configDs);
                 // we downloaded one new object and added it to the corresponding table
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 Assert.AreEqual(1, configDs.Aziende.Count);
@@ -260,7 +262,7 @@ namespace Amica.vNext.Compatibility.Tests
                 ValidateSyncDb(aziendeRow, "companies", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetAsync((DataSet)configDs).Wait();
+                await dp.GetAsync((DataSet) configDs);
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, configDs.Aziende.Count);
 
@@ -271,14 +273,14 @@ namespace Amica.vNext.Compatibility.Tests
                 System.Threading.Thread.Sleep(1000);
 
                 // ... we can then sync it down effortlessly
-                dp.GetAsync((DataSet)configDs).Wait();
+                await dp.GetAsync((DataSet) configDs);
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 aziendeRow = configDs.Aziende[0];
                 Assert.AreEqual(company.Name, aziendeRow.Nome);
                 ValidateSyncDb(aziendeRow, "companies", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetAsync((DataSet)configDs).Wait();
+                await dp.GetAsync((DataSet) configDs);
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, configDs.Aziende.Count);
 
@@ -286,7 +288,7 @@ namespace Amica.vNext.Compatibility.Tests
 
                 // test that we can download and sync with a new country posted on the remote
                 var companyDs = new companyDataSet();
-                dp.GetAsync((DataSet)companyDs).Wait();
+                await dp.GetAsync((DataSet) companyDs);
 
                 // we downloaded one new object and added it to the corresponding table
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
@@ -296,7 +298,7 @@ namespace Amica.vNext.Compatibility.Tests
                 ValidateSyncDb(nazioniRow, "countries", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetAsync((DataSet)companyDs).Wait();
+                await dp.GetAsync((DataSet) companyDs);
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, companyDs.Nazioni.Count);
 
@@ -307,14 +309,14 @@ namespace Amica.vNext.Compatibility.Tests
                 System.Threading.Thread.Sleep(1000);
 
                 // ... we can then sync it down effortlessly
-                dp.GetAsync((DataSet)companyDs).Wait();
+                await dp.GetAsync((DataSet) companyDs);
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 nazioniRow = companyDs.Nazioni[0];
                 Assert.AreEqual(country.Name, nazioniRow.Nome);
                 ValidateSyncDb(nazioniRow, "countries", false);
 
                 // if we try a sync again we don't get anything new since there have been no changes on the remote
-                dp.GetAsync((DataSet)companyDs).Wait();
+                await dp.GetAsync((DataSet) companyDs);
                 Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
                 Assert.AreEqual(1, companyDs.Nazioni.Count);
 
@@ -326,14 +328,14 @@ namespace Amica.vNext.Compatibility.Tests
 
 
                 // ... we can then sync the delete down.
-                dp.GetAsync((DataSet)companyDs).Wait();
+                await dp.GetAsync((DataSet) companyDs);
                 Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
                 Assert.AreEqual(0, companyDs.Nazioni.Count);
             }
 
         }
 
-        public  void ValidateUnknownRow(DataRow r, string endpoint)
+        public  async void ValidateUnknownRow(DataRow r, string endpoint)
         {
 
             // make sure remote remote endpoint is completely empty
@@ -343,25 +345,25 @@ namespace Amica.vNext.Compatibility.Tests
             using (var dp = GetHttpDataProvider()) {
 
                 // perform the operation
-                dp.UpdateAziendeAsync(r).Wait();
+                await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
                 Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
             }
             ValidateSyncDb(r, endpoint);
         }
 
-        public  void ValidateKnownRow(DataRow r, string endpoint)
+        public  async void ValidateKnownRow(DataRow r, string endpoint)
         {
             using (var dp = GetHttpDataProvider()) {
                 // perform the operation
-                dp.UpdateAziendeAsync(r).Wait();
+                await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Modified);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
             }
             ValidateSyncDb(r, endpoint);
         }
 
-        public  void ValidateBadUnknownRow(DataRow r, string endpoint)
+        public  async void ValidateBadUnknownRow(DataRow r, string endpoint)
         {
 
             // make sure remote remote endpoint is completely empty
@@ -371,7 +373,7 @@ namespace Amica.vNext.Compatibility.Tests
             using (var dp = GetHttpDataProvider()) {
 
                 // perform the operation
-                dp.UpdateAziendeAsync(r).Wait();
+                await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(ActionPerformed.Aborted, dp.ActionPerformed);
                 Assert.AreEqual(422, (int) dp.HttpResponse.StatusCode);
 
@@ -404,7 +406,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
         }
 
-        private void ValidateKnownDeletedRow(DataRow r, string endpoint)
+        private async void ValidateKnownDeletedRow(DataRow r, string endpoint)
         {
             using (var dp = GetHttpDataProvider())
             {
@@ -414,7 +416,7 @@ namespace Amica.vNext.Compatibility.Tests
                 var mapping = objs.First();
 
                 // perform the operation
-                dp.UpdateAziendeAsync(r).Wait();
+                await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(ActionPerformed.Deleted, dp.ActionPerformed);
                 Assert.AreEqual(HttpStatusCode.NoContent, dp.HttpResponse.StatusCode);
 
@@ -429,14 +431,14 @@ namespace Amica.vNext.Compatibility.Tests
             }
             
         }
-        private void ValidateUnknownDeletedRow(DataRow r, string endpoint)
+        private async void ValidateUnknownDeletedRow(DataRow r, string endpoint)
         {
             using (var dp = GetHttpDataProvider())
             {
                 var localId = (int) r["Id", DataRowVersion.Original];
 
                 // perform the operation
-                dp.UpdateAziendeAsync(r).Wait();
+                await dp.UpdateAziendeAsync(r);
                 // since we did not have this row we did no action at all
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
                 // therefore, we got no HttpResponse back.
