@@ -1,7 +1,9 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Threading.Tasks;
 using Amica.vNext.Compatibility;
 using Amica.Data;
+using Nito.AsyncEx;
 
 namespace ConsoleApplication1
 {
@@ -9,9 +11,16 @@ namespace ConsoleApplication1
     {
         static  void Main(string[] args)
         {
-
-            Test().Wait();
+            try
+            {
+                AsyncContext.Run(() => Test());
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex);
+            }
         }
+
 
         static async Task Test()
         {
@@ -40,7 +49,8 @@ namespace ConsoleApplication1
             //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
             //var countries = FromAmica2.ToList<Country>(dp.Nazioni);
             //var country = FromAmica.To<Country>(nr);
-            var hdp = new HttpDataProvider("http://10.0.2.2:5000", new DataProvider());
+            var d = new DataProvider() {ActiveCompanyId = 4};
+            var hdp = new HttpDataProvider("http://10.0.2.2:5000", new DataProvider() {ActiveCompanyId=4});
 
             //try
             //{

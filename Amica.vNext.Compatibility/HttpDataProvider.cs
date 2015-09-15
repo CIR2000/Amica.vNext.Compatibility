@@ -11,6 +11,11 @@ using Amica.vNext.Models;
 using Eve;
 using SQLite;
 
+// TODO
+// 1. When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?
+// 2. When a remote change fails, what do we do? Raise exception, silently fail, etc?
+// 3. Any recovery plan like support for transactions?
+
 namespace Amica.vNext.Compatibility
 {
     /// <summary>
@@ -77,7 +82,7 @@ namespace Amica.vNext.Compatibility
         public void Dispose()
         {
             if (_db != null) _db.Dispose(); 
-            if (_dataProvider != null) _dataProvider.Dispose();
+            //if (_dataProvider != null) _dataProvider.Dispose();
         }
             
         private delegate int DelegateDbMethod(object obj);
@@ -201,7 +206,7 @@ namespace Amica.vNext.Compatibility
                         .Where(v =>
                             v.LocalId.Equals(localId) &&
                             v.Resource.Equals(resource) &&
-                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId)) || true
+                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId) || true) 
                             )
                             .FirstOrDefault() ?? new HttpMapping {
                                 LocalId = localId,
@@ -216,7 +221,7 @@ namespace Amica.vNext.Compatibility
                         .Where(v => 
                             v.LocalId.Equals(localId) && 
                             v.Resource.Equals(resource) && 
-                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId)) || true
+                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId) || true) 
                             )
                             .FirstOrDefault();
                     break;
@@ -311,10 +316,16 @@ namespace Amica.vNext.Compatibility
         /// <param name="dt">DataTable to be synced.</param>
         private async Task GetAndSync<T>(DataTable dt) where T : class
         {
+            if (LocalCompanyId == null) return;
             if (!_resourcesMapping.ContainsKey(dt.TableName)) return;
+
             var resource = _resourcesMapping[dt.TableName];
             var changes = await GetAsync<T>(resource);
+            //if (changes.Count == 0) return;
+
             SyncTable(resource, dt, changes);
+
+            DataProvider.Update((int) LocalCompanyId, dt);
         }
 
         /// <summary>
@@ -471,7 +482,7 @@ namespace Amica.vNext.Compatibility
 		        await (Task) GetType().GetMethod(methodName).Invoke(this, new object[] {dataSet});
             }
 
-	    // good luck
+	        // good luck
             dataSet.EnforceConstraints = true;
         }
 
