@@ -219,6 +219,8 @@ namespace Amica.vNext.Compatibility.Tests
                 await dp.UpateAsync(ds);
                 Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
                 Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
+                Assert.AreEqual(1, dp.UpdatesPerformed.Count);
+                Assert.AreEqual("Aziende", dp.UpdatesPerformed[0].TableName);
             }
             ValidateSyncDb(row, "companies", false);
         }
@@ -359,6 +361,8 @@ namespace Amica.vNext.Compatibility.Tests
                 await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Modified);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
+                Assert.AreEqual(1, dp.UpdatesPerformed.Count);
+                Assert.AreEqual("Aziende", dp.UpdatesPerformed[0].TableName);
             }
             ValidateSyncDb(r, endpoint);
         }
@@ -376,6 +380,7 @@ namespace Amica.vNext.Compatibility.Tests
                 await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(ActionPerformed.Aborted, dp.ActionPerformed);
                 Assert.AreEqual(422, (int) dp.HttpResponse.StatusCode);
+                Assert.AreEqual(0, dp.UpdatesPerformed.Count);
 
                 // test that row mapping record is still non-existant
                 Assert.AreEqual(0, _db.Table<HttpMapping>().Count());
@@ -419,6 +424,8 @@ namespace Amica.vNext.Compatibility.Tests
                 await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(ActionPerformed.Deleted, dp.ActionPerformed);
                 Assert.AreEqual(HttpStatusCode.NoContent, dp.HttpResponse.StatusCode);
+                Assert.AreEqual(1, dp.UpdatesPerformed.Count);
+                Assert.AreEqual("Aziende", dp.UpdatesPerformed[0].TableName);
 
                 // test that row mapping record has been removed
                 objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);
@@ -443,6 +450,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
                 // therefore, we got no HttpResponse back.
                 Assert.IsNull(dp.HttpResponse);
+                Assert.AreEqual(0, dp.UpdatesPerformed.Count);
 
                 // test that row mapping record is still non-existant
                 var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);

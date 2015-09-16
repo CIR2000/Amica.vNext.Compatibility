@@ -25,9 +25,10 @@ namespace Amica.vNext.Compatibility
     {
         private const string DbName = "HttpSync.db";
         private readonly Dictionary<string, string> _resourcesMapping;
+        private bool _hasCompanyIdChanged;
         private int? _localCompanyId;
         private DataProvider _dataProvider;
-        private bool _hasCompanyIdChanged;
+        private readonly List<DataTable> _updatesPerformed;
         private readonly SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
@@ -38,6 +39,7 @@ namespace Amica.vNext.Compatibility
             ActionPerformed = ActionPerformed.NoAction;
 
             _hasCompanyIdChanged = true;
+            _updatesPerformed = new List<DataTable>();
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
                 {"Nazioni", "countries"}
@@ -82,7 +84,6 @@ namespace Amica.vNext.Compatibility
         public void Dispose()
         {
             if (_db != null) _db.Dispose(); 
-            //if (_dataProvider != null) _dataProvider.Dispose();
         }
             
         private delegate int DelegateDbMethod(object obj);
@@ -92,13 +93,16 @@ namespace Amica.vNext.Compatibility
         /// </summary>
         /// <typeparam name="T">Type to cast the DataRow to.</typeparam>
         /// <param name="row">DataRow to store.</param>
+        /// <param name="batch">Wether this update is part of a batch operation or not.</param>
         /// <returns>T instance updated with API metadata, Or null if the operation was a delete.</returns>
         /// <remarks>The type of operation to be performed is inferred by DataRow's RowState property value.</remarks>
-        private async Task<T> UpdateAsync<T>(DataRow row) where T: new()
+        private async Task<T> UpdateAsync<T>(DataRow row, bool batch) where T: new()
         {
 
             ActionPerformed = ActionPerformed.NoAction;
             HttpResponse = null;
+
+            if (!batch) UpdatesPerformed.Clear();
 
             // ensure table exists 
             _db.CreateTable<HttpMapping>();
@@ -275,18 +279,34 @@ namespace Amica.vNext.Compatibility
         /// Stores a companyDataSet.NazioniDataTable.NazioniRow to a remote API endpoint.
         /// </summary>
         /// <param name="row">Source DataRow</param>
-        public async Task UpdateNazioniAsync(DataRow row) 
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateNazioniAsync(DataRow row, bool batch = false) 
         {
-            await UpdateAsync<Country>(row);
+            await UpdateRowAsync<Country>(row, batch);
         }
-        
+
         /// <summary>
         /// Stores a configDataSet.AziendeDataTable.AziendeRow to a remote API endpoint.
         /// </summary>
         /// <param name="row">Source DataRow</param>
-        public async Task UpdateAziendeAsync(DataRow row)
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateAziendeAsync(DataRow row, bool batch = false)
         {
-            await UpdateAsync<Company>(row);
+            await UpdateRowAsync<Company>(row, batch);
+        }
+
+        /// <summary>
+        /// Casts a DataRow to the mathcing object supported by the server, then sends the object upstream for update.
+        /// </summary>
+        /// <typeparam name="T">Type to which the DataRow should be casted.</typeparam>
+        /// <param name="row">DataRow to be sent to the server.</param>
+        /// <param name="batch">Wether this update is part of a batch operation or not.</param>
+        /// <returns></returns>
+        private async Task UpdateRowAsync<T>(DataRow row, bool batch) where T:new()
+        {
+            if (!batch) UpdatesPerformed.Clear();
+            await UpdateAsync<T>(row, batch);
+            if (!batch) UpdatesPerformed.Add(row.Table);
         }
 
         public async Task UpateAsync(DataSet dataSet)
@@ -294,15 +314,20 @@ namespace Amica.vNext.Compatibility
             var changes = dataSet.GetChanges();
             if (changes == null) return;
 
+            UpdatesPerformed.Clear();
             foreach (DataTable dt in changes.Tables)
             {
                 if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
                 var methodName = string.Format("Update{0}Async", dt.TableName);
 
                 foreach (DataRow row in dt.Rows) {
-                    await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row}));
+                    await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row, true}));
+                    if (ActionPerformed == ActionPerformed.Aborted) goto End;
                 }
-            }
+                // explicit is better than implicit
+                UpdatesPerformed.Add(dt);
+            } 
+            End: ;
         }
 
         #endregion
@@ -316,7 +341,6 @@ namespace Amica.vNext.Compatibility
         /// <param name="dt">DataTable to be synced.</param>
         private async Task GetAndSync<T>(DataTable dt) where T : class
         {
-            if (LocalCompanyId == null) return;
             if (!_resourcesMapping.ContainsKey(dt.TableName)) return;
 
             var resource = _resourcesMapping[dt.TableName];
@@ -325,7 +349,7 @@ namespace Amica.vNext.Compatibility
 
             SyncTable(resource, dt, changes);
 
-            DataProvider.Update((int) LocalCompanyId, dt);
+            if (DataProvider != null) DataProvider.Update(LocalCompanyId ?? 0, dt);
         }
 
         /// <summary>
@@ -439,11 +463,6 @@ namespace Amica.vNext.Compatibility
             }
         }
 
-        private void PersistChanges(DataTable dt)
-        {
-
-        }
-
         /// <summary>
         /// Downloads Companies changes from the server and merges them to the Aziende table on the local dataset.
         /// </summary>
@@ -462,6 +481,7 @@ namespace Amica.vNext.Compatibility
         {
             await GetAndSync<Country>(dataSet.Nazioni);
         }
+
 
         /// <summary>
         /// Downloads all changes from the server and merges them to a local DataSet instance.
@@ -560,7 +580,6 @@ namespace Amica.vNext.Compatibility
             }
         }
 
-
         /// <summary>
         ///  Gets or sets the remote company id.
         /// </summary>
@@ -576,6 +595,14 @@ namespace Amica.vNext.Compatibility
                 LocalCompanyId = DataProvider.ActiveCompanyId;
             }
         }
+
+        /// <summary>
+        /// Returns a list of DataTables for which the latest update operation has been successful.
+        /// </summary>
+        public List<DataTable> UpdatesPerformed {
+            get { return _updatesPerformed;}   
+        }
+
         #endregion
 
     }
