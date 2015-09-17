@@ -216,7 +216,7 @@ namespace Amica.vNext.Compatibility.Tests
             using (var dp = GetHttpDataProvider()) {
 
                 // perform the operation
-                await dp.UpateAsync(ds);
+                await dp.UpdateAsync(ds);
                 Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
                 Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
                 Assert.AreEqual(1, dp.UpdatesPerformed.Count);

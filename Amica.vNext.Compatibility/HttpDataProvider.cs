@@ -309,7 +309,7 @@ namespace Amica.vNext.Compatibility
             if (!batch) UpdatesPerformed.Add(row.Table);
         }
 
-        public async Task UpateAsync(DataSet dataSet)
+        public async Task UpdateAsync(DataSet dataSet)
         {
             var changes = dataSet.GetChanges();
             if (changes == null) return;
