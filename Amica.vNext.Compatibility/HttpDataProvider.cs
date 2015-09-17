@@ -102,6 +102,7 @@ namespace Amica.vNext.Compatibility
             ActionPerformed = ActionPerformed.NoAction;
             HttpResponse = null;
 
+            // TODO this might be redundant as we have this guard in place already in both UpdateRowAsync and UpdateAsync(DataSet).
             if (!batch) UpdatesPerformed.Clear();
 
             // ensure table exists 
@@ -320,11 +321,13 @@ namespace Amica.vNext.Compatibility
                 if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
                 var methodName = string.Format("Update{0}Async", dt.TableName);
 
+                // TODO handle the case of a write error on a batch of rows. Right now
+                // the table is reported as not saved while in fact some rows might be saved
+                // which would lead to inconsistency on the local Amica DB.
                 foreach (DataRow row in dt.Rows) {
                     await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row, true}));
                     if (ActionPerformed == ActionPerformed.Aborted) goto End;
                 }
-                // explicit is better than implicit
                 UpdatesPerformed.Add(dt);
             } 
             End: ;
