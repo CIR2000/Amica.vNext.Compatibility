@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Amica.Data;
 using Amica.vNext.Models;
 using Eve;
+using Eve.Authenticators;
 using SQLite;
 
 // TODO
@@ -555,7 +556,7 @@ namespace Amica.vNext.Compatibility
 		/// Gets or sets the authenticator.
 		/// </summary>
 		/// <value>The authenticator.</value>
-        public BasicAuthenticator Authenticator { get; set; }
+        public IAuthenticator Authenticator { get; set; }
 
         /// <summary>
         /// Returns the name of the local database used for keeping Amica and remote service in sync.

@@ -1,5 +1,6 @@
 ﻿using Amica.Data;
 using Eve;
+using Eve.Authenticators;
 using NUnit.Framework;
 using SQLite;
 using System;
