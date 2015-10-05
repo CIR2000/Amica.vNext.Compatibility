@@ -58,8 +58,7 @@ namespace Amica.vNext.Compatibility.Tests
         public void DefaultProperties()
         {
             using (var dp = new HttpDataProvider()) {
-                Assert.IsNull(dp.BaseAddress);
-                Assert.IsNull(dp.Authenticator);
+                Assert.IsNotNull(dp.BaseAddress);
                 Assert.IsNull(dp.HttpResponse);
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
                 Assert.AreEqual(dp.SyncDatabaseName, DbName);
@@ -69,7 +68,6 @@ namespace Amica.vNext.Compatibility.Tests
         [Test]
         public void CustomConstructors()
         {
-            const string baseAddress = "baseaddress";
             var auth = new BasicAuthenticator("username", "password");
 
             var dataProvider = new DataProvider {ActiveCompanyId = 1};
@@ -77,30 +75,10 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.AreEqual(dp.LocalCompanyId, 1);
             }
 
-            using (var dp = new HttpDataProvider(auth)) {
-                Assert.AreEqual(dp.Authenticator, auth);
-            }
-            using (var dp = new HttpDataProvider(auth, dataProvider)) {
-                Assert.AreEqual(dp.Authenticator, auth);
+            using (var dp = new HttpDataProvider(dataProvider, "username", "password")) {
                 Assert.AreEqual(dp.LocalCompanyId, 1);
-            }
-
-            using (var dp = new HttpDataProvider(baseAddress)) {
-                Assert.AreEqual(dp.BaseAddress, baseAddress);
-            }
-            using (var dp = new HttpDataProvider(baseAddress, dataProvider)) {
-                Assert.AreEqual(dp.BaseAddress, baseAddress);
-                Assert.AreEqual(dp.LocalCompanyId, 1);
-            }
-
-            using (var dp = new HttpDataProvider(baseAddress, auth)) {
-                Assert.AreEqual(dp.Authenticator, auth);
-                Assert.AreEqual(dp.BaseAddress, baseAddress);
-            }
-            using (var dp = new HttpDataProvider(baseAddress, auth, dataProvider)) {
-                Assert.AreEqual(dp.Authenticator, auth);
-                Assert.AreEqual(dp.BaseAddress, baseAddress);
-                Assert.AreEqual(dp.LocalCompanyId, 1);
+                Assert.AreEqual(dp.Username, "username");
+                Assert.AreEqual(dp.Password, "password");
             }
         }
 
@@ -157,7 +135,7 @@ namespace Amica.vNext.Compatibility.Tests
             n.Nome = "company";
             n.Id = 99;
             ds.Aziende.AddAziendeRow(n);
-            using (var dp = GetHttpDataProvider())
+            using (var dp = new HttpDataProvider())
             {
                 await dp.UpdateAziendeAsync(n);
                 Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
@@ -180,7 +158,7 @@ namespace Amica.vNext.Compatibility.Tests
             row.Id = 99;
             ds.Aziende.AddAziendeRow(row);
 
-            using (var dp = GetHttpDataProvider())
+            using (var dp = new HttpDataProvider())
             {
                 await dp.UpdateAziendeAsync(row);
 
@@ -214,7 +192,7 @@ namespace Amica.vNext.Compatibility.Tests
             row.Id = 99;
             ds.Aziende.AddAziendeRow(row);
 
-            using (var dp = GetHttpDataProvider()) {
+            using (var dp = new HttpDataProvider()) {
 
                 // perform the operation
                 await dp.UpdateAsync(ds);
@@ -250,7 +228,7 @@ namespace Amica.vNext.Compatibility.Tests
             var country = rc.PostAsync<Country>("countries", new Country() {Name = "Country", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            using (var dp = GetHttpDataProvider())
+            using (var dp = new HttpDataProvider())
             {
                 // test that we can download and sync with a new company being posted on the remote
                 var configDs = new configDataSet();
@@ -345,7 +323,7 @@ namespace Amica.vNext.Compatibility.Tests
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.NoContent);
 
-            using (var dp = GetHttpDataProvider()) {
+            using (var dp = new HttpDataProvider()) {
 
                 // perform the operation
                 await dp.UpdateAziendeAsync(r);
@@ -357,7 +335,7 @@ namespace Amica.vNext.Compatibility.Tests
 
         public  async void ValidateKnownRow(DataRow r, string endpoint)
         {
-            using (var dp = GetHttpDataProvider()) {
+            using (var dp = new HttpDataProvider()) {
                 // perform the operation
                 await dp.UpdateAziendeAsync(r);
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Modified);
@@ -375,7 +353,7 @@ namespace Amica.vNext.Compatibility.Tests
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.NoContent);
 
-            using (var dp = GetHttpDataProvider()) {
+            using (var dp = new HttpDataProvider()) {
 
                 // perform the operation
                 await dp.UpdateAziendeAsync(r);
@@ -414,7 +392,7 @@ namespace Amica.vNext.Compatibility.Tests
 
         private async void ValidateKnownDeletedRow(DataRow r, string endpoint)
         {
-            using (var dp = GetHttpDataProvider())
+            using (var dp = new HttpDataProvider())
             {
                 var localId = (int) r["Id", DataRowVersion.Original];
 
@@ -441,7 +419,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
         private async void ValidateUnknownDeletedRow(DataRow r, string endpoint)
         {
-            using (var dp = GetHttpDataProvider())
+            using (var dp = new HttpDataProvider())
             {
                 var localId = (int) r["Id", DataRowVersion.Original];
 
@@ -461,9 +439,7 @@ namespace Amica.vNext.Compatibility.Tests
 
         private static HttpDataProvider GetHttpDataProvider()
         {
-            // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
-            // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
-            return new HttpDataProvider(Service);
+            return new HttpDataProvider();
         }
 
     }

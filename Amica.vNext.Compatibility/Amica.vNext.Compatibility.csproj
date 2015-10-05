@@ -110,6 +110,10 @@
       <Project>{d405d3c5-de1c-4db1-b920-2e7cd7f450af}</Project>
       <Name>Eve.NET.Net4</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\Sentinel.NET\Sentinel.Net4\Sentinel.Net4.csproj">
+      <Project>{69b58df3-d1f5-40fe-8c1e-f133b7b3b6b6}</Project>
+      <Name>Sentinel.Net4</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Amica.vNext.Models\Amica.vNext.Models.Net4\Amica.vNext.Models.Net4.csproj">
       <Project>{b4788993-7148-4d66-9cd8-6bb7dae2b9bc}</Project>
       <Name>Amica.vNext.Models.Net4</Name>

@@ -11,6 +11,7 @@ using Amica.vNext.Models;
 using Eve;
 using Eve.Authenticators;
 using SQLite;
+using Sentinel;
 
 // TODO
 // 1. When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?
@@ -25,6 +26,8 @@ namespace Amica.vNext.Compatibility
     public class HttpDataProvider : IDisposable
     {
         private const string DbName = "HttpSync.db";
+        private readonly string _sentinelClientId;
+
         private readonly Dictionary<string, string> _resourcesMapping;
         private bool _hasCompanyIdChanged;
         private int? _localCompanyId;
@@ -33,7 +36,6 @@ namespace Amica.vNext.Compatibility
         private readonly SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
-
 
         public HttpDataProvider()
         {
@@ -47,38 +49,22 @@ namespace Amica.vNext.Compatibility
             };
 
             _db = new SQLiteConnection(DbName);
+
+	    // TODO set BaseAddress using the appropriate DiscoveryService class method/property.
+	    BaseAddress = "http://10.0.2.2:5000";
+
+	    // TODO replace with hard-coded client id in production
+            _sentinelClientId = Environment.GetEnvironmentVariable("SentinelClientId");
         }
 
         public HttpDataProvider(DataProvider dataProvider) : this()
         {
             DataProvider = dataProvider;
         }
-
-        public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator, DataProvider dataProvider) : this(dataProvider)
+        public HttpDataProvider(DataProvider dataProvider, string username, string password) : this(dataProvider)
         {
-            BaseAddress = baseAddress;
-            Authenticator = authenticator;
-        }
-        public HttpDataProvider(string baseAddress, BasicAuthenticator authenticator) : this()
-        {
-            BaseAddress = baseAddress;
-            Authenticator = authenticator;
-        }
-        public HttpDataProvider(string baseAddress, DataProvider dataProvider): this(dataProvider)
-        {
-            BaseAddress = baseAddress;
-        }
-        public HttpDataProvider(string baseAddress): this()
-        {
-            BaseAddress = baseAddress;
-        }
-        public HttpDataProvider(BasicAuthenticator authenticator, DataProvider dataProvider) : this(dataProvider)
-        {
-            Authenticator = authenticator;
-        }
-        public HttpDataProvider(BasicAuthenticator authenticator) : this()
-        {
-            Authenticator = authenticator;
+            Username = username;
+            Password = password;
         }
         #endregion
 
@@ -127,7 +113,7 @@ namespace Amica.vNext.Compatibility
                 ((BaseModelWithCompanyId) obj).CompanyId = mapping.RemoteCompanyId;
             }
 
-            var rc = new EveClient(BaseAddress, Authenticator);
+            var rc = new EveClient(BaseAddress, new BasicAuthenticator(Username, Password));
 
             HttpStatusCode statusCode;
             ActionPerformed action;
@@ -398,7 +384,7 @@ namespace Amica.vNext.Compatibility
             const bool showDeleted = true;
 
             // request changes
-            var rc = new EveClient(BaseAddress, Authenticator);
+            var rc = new EveClient(BaseAddress, new BasicAuthenticator(Username, Password));
             var changes = await rc.GetAsync<T>(resource, ims, showDeleted, rawQuery);
 
             HttpResponse = rc.HttpResponse;
@@ -546,17 +532,20 @@ namespace Amica.vNext.Compatibility
         /// </summary>
         public HttpResponseMessage HttpResponse { get; private set; }
 
-		/// <summary>
-		/// Gets or sets the remote service base address.
-		/// </summary>
-		/// <value>The remote service base address.</value>
-        public string BaseAddress { get; set; }
+	/// <summary>
+	/// Gets or sets the remote service base address.
+	/// </summary>
+	/// <value>The remote service base address.</value>
+        public string BaseAddress { get; private set; }
 
-		/// <summary>
-		/// Gets or sets the authenticator.
-		/// </summary>
-		/// <value>The authenticator.</value>
-        public IAuthenticator Authenticator { get; set; }
+	/// <summary>
+	///  Username for authentication to the remote service.  
+	/// </summary>
+        public string Username { get; set; }
+	/// <summary>
+	///  Password for authentication to the remote service.  
+	/// </summary>
+	public string Password { get; set; }
 
         /// <summary>
         /// Returns the name of the local database used for keeping Amica and remote service in sync.

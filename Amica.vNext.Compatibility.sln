@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Data Provider", "..\..\amica\Amica Data Provider\Data Provider.vbproj", "{67306CA6-7F03-4D04-9F95-0607C4DC2A89}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eve.NET.Net4", "..\..\Eve.NET\Eve.NET.Net4\Eve.NET.Net4.csproj", "{D405D3C5-DE1C-4DB1-B920-2E7CD7F450AF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amica.vNext.Models.Net4", "..\Amica.vNext.Models\Amica.vNext.Models.Net4\Amica.vNext.Models.Net4.csproj", "{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sentinel.Net4", "..\..\Sentinel.NET\Sentinel.Net4\Sentinel.Net4.csproj", "{69B58DF3-D1F5-40FE-8C1E-F133B7B3B6B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B4788993-7148-4D66-9CD8-6BB7DAE2B9BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69B58DF3-D1F5-40FE-8C1E-F133B7B3B6B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69B58DF3-D1F5-40FE-8C1E-F133B7B3B6B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69B58DF3-D1F5-40FE-8C1E-F133B7B3B6B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69B58DF3-D1F5-40FE-8C1E-F133B7B3B6B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
