@@ -335,13 +335,25 @@ namespace Amica.vNext.Compatibility
 
             var resource = _resourcesMapping[dt.TableName];
             var changes = await GetAsync<T>(resource);
-            //if (changes.Count == 0) return;
+	    // TODO if changes is null then something went wrong, probably with the
+	    // request (eg., a 401). Should we report back?
+            if (changes == null) return;
 
             SyncTable(resource, dt, changes);
 
             if (DataProvider != null) DataProvider.Update(LocalCompanyId ?? 0, dt);
         }
 
+        private async Task<BearerAuthenticator> GetAuthenticator()
+        {
+            var sc = new SentinelClient
+            {
+                Username = Username,
+                Password = Password,
+                ClientId = _sentinelClientId,
+            };
+            return await sc.GetBearerAuthenticator();
+        }
         /// <summary>
         /// Downloads changes happened on a remote resource.
         /// </summary>
@@ -384,7 +396,7 @@ namespace Amica.vNext.Compatibility
             const bool showDeleted = true;
 
             // request changes
-            var rc = new EveClient(BaseAddress, new BasicAuthenticator(Username, Password));
+            var rc = new EveClient(BaseAddress, await GetAuthenticator());
             var changes = await rc.GetAsync<T>(resource, ims, showDeleted, rawQuery);
 
             HttpResponse = rc.HttpResponse;
