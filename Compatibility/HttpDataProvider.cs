@@ -11,7 +11,6 @@ using Amica.vNext.Models;
 using Eve;
 using Eve.Authenticators;
 using SQLite;
-using Sentinel;
 
 // TODO
 // 1. When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?
@@ -346,7 +345,7 @@ namespace Amica.vNext.Compatibility
 
         private async Task<BearerAuthenticator> GetAuthenticator()
         {
-            var sc = new SentinelClient
+            var sc = new Sentinel
             {
                 Username = Username,
                 Password = Password,
