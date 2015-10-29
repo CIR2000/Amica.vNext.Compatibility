@@ -35,10 +35,10 @@ namespace ConsoleApplication1
             //nr.Delete();
             //nr.SetModified();
 
-            //var nz = cdp.Nazioni.NewNazioniRow();
-            //nz.Nome = "italia";
-            //nz.Id = 100;
-            //cdp.Nazioni.AddNazioniRow(nz);
+            var nz = cdp.Nazioni.NewNazioniRow();
+            nz.Nome = "italia2";
+            nz.Id = 100;
+            cdp.Nazioni.AddNazioniRow(nz);
 
             //var nr = dp.Nazioni.NewNazioniRow();
             //nr.Nome = "italia";
@@ -49,14 +49,17 @@ namespace ConsoleApplication1
             //dp.Aziende.PrimaryKey = new[] {dp.Aziende.IdColumn};
             //var countries = FromAmica2.ToList<Country>(dp.Nazioni);
             //var country = FromAmica.To<Country>(nr);
-            var hdp = new HttpDataProvider(new DataProvider(){ActiveCompanyId=4}, "nicola", "nicola");
+            var hdp = new HttpDataProvider(new DataProvider("C:\\Amica 10\\Database"), "nicola", "nicola");
+            hdp.LocalCompanyId = 1;
+            //hdp.DataProvider.LoadConfigData();
 
             //try
             //{
 
-            await hdp.GetAsync((DataSet)cdp);
+            //await hdp.GetAsync(dp);
+            await hdp.UpdateAsync(cdp);
+            //await hdp.GetAsync((DataSet)cdp);
             //await hdp.UpateAsync(dp);
-            //await hdp.UpateAsync(cdp);
             //await hdp.UpdateNazioniAsync(nr);
             //await hdp.UpdateAziendeAsync(nr);
             //await hdp.GetAziendeAsync(dp);

@@ -106,17 +106,13 @@
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Eve.NET\Eve.Net4\Eve.Net4.csproj">
-      <Project>{43aff1e2-c4dc-4737-963b-7ce26a559baf}</Project>
-      <Name>Eve.Net4</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\Models\Models.Net4\Models.Net4.csproj">
       <Project>{aa1e9fe1-d984-417a-9f3d-16c260da9463}</Project>
       <Name>Models.Net4</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Sentinel\Sentinel.Net4\Sentinel.Net4.csproj">
-      <Project>{69b58df3-d1f5-40fe-8c1e-f133b7b3b6b6}</Project>
-      <Name>Sentinel.Net4</Name>
+    <ProjectReference Include="..\..\Storage\Storage.Net4\Storage.Net4.csproj">
+      <Project>{429f9a43-72ec-4a1a-9d85-b66dcc8d4830}</Project>
+      <Name>Storage.Net4</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

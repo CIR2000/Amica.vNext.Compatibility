@@ -8,9 +8,8 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Amica.Data;
 using Amica.vNext.Models;
-using Eve;
-using Eve.Authenticators;
 using SQLite;
+using Amica.vNext.Data;
 
 // TODO
 // 1. When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?
@@ -82,7 +81,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="batch">Wether this update is part of a batch operation or not.</param>
         /// <returns>T instance updated with API metadata, Or null if the operation was a delete.</returns>
         /// <remarks>The type of operation to be performed is inferred by DataRow's RowState property value.</remarks>
-        private async Task<T> UpdateAsync<T>(DataRow row, bool batch) where T: new()
+        private async Task<T> UpdateAsync<T>(DataRow row, bool batch) where T: BaseModel, new()
         {
 
             ActionPerformed = ActionPerformed.NoAction;
@@ -112,51 +111,53 @@ namespace Amica.vNext.Compatibility
                 ((BaseModelWithCompanyId) obj).CompanyId = mapping.RemoteCompanyId;
             }
 
-            var rc = new EveClient(BaseAddress, new BasicAuthenticator(Username, Password));
-
-            HttpStatusCode statusCode;
-            ActionPerformed action;
-            DelegateDbMethod dbMethod;
             var retObj = default(T);
+            using (var adam = new AdamStorage {Username = Username, Password = Password, ClientId = _sentinelClientId})
+            {
+				HttpStatusCode statusCode;
+				ActionPerformed action;
+				DelegateDbMethod dbMethod;
 
-            switch (mapping.RemoteId) {
-                case null:
-                    retObj = await rc.PostAsync<T>(mapping.Resource, obj);
-                    dbMethod = _db.Insert;
-                    action = ActionPerformed.Added;
-                    statusCode = HttpStatusCode.Created;
-                    break;
-                default:
-                    switch (row.RowState) {
-                        case DataRowState.Modified:
-                            retObj = await rc.PutAsync<T>(mapping.Resource, obj);
-                            dbMethod = _db.Update;
-                            action = ActionPerformed.Modified;
-                            statusCode = HttpStatusCode.OK;
-                            break;
-                        case DataRowState.Deleted:
-                            await rc.DeleteAsync(mapping.Resource, obj);
-                            dbMethod = _db.Delete;
-                            action = ActionPerformed.Deleted;
-                            statusCode = HttpStatusCode.NoContent;
-                            break;
-                        default:
-                            // TODO better exception.. or maybe just fail silently?
-                            throw new Exception("Cannot determine how the DataRow should be processed.");
-                    }
-                    break;
-            }
-            HttpResponse = rc.HttpResponse;
-            ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
+				switch (mapping.RemoteId) {
+					case null:
+				        retObj = await adam.Insert((T)obj);
+						dbMethod = _db.Insert;
+						action = ActionPerformed.Added;
+						statusCode = HttpStatusCode.Created;
+						break;
+					default:
+						switch (row.RowState) {
+							case DataRowState.Modified:
+						        retObj = await adam.Replace((T) obj);
+								dbMethod = _db.Update;
+								action = ActionPerformed.Modified;
+								statusCode = HttpStatusCode.OK;
+								break;
+							case DataRowState.Deleted:
+						        await adam.Delete((T) obj);
+								dbMethod = _db.Delete;
+								action = ActionPerformed.Deleted;
+								statusCode = HttpStatusCode.NoContent;
+								break;
+							default:
+								// TODO better exception.. or maybe just fail silently?
+								throw new Exception("Cannot determine how the DataRow should be processed.");
+						}
+						break;
+				}
+				HttpResponse = adam.HttpResponseMessage;
+				ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
 
-            if (ActionPerformed != ActionPerformed.Aborted) {
-                if (retObj != null) { 
-                    // update mapping datatore with remote service meta fields.
-                    mapping.RemoteId = ((BaseModel)((object)retObj)).UniqueId;
-                    mapping.ETag = ((BaseModel)((object)retObj)).ETag;
-                    mapping.LastUpdated = ((BaseModel)((object)retObj)).Updated;
-                }
-                dbMethod(mapping);
+				if (ActionPerformed != ActionPerformed.Aborted) {
+					if (retObj != null) { 
+						// update mapping datatore with remote service meta fields.
+						mapping.RemoteId = retObj.UniqueId;
+						mapping.ETag = retObj.ETag;
+						mapping.LastUpdated = retObj.Updated;
+					}
+					dbMethod(mapping);
+				}
+                
             }
             return retObj;
         }
@@ -289,7 +290,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="row">DataRow to be sent to the server.</param>
         /// <param name="batch">Wether this update is part of a batch operation or not.</param>
         /// <returns></returns>
-        private async Task UpdateRowAsync<T>(DataRow row, bool batch) where T:new()
+        private async Task UpdateRowAsync<T>(DataRow row, bool batch) where T: BaseModel, new()
         {
             if (!batch) UpdatesPerformed.Clear();
             await UpdateAsync<T>(row, batch);
@@ -336,23 +337,15 @@ namespace Amica.vNext.Compatibility
             var changes = await GetAsync<T>(resource);
 	    // TODO if changes is null then something went wrong, probably with the
 	    // request (eg., a 401). Should we report back?
-            if (changes == null) return;
+            if (changes == null || changes.Count == 0) return;
 
             SyncTable(resource, dt, changes);
 
-            if (DataProvider != null) DataProvider.Update(LocalCompanyId ?? 0, dt);
+            var companyId = (dt.DataSet is configDataSet) ?  0 : LocalCompanyId ?? 0;
+			
+            if (DataProvider != null) DataProvider.Update(companyId, dt);
         }
 
-        private async Task<BearerAuthenticator> GetAuthenticator()
-        {
-            var sc = new Sentinel
-            {
-                Username = Username,
-                Password = Password,
-                ClientId = _sentinelClientId,
-            };
-            return await sc.GetBearerAuthenticator();
-        }
         /// <summary>
         /// Downloads changes happened on a remote resource.
         /// </summary>
@@ -366,20 +359,16 @@ namespace Amica.vNext.Compatibility
 
             // determine proper filter, depending on the base model type
             Expression<Func<HttpMapping, bool>> filter;
-            string rawQuery;
 
 
             var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
             if (shouldQueryOnCompanyId) {
                 filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
                 // we also want to match documents which belongs to the current company
-                // TODO use a pattern object instead of raw query as soon as it is available in Eve.NET
                 RetrieveRemoteCompanyId();
-                rawQuery = string.Format(@"{{""c"": ""{0}""}}", RemoteCompanyId);
             }
             else {
                 filter = m => m.Resource.Equals(resource);
-                rawQuery = null;
             }
 
             // retrieve IMS
@@ -391,18 +380,19 @@ namespace Amica.vNext.Compatibility
                 .FirstOrDefault();
             var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
 
-            // explicit is better than implicit (The Zen of Python)
-            const bool showDeleted = true;
-
+            List<T> changes;
             // request changes
-            var rc = new EveClient(BaseAddress, await GetAuthenticator());
-            var changes = await rc.GetAsync<T>(resource, ims, showDeleted, rawQuery);
+            using (var adam = new AdamStorage {Username = Username, Password = Password, ClientId = _sentinelClientId})
+            {
+				changes = (List<T>) await adam.Get<T>(ims, RemoteCompanyId);
 
-            HttpResponse = rc.HttpResponse;
-            ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? 
-                ((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) :  ActionPerformed.Aborted;
+				HttpResponse = adam.HttpResponseMessage;
+				ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? 
+					((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) :  ActionPerformed.Aborted;
 
-            return changes;
+                
+            }
+			return changes;
         }
 
         /// <summary>
