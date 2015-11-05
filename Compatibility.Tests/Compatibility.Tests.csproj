@@ -118,9 +118,9 @@
       <Project>{43aff1e2-c4dc-4737-963b-7ce26a559baf}</Project>
       <Name>Eve.Net4</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Models\Models.Net4\Models.Net4.csproj">
-      <Project>{aa1e9fe1-d984-417a-9f3d-16c260da9463}</Project>
-      <Name>Models.Net4</Name>
+    <ProjectReference Include="..\..\Models\Models\Models.csproj">
+      <Project>{38931933-1e9d-4df3-bdde-75e81e3234f4}</Project>
+      <Name>Models</Name>
     </ProjectReference>
     <ProjectReference Include="..\Compatibility\Compatibility.csproj">
       <Project>{9e04ee4c-d5e2-4609-a68f-0510ad1d47cc}</Project>
