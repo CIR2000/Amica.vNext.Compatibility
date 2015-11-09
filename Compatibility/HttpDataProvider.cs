@@ -112,7 +112,7 @@ namespace Amica.vNext.Compatibility
             }
 
             var retObj = default(T);
-            using (var adam = new AdamStorage {Username = Username, Password = Password, ClientId = _sentinelClientId})
+            using (var adam = new RemoteRepository {Username = Username, Password = Password, ClientId = _sentinelClientId})
             {
 				HttpStatusCode statusCode;
 				ActionPerformed action;
@@ -382,7 +382,7 @@ namespace Amica.vNext.Compatibility
 
             List<T> changes;
             // request changes
-            using (var adam = new AdamStorage {Username = Username, Password = Password, ClientId = _sentinelClientId})
+            using (var adam = new RemoteRepository {Username = Username, Password = Password, ClientId = _sentinelClientId})
             {
 				changes = (List<T>) await adam.Get<T>(ims, RemoteCompanyId);
 
