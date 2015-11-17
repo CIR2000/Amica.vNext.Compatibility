@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Amica.Data;
 using Amica.vNext.Models;
 using SQLite;
-using Amica.vNext.Data;
 
 // TODO
 // 1. When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?

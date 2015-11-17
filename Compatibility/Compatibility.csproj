@@ -110,6 +110,10 @@
       <Project>{38931933-1e9d-4df3-bdde-75e81e3234f4}</Project>
       <Name>Models</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Storage\Storage.Core\Storage.Core.csproj">
+      <Project>{174bd198-5ce8-4eb4-855f-006b179c4a67}</Project>
+      <Name>Storage.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Storage\Storage.Net4\Storage.Net4.csproj">
       <Project>{429f9a43-72ec-4a1a-9d85-b66dcc8d4830}</Project>
       <Name>Storage.Net4</Name>
