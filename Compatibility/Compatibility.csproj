@@ -98,25 +98,23 @@
     <Compile Include="Map.cs" />
     <Compile Include="HttpMapping.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SQLite.cs" />
-    <Compile Include="SQLiteAsync.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\amica\Amica Data Provider\Data Provider.vbproj">
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Models\Models\Models.csproj">
-      <Project>{38931933-1e9d-4df3-bdde-75e81e3234f4}</Project>
-      <Name>Models</Name>
+    <ProjectReference Include="..\..\Models\Models.Net4\Models.Net4.csproj">
+      <Project>{678d3308-5de9-4335-b0c8-1e0820b7515c}</Project>
+      <Name>Models.Net4</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Storage\Storage.Core\Storage.Core.csproj">
-      <Project>{174bd198-5ce8-4eb4-855f-006b179c4a67}</Project>
-      <Name>Storage.Core</Name>
+    <ProjectReference Include="..\..\SimpleCache\SimpleCache.Net4\SimpleCache.Net4.csproj">
+      <Project>{5A320348-7AE0-421A-B3EC-25FF8FED4243}</Project>
+      <Name>SimpleCache.Net4</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Storage\Storage.Net4\Storage.Net4.csproj">
-      <Project>{429f9a43-72ec-4a1a-9d85-b66dcc8d4830}</Project>
-      <Name>Storage.Net4</Name>
+    <ProjectReference Include="..\..\Storage\Storage.Remote\Storage.Remote.Net4\Storage.Remote.Net4.csproj">
+      <Project>{e67bdb25-4234-4fca-be8b-21ad435bb0d3}</Project>
+      <Name>Storage.Remote.Net4</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

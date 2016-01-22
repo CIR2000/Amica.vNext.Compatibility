@@ -114,14 +114,6 @@
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Eve.NET\Eve\Eve.csproj">
-      <Project>{dd88d007-ad10-470d-9c89-aa8ee39857d0}</Project>
-      <Name>Eve</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Models\Models\Models.csproj">
-      <Project>{38931933-1e9d-4df3-bdde-75e81e3234f4}</Project>
-      <Name>Models</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Compatibility\Compatibility.csproj">
       <Project>{9e04ee4c-d5e2-4609-a68f-0510ad1d47cc}</Project>
       <Name>Compatibility</Name>

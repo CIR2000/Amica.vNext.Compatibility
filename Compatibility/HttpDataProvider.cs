@@ -4,10 +4,10 @@ using System.Net.Http;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Amica.Data;
 using Amica.vNext.Models;
+using Amica.vNext.Storage;
 using SQLite;
 
 // TODO
@@ -20,10 +20,9 @@ namespace Amica.vNext.Compatibility
     /// <summary>
     /// Provides a compatibilty layer between Amica 10's ADO storage system and Eve REST APIs.
     /// </summary>
-    public class HttpDataProvider : IDisposable
+    public class HttpDataProvider : IDisposable, IRestoreDefaults
     {
         private const string DbName = "HttpSync.db";
-        private readonly string _sentinelClientId;
 
         private readonly Dictionary<string, string> _resourcesMapping;
         private bool _hasCompanyIdChanged;
@@ -31,12 +30,17 @@ namespace Amica.vNext.Compatibility
         private DataProvider _dataProvider;
         private readonly List<DataTable> _updatesPerformed;
         private readonly SQLiteConnection _db;
+        private readonly RemoteRepository _adam;
 
         #region "C O N S T R U C T O R S"
 
         public HttpDataProvider()
         {
             ActionPerformed = ActionPerformed.NoAction;
+
+            _adam = new RemoteRepository();
+            RemoteRepositorySetup();
+            RestoreDefaults();
 
             _hasCompanyIdChanged = true;
             _updatesPerformed = new List<DataTable>();
@@ -47,11 +51,6 @@ namespace Amica.vNext.Compatibility
 
             _db = new SQLiteConnection(DbName);
 
-	    // TODO set BaseAddress using the appropriate DiscoveryService class method/property.
-	    BaseAddress = "http://10.0.2.2:5000";
-
-	    // TODO replace with hard-coded client id in production
-            _sentinelClientId = Environment.GetEnvironmentVariable("SentinelClientId");
         }
 
         public HttpDataProvider(DataProvider dataProvider) : this()
@@ -67,7 +66,8 @@ namespace Amica.vNext.Compatibility
 
         public void Dispose()
         {
-            if (_db != null) _db.Dispose(); 
+            if (_db != null) _db.Dispose();
+            _adam.Dispose();
         }
             
         private delegate int DelegateDbMethod(object obj);
@@ -111,53 +111,52 @@ namespace Amica.vNext.Compatibility
             }
 
             var retObj = default(T);
-            using (var adam = new RemoteRepository {Username = Username, Password = Password, ClientId = _sentinelClientId})
-            {
-				HttpStatusCode statusCode;
-				ActionPerformed action;
-				DelegateDbMethod dbMethod;
 
-				switch (mapping.RemoteId) {
-					case null:
-				        retObj = await adam.Insert((T)obj);
-						dbMethod = _db.Insert;
-						action = ActionPerformed.Added;
-						statusCode = HttpStatusCode.Created;
-						break;
-					default:
-						switch (row.RowState) {
-							case DataRowState.Modified:
-						        retObj = await adam.Replace((T) obj);
-								dbMethod = _db.Update;
-								action = ActionPerformed.Modified;
-								statusCode = HttpStatusCode.OK;
-								break;
-							case DataRowState.Deleted:
-						        await adam.Delete((T) obj);
-								dbMethod = _db.Delete;
-								action = ActionPerformed.Deleted;
-								statusCode = HttpStatusCode.NoContent;
-								break;
-							default:
-								// TODO better exception.. or maybe just fail silently?
-								throw new Exception("Cannot determine how the DataRow should be processed.");
-						}
-						break;
-				}
-				HttpResponse = adam.HttpResponseMessage;
-				ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
+            RemoteRepositorySetup();
+			HttpStatusCode statusCode;
+			ActionPerformed action;
+			DelegateDbMethod dbMethod;
 
-				if (ActionPerformed != ActionPerformed.Aborted) {
-					if (retObj != null) { 
-						// update mapping datatore with remote service meta fields.
-						mapping.RemoteId = retObj.UniqueId;
-						mapping.ETag = retObj.ETag;
-						mapping.LastUpdated = retObj.Updated;
+			switch (mapping.RemoteId) {
+				case null:
+					retObj = await _adam.Insert((T)obj);
+					dbMethod = _db.Insert;
+					action = ActionPerformed.Added;
+					statusCode = HttpStatusCode.Created;
+					break;
+				default:
+					switch (row.RowState) {
+						case DataRowState.Modified:
+							retObj = await _adam.Replace((T) obj);
+							dbMethod = _db.Update;
+							action = ActionPerformed.Modified;
+							statusCode = HttpStatusCode.OK;
+							break;
+						case DataRowState.Deleted:
+							await _adam.Delete((T) obj);
+							dbMethod = _db.Delete;
+							action = ActionPerformed.Deleted;
+							statusCode = HttpStatusCode.NoContent;
+							break;
+						default:
+							// TODO better exception.. or maybe just fail silently?
+							throw new Exception("Cannot determine how the DataRow should be processed.");
 					}
-					dbMethod(mapping);
+					break;
+			}
+			HttpResponse = _adam.HttpResponseMessage;
+			ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == statusCode) ? action :  ActionPerformed.Aborted;
+
+			if (ActionPerformed != ActionPerformed.Aborted) {
+				if (retObj != null) { 
+					// update mapping datatore with remote service meta fields.
+					mapping.RemoteId = retObj.UniqueId;
+					mapping.ETag = retObj.ETag;
+					mapping.LastUpdated = retObj.Updated;
 				}
+				dbMethod(mapping);
+			}
                 
-            }
             return retObj;
         }
 
@@ -260,6 +259,17 @@ namespace Amica.vNext.Compatibility
             return dr;
         }
 
+        private void RemoteRepositorySetup()
+        {
+            _adam.ClientId = ClientId;
+			_adam.LocalCache = new SqliteObjectCache { ApplicationName = ApplicationName };
+            _adam.UserAccount = new UserAccount
+            {
+                Username = Username,
+                Password = Password
+            };
+        }
+
         #region "U P D A T E  M E T H O D S"
 
         /// <summary>
@@ -328,21 +338,41 @@ namespace Amica.vNext.Compatibility
         /// </summary>
         /// <typeparam name="T">Type of objects to be downloaded.</typeparam>
         /// <param name="dt">DataTable to be synced.</param>
-        private async Task GetAndSync<T>(DataTable dt) where T : class
+        private async Task GetAndSyncCompanyTable<T>(DataTable dt) where T : BaseModelWithCompanyId
         {
             if (!_resourcesMapping.ContainsKey(dt.TableName)) return;
 
             var resource = _resourcesMapping[dt.TableName];
-            var changes = await GetAsync<T>(resource);
-	    // TODO if changes is null then something went wrong, probably with the
-	    // request (eg., a 401). Should we report back?
+            var changes = await GetCompanyResourceAsync<T>(resource);
+
+			// TODO if changes is null then something went wrong, probably with the
+			// request (eg., a 401). Should we report back?
             if (changes == null || changes.Count == 0) return;
 
             SyncTable(resource, dt, changes);
 
-            var companyId = (dt.DataSet is configDataSet) ?  0 : LocalCompanyId ?? 0;
-			
-            if (DataProvider != null) DataProvider.Update(companyId, dt);
+			// TODO confirm that LocalCompanyId will never be 0. maybe even validate against it.
+            if (DataProvider != null) DataProvider.Update(LocalCompanyId ?? 0, dt);
+        }
+        /// <summary>
+        ///  Implements the Download Changes and Sync them logic.
+        /// </summary>
+        /// <typeparam name="T">Type of objects to be downloaded.</typeparam>
+        /// <param name="dt">DataTable to be synced.</param>
+        private async Task GetAndSyncConfigTable<T>(DataTable dt) where T : BaseModel
+        {
+            if (!_resourcesMapping.ContainsKey(dt.TableName)) return;
+
+            var resource = _resourcesMapping[dt.TableName];
+            var changes = await GetConfigResourceAsync<T>(resource);
+
+			// TODO if changes is null then something went wrong, probably with the
+			// request (eg., a 401). Should we report back?
+            if (changes == null || changes.Count == 0) return;
+
+            SyncTable(resource, dt, changes);
+
+            if (DataProvider != null) DataProvider.Update(0, dt);
         }
 
         /// <summary>
@@ -351,47 +381,59 @@ namespace Amica.vNext.Compatibility
         /// <typeparam name="T">Type of the objects to be downloaded.</typeparam>
         /// <param name="resource">Remote resource name.</param>
         /// <returns>A list of changed objects.</returns>
-        private async Task<List<T>> GetAsync<T>(string resource) where T : class
+        private async Task<List<T>> GetCompanyResourceAsync<T>(string resource) where T : BaseModelWithCompanyId
         {
             // ensure table exists 
             _db.CreateTable<HttpMapping>();
 
-            // determine proper filter, depending on the base model type
-            Expression<Func<HttpMapping, bool>> filter;
-
-
-            var shouldQueryOnCompanyId = (typeof (BaseModelWithCompanyId).IsAssignableFrom(typeof (T)));
-            if (shouldQueryOnCompanyId) {
-                filter = m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId);
-                // we also want to match documents which belongs to the current company
-                RetrieveRemoteCompanyId();
-            }
-            else {
-                filter = m => m.Resource.Equals(resource);
-            }
-
             // retrieve IMS
             var imsEntry = _db.Table<HttpMapping>()
-                .Where(filter)
+                .Where(m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId))
                 .OrderByDescending(v =>
                     v.LastUpdated
                 )
                 .FirstOrDefault();
             var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
 
-            List<T> changes;
-            // request changes
-            using (var adam = new RemoteRepository {Username = Username, Password = Password, ClientId = _sentinelClientId})
-            {
-				changes = (List<T>) await adam.Get<T>(ims, RemoteCompanyId);
+            RemoteRepositorySetup();
+			var changes = await _adam.Get<T>(ims, RemoteCompanyId);
 
-				HttpResponse = adam.HttpResponseMessage;
-				ActionPerformed = ( HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ? 
-					((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) :  ActionPerformed.Aborted;
+			HttpResponse = _adam.HttpResponseMessage;
+			ActionPerformed = (HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ?
+				((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) : ActionPerformed.Aborted;
 
-                
-            }
-			return changes;
+
+			return changes.ToList();
+        }
+        /// <summary>
+        /// Downloads changes happened on a remote resource.
+        /// </summary>
+        /// <typeparam name="T">Type of the objects to be downloaded.</typeparam>
+        /// <param name="resource">Remote resource name.</param>
+        /// <returns>A list of changed objects.</returns>
+        private async Task<List<T>> GetConfigResourceAsync<T>(string resource) where T : BaseModel
+        {
+            // ensure table exists 
+            _db.CreateTable<HttpMapping>();
+
+            // retrieve IMS
+            var imsEntry = _db.Table<HttpMapping>()
+                .Where(m => m.Resource.Equals(resource))
+                .OrderByDescending(v =>
+                    v.LastUpdated
+                )
+                .FirstOrDefault();
+            var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
+
+            RemoteRepositorySetup();
+			var changes = await _adam.Get<T>(ims);
+
+			HttpResponse = _adam.HttpResponseMessage;
+			ActionPerformed = (HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ?
+				((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) : ActionPerformed.Aborted;
+
+
+			return changes.ToList();
         }
 
         /// <summary>
@@ -459,7 +501,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="dataSet">configDataSet instance.</param>
         public async Task GetAziendeAsync(configDataSet dataSet)
         {
-            await GetAndSync<Company>(dataSet.Aziende);
+            await GetAndSyncConfigTable<Company>(dataSet.Aziende);
 
         }
 
@@ -469,7 +511,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="dataSet">companyDataSet instance.</param>
         public async Task GetNazioniAsync(companyDataSet dataSet)
         {
-            await GetAndSync<Country>(dataSet.Nazioni);
+            await GetAndSyncCompanyTable<Country>(dataSet.Nazioni);
         }
 
 
@@ -477,7 +519,7 @@ namespace Amica.vNext.Compatibility
         /// Downloads all changes from the server and merges them to a local DataSet instance.
         /// </summary>
         /// <param name="dataSet">Local DataSet.</param>
-	/// <remarks>Be careful that this will send a request for each table which has a corresponding endpoint on the remote server.</remarks>
+		/// <remarks>Be careful that this will send a request for each table which has a corresponding endpoint on the remote server.</remarks>
         public async Task GetAsync(DataSet dataSet)
         {
             // TODO: query the Eve OpLog to know which resources/tables have updates, 
@@ -489,10 +531,10 @@ namespace Amica.vNext.Compatibility
             {
                 if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
                 var methodName = string.Format("Get{0}Async", dt.TableName);
-		        await (Task) GetType().GetMethod(methodName).Invoke(this, new object[] {dataSet});
+                await (Task)GetType().GetMethod(methodName).Invoke(this, new object[] { dataSet });
             }
 
-	        // good luck
+            // good luck
             dataSet.EnforceConstraints = true;
         }
 
@@ -532,21 +574,29 @@ namespace Amica.vNext.Compatibility
         /// </summary>
         public HttpResponseMessage HttpResponse { get; private set; }
 
-	/// <summary>
-	/// Gets or sets the remote service base address.
-	/// </summary>
-	/// <value>The remote service base address.</value>
-        public string BaseAddress { get; private set; }
+		/// <summary>
+		/// Gets or sets the remote service base address.
+		/// </summary>
+		/// <value>The remote service base address.</value>
+        public Uri BaseAddress { get; set; }
 
-	/// <summary>
-	///  Username for authentication to the remote service.  
-	/// </summary>
-        public string Username { get; set; }
-	/// <summary>
-	///  Password for authentication to the remote service.  
-	/// </summary>
-	public string Password { get; set; }
+		/// <summary>
+		///  Username for authentication to the remote service.  
+		/// </summary>
+		public string Username { get; set; }
 
+		/// <summary>
+		///  Password for authentication to the remote service.  
+		/// </summary>
+		public string Password { get; set; }
+		/// <summary>
+        /// Client Id for autentication to the remote service..
+        /// </summary>
+		public string ClientId { get; set; }
+		/// <summary>
+        /// Application name used by the local cache.
+        /// </summary>
+		public string ApplicationName { get; set; }
         /// <summary>
         /// Returns the name of the local database used for keeping Amica and remote service in sync.
         /// </summary>
@@ -598,5 +648,14 @@ namespace Amica.vNext.Compatibility
 
         #endregion
 
+        public void RestoreDefaults()
+        {
+            Username = null;
+            Password = null;
+
+            BaseAddress = _adam.DiscoveryUri;
+            ClientId = Environment.GetEnvironmentVariable("SentinelClientId");
+            ApplicationName = "HttpDataProvider";
+        }
     }
 }
