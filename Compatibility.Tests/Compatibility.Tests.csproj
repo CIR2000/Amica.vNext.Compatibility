@@ -34,6 +34,12 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Amica.vNext.Compatibility.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -47,11 +53,13 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net40\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="nunit.framework">
-      <HintPath>..\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
+    <Reference Include="nunit.framework, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+      <HintPath>..\packages\NUnit.2.6.4\lib\nunit.framework.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Ploeh.Albedo, Version=1.0.2.0, Culture=neutral, PublicKeyToken=179ef6dd03497bbd, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -107,6 +115,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLite.cs" />
     <Compile Include="SQLiteAsync.cs" />
+    <Compile Include="TestBase.cs" />
     <Compile Include="TestHttpDataProvider.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -114,12 +123,25 @@
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\Eve.NET\Eve.Net4\Eve.Net4.csproj">
+      <Project>{c5dead7a-1511-4516-9334-420ce21d3dc8}</Project>
+      <Name>Eve.Net4</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Models\Models.Net4\Models.Net4.csproj">
+      <Project>{678d3308-5de9-4335-b0c8-1e0820b7515c}</Project>
+      <Name>Models.Net4</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Storage\Storage.Remote\Storage.Remote.Net4\Storage.Remote.Net4.csproj">
+      <Project>{e67bdb25-4234-4fca-be8b-21ad435bb0d3}</Project>
+      <Name>Storage.Remote.Net4</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Compatibility\Compatibility.csproj">
       <Project>{9e04ee4c-d5e2-4609-a68f-0510ad1d47cc}</Project>
       <Name>Compatibility</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Amica.vNext.Compatibility.snk" />
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>

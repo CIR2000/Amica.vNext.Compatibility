@@ -109,6 +109,10 @@
       <Project>{67306ca6-7f03-4d04-9f95-0607c4dc2a89}</Project>
       <Name>Data Provider</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Storage\Storage.Remote\Storage.Remote.Net4\Storage.Remote.Net4.csproj">
+      <Project>{e67bdb25-4234-4fca-be8b-21ad435bb0d3}</Project>
+      <Name>Storage.Remote.Net4</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Compatibility\Compatibility.csproj">
       <Project>{9e04ee4c-d5e2-4609-a68f-0510ad1d47cc}</Project>
       <Name>Compatibility</Name>

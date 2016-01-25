@@ -537,34 +537,6 @@ namespace Amica.vNext.Compatibility
             // good luck
             dataSet.EnforceConstraints = true;
         }
-
-        /// <summary>
-        /// Downloads all changes from the server and merges them to a local companyDataSet instance.
-        /// </summary>
-        /// <param name="dataSet">companyDataSet instance.</param>
-        public async Task GetAsync(companyDataSet dataSet)
-        {
-            dataSet.EnforceConstraints = false;
-
-            await GetNazioniAsync(dataSet);
-	    // ...
-
-            dataSet.EnforceConstraints = true;
-        }
-
-        /// <summary>
-        /// Downloads all cheanges from the server and merges them to a local configDataSet instance.
-        /// </summary>
-        /// <param name="dataSet">configDataSet instance.</param>
-        public async Task GetAsync(configDataSet dataSet)
-        {
-            dataSet.EnforceConstraints = false;
-
-            await GetAziendeAsync(dataSet);
-	    // ..
-
-            dataSet.EnforceConstraints = true;
-        }
         #endregion
 
         #region "P R O P E R T I E S"
@@ -652,9 +624,9 @@ namespace Amica.vNext.Compatibility
         {
             Username = null;
             Password = null;
+            ClientId = null;
 
             BaseAddress = _adam.DiscoveryUri;
-            ClientId = Environment.GetEnvironmentVariable("SentinelClientId");
             ApplicationName = "HttpDataProvider";
         }
     }

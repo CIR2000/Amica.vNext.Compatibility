@@ -1,6 +1,5 @@
 ﻿using Amica.Data;
 using Eve;
-using Eve.Authenticators;
 using NUnit.Framework;
 using SQLite;
 using System;
@@ -11,10 +10,13 @@ using Amica.vNext.Models;
 
 namespace Amica.vNext.Compatibility.Tests
 {
+
     [TestFixture]
-    public class TestHttpDataProvider
+    public class TestHttpDataProvider 
     {
         private SQLiteConnection _db;
+		private HttpDataProvider _httpDataProvider;
+
         // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
         // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
         private const string Service = "http://10.0.2.2:5000/";
@@ -28,14 +30,23 @@ namespace Amica.vNext.Compatibility.Tests
 
             _db = new SQLiteConnection(DbName);
             _db.DeleteAll<HttpMapping>();
+
+            _httpDataProvider = new HttpDataProvider()
+            {
+                ClientId = Environment.GetEnvironmentVariable("SentinelClientId"),
+                Username = Environment.GetEnvironmentVariable("SentinelUsername"),
+                Password = Environment.GetEnvironmentVariable("SentinelPassword"),
+            };
         }
 
         [TearDown]
         public void TearDown()
         {
-            if (_db != null) {
+            if (_db != null) 
                 _db.Dispose();
-            }
+
+			if (_httpDataProvider != null)
+				_httpDataProvider.Dispose();
 
         }
 
@@ -45,20 +56,22 @@ namespace Amica.vNext.Compatibility.Tests
         [Test]
         public void DatabaseStructure()
         {
-            using (new HttpDataProvider()) {
-                var props = typeof (HttpMapping).GetProperties();
-                var tableInfo = _db.GetTableInfo("HttpMapping");
-                for (var i = 0; i < tableInfo.Count; i++) {
-                    Assert.AreEqual(tableInfo[i].Name, props[i].Name);
-                }
-            }
+			var props = typeof (HttpMapping).GetProperties();
+			var tableInfo = _db.GetTableInfo("HttpMapping");
+			for (var i = 0; i < tableInfo.Count; i++) {
+				Assert.AreEqual(tableInfo[i].Name, props[i].Name);
+			}
         }
 
         [Test]
         public void DefaultProperties()
         {
             using (var dp = new HttpDataProvider()) {
+                Assert.IsNull(dp.Username);
+                Assert.IsNull(dp.Password);
+                Assert.IsNull(dp.ClientId);
                 Assert.IsNotNull(dp.BaseAddress);
+                Assert.AreEqual(dp.ApplicationName, "HttpDataProvider");
                 Assert.IsNull(dp.HttpResponse);
                 Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
                 Assert.AreEqual(dp.SyncDatabaseName, DbName);
@@ -68,8 +81,6 @@ namespace Amica.vNext.Compatibility.Tests
         [Test]
         public void CustomConstructors()
         {
-            var auth = new BasicAuthenticator("username", "password");
-
             var dataProvider = new DataProvider {ActiveCompanyId = 1};
             using (var dp = new HttpDataProvider(dataProvider)) {
                 Assert.AreEqual(dp.LocalCompanyId, 1);
@@ -135,17 +146,15 @@ namespace Amica.vNext.Compatibility.Tests
             n.Nome = "company";
             n.Id = 99;
             ds.Aziende.AddAziendeRow(n);
-            using (var dp = new HttpDataProvider())
-            {
-                await dp.UpdateAziendeAsync(n);
-                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.Created);
 
-                n.AcceptChanges();
-                n.SetModified();
+			await _httpDataProvider.UpdateAziendeAsync(n);
+			Assert.AreEqual( _httpDataProvider.HttpResponse.StatusCode, HttpStatusCode.Created);
 
-                n.Nome = "modified company";
-                ValidateKnownRow(n, "companies");
-            }
+			n.AcceptChanges();
+			n.SetModified();
+
+			n.Nome = "modified company";
+			ValidateKnownRow(n, "companies");
         }
 
         [Test]
@@ -158,13 +167,10 @@ namespace Amica.vNext.Compatibility.Tests
             row.Id = 99;
             ds.Aziende.AddAziendeRow(row);
 
-            using (var dp = new HttpDataProvider())
-            {
-                await dp.UpdateAziendeAsync(row);
+			await _httpDataProvider.UpdateAziendeAsync(row);
 
-                row.AcceptChanges();
-                row.Delete();
-            }
+			row.AcceptChanges();
+			row.Delete();
             ValidateKnownDeletedRow(row, "companies");
         }
 
@@ -192,15 +198,12 @@ namespace Amica.vNext.Compatibility.Tests
             row.Id = 99;
             ds.Aziende.AddAziendeRow(row);
 
-            using (var dp = new HttpDataProvider()) {
-
-                // perform the operation
-                await dp.UpdateAsync(ds);
-                Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
-                Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
-                Assert.AreEqual(1, dp.UpdatesPerformed.Count);
-                Assert.AreEqual("Aziende", dp.UpdatesPerformed[0].TableName);
-            }
+			// perform the operation
+			await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+			Assert.AreEqual(1, _httpDataProvider.UpdatesPerformed.Count);
+			Assert.AreEqual("Aziende", _httpDataProvider.UpdatesPerformed[0].TableName);
             ValidateSyncDb(row, "companies", false);
         }
 
@@ -228,92 +231,88 @@ namespace Amica.vNext.Compatibility.Tests
             var country = rc.PostAsync<Country>("countries", new Country() {Name = "Country", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            using (var dp = new HttpDataProvider())
-            {
-                // test that we can download and sync with a new company being posted on the remote
-                var configDs = new configDataSet();
-                await dp.GetAsync((DataSet) configDs);
-                // we downloaded one new object and added it to the corresponding table
-                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
-                Assert.AreEqual(1, configDs.Aziende.Count);
+			// test that we can download and sync with a new company being posted on the remote
+			var configDs = new configDataSet();
+			await _httpDataProvider.GetAsync(configDs);
+			// we downloaded one new object and added it to the corresponding table
+			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(1, configDs.Aziende.Count);
 
-                // we actually downloaded to right object
-                var aziendeRow = configDs.Aziende[0];
-                Assert.AreEqual(company.Name, aziendeRow.Nome);
-                ValidateSyncDb(aziendeRow, "companies", false);
+			// we actually downloaded to right object
+			var aziendeRow = configDs.Aziende[0];
+			Assert.AreEqual(company.Name, aziendeRow.Nome);
+			ValidateSyncDb(aziendeRow, "companies", false);
 
-                // if we try a sync again we don't get anything new since there have been no changes on the remote
-                await dp.GetAsync((DataSet) configDs);
-                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
-                Assert.AreEqual(1, configDs.Aziende.Count);
+			// if we try a sync again we don't get anything new since there have been no changes on the remote
+			await _httpDataProvider.GetAsync(configDs);
+			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(1, configDs.Aziende.Count);
 
-                // test that if the remote object is updated...
-                company.Name = "We changed name";
-                company = rc.PutAsync<Company>("companies", company).Result;
+			// test that if the remote object is updated...
+			company.Name = "We changed name";
+			company = rc.PutAsync<Company>("companies", company).Result;
 
-                System.Threading.Thread.Sleep(1000);
+			System.Threading.Thread.Sleep(1000);
 
-                // ... we can then sync it down effortlessly
-                await dp.GetAsync((DataSet) configDs);
-                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
-                aziendeRow = configDs.Aziende[0];
-                Assert.AreEqual(company.Name, aziendeRow.Nome);
-                ValidateSyncDb(aziendeRow, "companies", false);
+			// ... we can then sync it down effortlessly
+			await _httpDataProvider.GetAsync(configDs);
+			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+			aziendeRow = configDs.Aziende[0];
+			Assert.AreEqual(company.Name, aziendeRow.Nome);
+			ValidateSyncDb(aziendeRow, "companies", false);
 
-                // if we try a sync again we don't get anything new since there have been no changes on the remote
-                await dp.GetAsync((DataSet) configDs);
-                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
-                Assert.AreEqual(1, configDs.Aziende.Count);
+			// if we try a sync again we don't get anything new since there have been no changes on the remote
+			await _httpDataProvider.GetAsync(configDs);
+			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(1, configDs.Aziende.Count);
 
-                dp.LocalCompanyId = aziendeRow.Id;
+			_httpDataProvider.LocalCompanyId = aziendeRow.Id;
 
-                // test that we can download and sync with a new country posted on the remote
-                var companyDs = new companyDataSet();
-                await dp.GetAsync((DataSet) companyDs);
+			// test that we can download and sync with a new country posted on the remote
+			var companyDs = new companyDataSet();
+			await _httpDataProvider.GetAsync(companyDs);
 
-                // we downloaded one new object and added it to the corresponding table
-                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
-                Assert.AreEqual(1, companyDs.Nazioni.Count);
-                var nazioniRow = companyDs.Nazioni[0];
-                Assert.AreEqual(country.Name, nazioniRow.Nome);
-                ValidateSyncDb(nazioniRow, "countries", false);
+			// we downloaded one new object and added it to the corresponding table
+			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(1, companyDs.Nazioni.Count);
+			var nazioniRow = companyDs.Nazioni[0];
+			Assert.AreEqual(country.Name, nazioniRow.Nome);
+			ValidateSyncDb(nazioniRow, "countries", false);
 
-                // if we try a sync again we don't get anything new since there have been no changes on the remote
-                await dp.GetAsync((DataSet) companyDs);
-                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
-                Assert.AreEqual(1, companyDs.Nazioni.Count);
+			// if we try a sync again we don't get anything new since there have been no changes on the remote
+			await _httpDataProvider.GetAsync(companyDs);
+			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(1, companyDs.Nazioni.Count);
 
-                // test that if the remote object is updated...
-                country.Name = "We changed name";
-                country = rc.PutAsync<Country>("countries", country).Result;
+			// test that if the remote object is updated...
+			country.Name = "We changed name";
+			country = rc.PutAsync<Country>("countries", country).Result;
 
-                System.Threading.Thread.Sleep(1000);
+			System.Threading.Thread.Sleep(1000);
 
-                // ... we can then sync it down effortlessly
-                await dp.GetAsync((DataSet) companyDs);
-                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
-                nazioniRow = companyDs.Nazioni[0];
-                Assert.AreEqual(country.Name, nazioniRow.Nome);
-                ValidateSyncDb(nazioniRow, "countries", false);
+			// ... we can then sync it down effortlessly
+			await _httpDataProvider.GetAsync(companyDs);
+			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+			nazioniRow = companyDs.Nazioni[0];
+			Assert.AreEqual(country.Name, nazioniRow.Nome);
+			ValidateSyncDb(nazioniRow, "countries", false);
 
-                // if we try a sync again we don't get anything new since there have been no changes on the remote
-                await dp.GetAsync((DataSet) companyDs);
-                Assert.AreEqual(ActionPerformed.ReadNoChanges, dp.ActionPerformed);
-                Assert.AreEqual(1, companyDs.Nazioni.Count);
+			// if we try a sync again we don't get anything new since there have been no changes on the remote
+			await _httpDataProvider.GetAsync(companyDs);
+			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(1, companyDs.Nazioni.Count);
 
-                System.Threading.Thread.Sleep(1000);
+			System.Threading.Thread.Sleep(1000);
 
-                // if we delete an object on remote...
-                var r = rc.DeleteAsync("countries", country).Result;
-                Assert.AreEqual(HttpStatusCode.NoContent, r.StatusCode);
+			// if we delete an object on remote...
+			var r = rc.DeleteAsync("countries", country).Result;
+			Assert.AreEqual(HttpStatusCode.NoContent, r.StatusCode);
 
 
-                // ... we can then sync the delete down.
-                await dp.GetAsync((DataSet) companyDs);
-                Assert.AreEqual(ActionPerformed.Read, dp.ActionPerformed);
-                Assert.AreEqual(0, companyDs.Nazioni.Count);
-            }
-
+			// ... we can then sync the delete down.
+			await _httpDataProvider.GetAsync(companyDs);
+			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(0, companyDs.Nazioni.Count);
         }
 
         public  async void ValidateUnknownRow(DataRow r, string endpoint)
@@ -323,26 +322,22 @@ namespace Amica.vNext.Compatibility.Tests
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.NoContent);
 
-            using (var dp = new HttpDataProvider()) {
-
-                // perform the operation
-                await dp.UpdateAziendeAsync(r);
-                Assert.AreEqual(ActionPerformed.Added, dp.ActionPerformed);
-                Assert.AreEqual(HttpStatusCode.Created, dp.HttpResponse.StatusCode);
-            }
+			// perform the operation
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
             ValidateSyncDb(r, endpoint);
         }
 
         public  async void ValidateKnownRow(DataRow r, string endpoint)
         {
-            using (var dp = new HttpDataProvider()) {
-                // perform the operation
-                await dp.UpdateAziendeAsync(r);
-                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.Modified);
-                Assert.AreEqual(dp.HttpResponse.StatusCode, HttpStatusCode.OK);
-                Assert.AreEqual(1, dp.UpdatesPerformed.Count);
-                Assert.AreEqual("Aziende", dp.UpdatesPerformed[0].TableName);
-            }
+
+			// perform the operation
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(_httpDataProvider.ActionPerformed, ActionPerformed.Modified);
+			Assert.AreEqual(_httpDataProvider.HttpResponse.StatusCode, HttpStatusCode.OK);
+			Assert.AreEqual(1, _httpDataProvider.UpdatesPerformed.Count);
+			Assert.AreEqual("Aziende", _httpDataProvider.UpdatesPerformed[0].TableName);
             ValidateSyncDb(r, endpoint);
         }
 
@@ -353,17 +348,14 @@ namespace Amica.vNext.Compatibility.Tests
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}",endpoint)).Result.StatusCode == HttpStatusCode.NoContent);
 
-            using (var dp = new HttpDataProvider()) {
+			// perform the operation
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Aborted, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(422, (int) _httpDataProvider.HttpResponse.StatusCode);
+			Assert.AreEqual(0, _httpDataProvider.UpdatesPerformed.Count);
 
-                // perform the operation
-                await dp.UpdateAziendeAsync(r);
-                Assert.AreEqual(ActionPerformed.Aborted, dp.ActionPerformed);
-                Assert.AreEqual(422, (int) dp.HttpResponse.StatusCode);
-                Assert.AreEqual(0, dp.UpdatesPerformed.Count);
-
-                // test that row mapping record is still non-existant
-                Assert.AreEqual(0, _db.Table<HttpMapping>().Count());
-            }
+			// test that row mapping record is still non-existant
+			Assert.AreEqual(0, _db.Table<HttpMapping>().Count());
         }
 
         private void ValidateSyncDb(DataRow r, string endpoint, bool shouldTestRemote = true)
@@ -419,28 +411,19 @@ namespace Amica.vNext.Compatibility.Tests
         }
         private async void ValidateUnknownDeletedRow(DataRow r, string endpoint)
         {
-            using (var dp = new HttpDataProvider())
-            {
-                var localId = (int) r["Id", DataRowVersion.Original];
+			var localId = (int) r["Id", DataRowVersion.Original];
 
-                // perform the operation
-                await dp.UpdateAziendeAsync(r);
-                // since we did not have this row we did no action at all
-                Assert.AreEqual(dp.ActionPerformed, ActionPerformed.NoAction);
-                // therefore, we got no HttpResponse back.
-                Assert.IsNull(dp.HttpResponse);
-                Assert.AreEqual(0, dp.UpdatesPerformed.Count);
+			// perform the operation
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			// since we did not have this row we did no action at all
+			Assert.AreEqual(_httpDataProvider.ActionPerformed, ActionPerformed.NoAction);
+			// therefore, we got no HttpResponse back.
+			Assert.IsNull(_httpDataProvider.HttpResponse);
+			Assert.AreEqual(0, _httpDataProvider.UpdatesPerformed.Count);
 
-                // test that row mapping record is still non-existant
-                var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);
-                Assert.AreEqual(objs.Count(), 0);
-            }
+			// test that row mapping record is still non-existant
+			var objs = _db.Table<HttpMapping>().Where(v => v.Resource == endpoint && v.LocalId == localId);
+			Assert.AreEqual(objs.Count(), 0);
         }
-
-        private static HttpDataProvider GetHttpDataProvider()
-        {
-            return new HttpDataProvider();
-        }
-
     }
 }
