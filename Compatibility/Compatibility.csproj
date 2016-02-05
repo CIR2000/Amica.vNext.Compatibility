@@ -96,8 +96,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
-    <Compile Include="Maps\Companies.cs" />
-    <Compile Include="Maps\Countries.cs" />
+    <Compile Include="Maps\ContactMapInfo.cs" />
+    <Compile Include="Maps\MapInfo.cs" />
+    <Compile Include="Maps\CompanyMapInfo.cs" />
+    <Compile Include="Maps\ContactMinimalMapInfo.cs" />
+    <Compile Include="Maps\DocumentMapInfo.cs" />
+    <Compile Include="Maps\CountryMapInfo.cs" />
     <Compile Include="HttpDataProvider.cs" />
     <Compile Include="Map.cs" />
     <Compile Include="HttpMapping.cs" />
@@ -126,7 +130,9 @@
   <ItemGroup>
     <None Include="Amica.vNext.Compatibility.snk" />
     <None Include="Amica2007Key.pfx" />
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

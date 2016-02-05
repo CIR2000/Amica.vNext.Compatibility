@@ -9,11 +9,14 @@ using Amica.Data;
 using Amica.vNext.Models;
 using Amica.vNext.Storage;
 using SQLite;
+using System.Diagnostics;
+using Amica.vNext.Models.Documents;
 
 // TODO
-// 1. When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?
-// 2. When a remote change fails, what do we do? Raise exception, silently fail, etc?
-// 3. Any recovery plan like support for transactions?
+// Allow 'batch' uploads of data that has not changed? When an account joins the first time, what/if/how do we upload data?
+// When a row's parent company is not found we currently raise an exception. Should auto-create the parent instead? Or something else?
+// When a remote change fails, what do we do? Raise exception, silently fail, etc?
+// Any recovery plan like support for transactions?
 
 namespace Amica.vNext.Compatibility
 {
@@ -22,15 +25,16 @@ namespace Amica.vNext.Compatibility
     /// </summary>
     public class HttpDataProvider : IDisposable, IRestoreDefaults
     {
+
         private const string DbName = "HttpSync.db";
 
-        private readonly Dictionary<string, string> _resourcesMapping;
         private bool _hasCompanyIdChanged;
         private int? _localCompanyId;
         private DataProvider _dataProvider;
         private readonly List<DataTable> _updatesPerformed;
-        private readonly SQLiteConnection _db;
         private readonly RemoteRepository _adam;
+        private readonly Dictionary<string, string> _resourcesMapping;
+        private readonly SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
 
@@ -41,16 +45,20 @@ namespace Amica.vNext.Compatibility
             _adam = new RemoteRepository();
             RemoteRepositorySetup();
             RestoreDefaults();
-
             _hasCompanyIdChanged = true;
             _updatesPerformed = new List<DataTable>();
+
+            Map.HttpDataProvider = this;
+
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
-                {"Nazioni", "countries"}
+                {"Nazioni", "countries"},
+                {"Documenti", "documents"},
+                {"Anagrafiche", "contacts"}
             };
 
-            _db = new SQLiteConnection(DbName);
-
+			_db = new SQLiteConnection(DbName);
+            _db.CreateTable<HttpMapping>();
         }
 
         public HttpDataProvider(DataProvider dataProvider) : this()
@@ -66,7 +74,7 @@ namespace Amica.vNext.Compatibility
 
         public void Dispose()
         {
-            if (_db != null) _db.Dispose();
+            _db.Dispose();
             _adam.Dispose();
         }
             
@@ -88,9 +96,6 @@ namespace Amica.vNext.Compatibility
 
             // TODO this might be redundant as we have this guard in place already in both UpdateRowAsync and UpdateAsync(DataSet).
             if (!batch) UpdatesPerformed.Clear();
-
-            // ensure table exists 
-            _db.CreateTable<HttpMapping>();
 
             var targetRow = (row.RowState != DataRowState.Deleted) ? row : RetrieveDeletedRowValues(row);
 
@@ -273,6 +278,24 @@ namespace Amica.vNext.Compatibility
         #region "U P D A T E  M E T H O D S"
 
         /// <summary>
+        /// Stores a companyDataSet.AnagraficheDataTable.AnagraficheRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateAnagraficheAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Contact>(row, batch);
+        }
+        /// <summary>
+        /// Stores a companyDataSet.DocumentiDataTable.DocumentiRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateDocumentiAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Document>(row, batch);
+        }
+        /// <summary>
         /// Stores a companyDataSet.NazioniDataTable.NazioniRow to a remote API endpoint.
         /// </summary>
         /// <param name="row">Source DataRow</param>
@@ -289,6 +312,11 @@ namespace Amica.vNext.Compatibility
         /// <param name="batch">Wether this is part of a batch operation or not.</param>
         public async Task UpdateAziendeAsync(DataRow row, bool batch = false)
         {
+            var ts = new TraceSource("HttpDataProvider");
+            ts.TraceInformation("test");
+            ts.TraceEvent(TraceEventType.Error, 1, "errore");
+            //ts.Flush();
+            //ts.Close();
             await UpdateRowAsync<Company>(row, batch);
         }
 
@@ -312,20 +340,43 @@ namespace Amica.vNext.Compatibility
             if (changes == null) return;
 
             UpdatesPerformed.Clear();
-            foreach (DataTable dt in changes.Tables)
+            foreach (var tableName in _resourcesMapping.Keys)
             {
-                if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
-                var methodName = string.Format("Update{0}Async", dt.TableName);
+                if (!changes.Tables.Contains(tableName)) continue;
 
-                // TODO handle the case of a write error on a batch of rows. Right now
-                // the table is reported as not saved while in fact some rows might be saved
-                // which would lead to inconsistency on the local Amica DB.
-                foreach (DataRow row in dt.Rows) {
-                    await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row, true}));
-                    if (ActionPerformed == ActionPerformed.Aborted) goto End;
-                }
-                UpdatesPerformed.Add(dt);
-            } 
+                var targetTable = changes.Tables[tableName];
+                if (targetTable.Rows.Count == 0) continue;
+
+                await UpdateParentTables(targetTable);
+                await UpdateTable(targetTable);
+            }
+        }
+
+        private async Task UpdateParentTables(DataTable dt)
+        {
+            foreach (var parentTable in from DataRelation rel in dt.ParentRelations select rel.ParentTable)
+            {
+                await UpdateTable(parentTable);
+            }
+        }
+
+        private async Task UpdateTable(DataTable dt)
+        {
+			if (!_resourcesMapping.ContainsKey(dt.TableName) || UpdatesPerformed.Contains(dt) || dt.Rows.Count == 0)
+                return;
+
+			var methodName = string.Format("Update{0}Async", dt.TableName);
+
+			// TODO handle the case of a write error on a batch of rows. Right now
+			// the table is reported as not saved while in fact some rows might be saved
+			// which would lead to inconsistency on the local Amica DB.
+
+			foreach (DataRow row in dt.Rows) {
+				await ((Task) GetType().GetMethod(methodName).Invoke(this, new object[] {row, true}));
+				if (ActionPerformed == ActionPerformed.Aborted) goto End;
+			}
+
+			UpdatesPerformed.Add(dt);
             End: ;
         }
 
@@ -405,6 +456,20 @@ namespace Amica.vNext.Compatibility
 
 			return changes.ToList();
         }
+        internal string GetRemoteRowId(DataRow row)
+        {
+            _db.CreateTable<HttpMapping>();
+
+            var resource = _resourcesMapping[row.Table.TableName];
+            var localId = (int) row["Id"];
+
+            var mapping = _db
+                .Table<HttpMapping>()
+                .FirstOrDefault(
+                    m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId) && m.LocalId.Equals(localId));
+            return mapping != null ? mapping.RemoteId : null;
+        }
+
         /// <summary>
         /// Downloads changes happened on a remote resource.
         /// </summary>
@@ -431,7 +496,6 @@ namespace Amica.vNext.Compatibility
 			HttpResponse = _adam.HttpResponseMessage;
 			ActionPerformed = (HttpResponse != null && HttpResponse.StatusCode == HttpStatusCode.OK) ?
 				((changes.Count > 0) ? ActionPerformed.Read : ActionPerformed.ReadNoChanges) : ActionPerformed.Aborted;
-
 
 			return changes.ToList();
         }
@@ -465,15 +529,9 @@ namespace Amica.vNext.Compatibility
                     // TODO should we properly address this, instead of just throwing an exception?
                     throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");
 
-                Map.From<T>(row, obj);
+                Map.From(obj, row);
 
-                if (baseObj.Deleted) {
-                    row.Delete();
-                    _db.Delete(entry);
-                    continue;
-                }
-
-                if (row.RowState == DataRowState.Detached) dt.Rows.Add(row);
+				if (row.RowState == DataRowState.Detached) dt.Rows.Add(row);
 
                 // update the fresh new entry, or refresh existing one.
                 entry.LocalId = (int) row[dt.PrimaryKey[0]];
@@ -492,6 +550,13 @@ namespace Amica.vNext.Compatibility
                     _db.Insert(entry);
                 else
                     _db.Update(entry);
+
+                if (baseObj.Deleted)
+                {
+                    row.Delete();
+                    //_db.Delete(entry);
+                }
+
             }
         }
 
@@ -514,6 +579,15 @@ namespace Amica.vNext.Compatibility
             await GetAndSyncCompanyTable<Country>(dataSet.Nazioni);
         }
 
+        /// <summary>
+        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        public async Task GetDocumentiAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Document>(dataSet.Documenti);
+        }
+
 
         /// <summary>
         /// Downloads all changes from the server and merges them to a local DataSet instance.
@@ -527,12 +601,20 @@ namespace Amica.vNext.Compatibility
 
             dataSet.EnforceConstraints = false;
 
+            var readOnce = false;
+
             foreach (DataTable dt in dataSet.Tables)
             {
                 if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
                 var methodName = string.Format("Get{0}Async", dt.TableName);
                 await (Task)GetType().GetMethod(methodName).Invoke(this, new object[] { dataSet });
+
+                if (ActionPerformed == ActionPerformed.Read)
+                    readOnce = true;
             }
+
+            if (readOnce)
+                ActionPerformed = ActionPerformed.Read;
 
             // good luck
             dataSet.EnforceConstraints = true;

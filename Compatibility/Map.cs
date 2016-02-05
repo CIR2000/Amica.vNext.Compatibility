@@ -4,19 +4,24 @@ using System.Data;
 using System.Linq;
 using Amica.vNext.Compatibility.Maps;
 using Amica.vNext.Models;
+using Amica.vNext.Models.Documents;
+using SQLite;
 using Company = Amica.vNext.Models.Company;
 
 namespace Amica.vNext.Compatibility
 {
     public class Map
     {
-        private static readonly Dictionary<Type, Dictionary<string, string>> Topology =
-            new Dictionary<Type, Dictionary<string, string>>();
+        private static readonly Dictionary<Type, Dictionary<string, MapInfo>> Topology =
+            new Dictionary<Type, Dictionary<string, MapInfo>>();
 
         static Map()
         {
-            Topology.Add(typeof (Country), new Countries());
-            Topology.Add(typeof (Company), new Companies());
+            Topology.Add(typeof (Country), new CountryMapInfo());
+            Topology.Add(typeof (Company), new CompanyMapInfo());
+            Topology.Add(typeof (Document), new DocumentMapInfo());
+            Topology.Add(typeof(Contact), new ContactMapInfo());
+            Topology.Add(typeof (ContactMinimal), new ContactMinimalMapInfo());
         }
 
 #region "T O"
@@ -40,40 +45,78 @@ namespace Amica.vNext.Compatibility
         /// <returns></returns>
         public static T To<T>(DataRow dr) where T : new()
         {
-            var type = typeof (T);
-            var map =  Topology[type];
-
             var instance = new T();
-            foreach (DataColumn c in dr.Table.Columns)
+            DataRowToObject(dr, instance);
+            return instance;
+        }
+
+        internal static void DataRowToObject(DataRow sourceRow, object target)
+        {
+            var map = Topology[target.GetType()];
+
+            foreach (DataColumn c in sourceRow.Table.Columns)
             {
                 var propName = c.ColumnName;
                 if (!map.ContainsKey(propName)) continue;
 
-                var propInfo = type.GetProperty(map[propName]);
-                var val = Convert.ChangeType(dr[c], propInfo.PropertyType);
-                propInfo.SetValue(instance, val, null);
+                var mapInfo = map[propName];
+				var destProp = target.GetType().GetProperty(mapInfo.Destination);
+                object val;
+
+                if (mapInfo.ParentRelation == null)
+                {
+                    if (destProp.PropertyType.IsEnum)
+                        val = (int) Enum.Parse(destProp.PropertyType, sourceRow[c].ToString());
+					else if (c.ColumnName == "Id")
+						val = HttpDataProvider.GetRemoteRowId(sourceRow);
+					else
+						val = Convert.ChangeType(sourceRow[c], destProp.PropertyType);
+                }
+                else 
+                {
+                    val = Activator.CreateInstance(mapInfo.ParentType);
+					var parentRow = sourceRow.GetParentRow(mapInfo.ParentRelation);
+					DataRowToObject(parentRow, val);
+                }
+			   destProp.SetValue(target, val, null);
             }
-            return instance;
         }
 
-#endregion
+        #endregion
 
-        public static void From<T>(DataRow row, object obj)
+        internal static void From(object source, DataRow row)
         {
-            var type = typeof (T);
-            var map =  Topology[type];
+            var sourceType = source.GetType();
+            var map =  Topology[sourceType];
 
-            foreach (DataColumn c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
+            foreach (var c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
             {
                 var fieldName = c.ColumnName;
                 if (!map.ContainsKey(fieldName)) continue;
 
-                var prop = type.GetProperty(map[fieldName]);
+                var mapInfo = map[fieldName];
+
+                var prop = sourceType.GetProperty(mapInfo.Destination);
                 if (prop == null) continue;
 
-                var value = prop.GetValue(obj, null);
+                object value;
+                if (mapInfo.ParentRelation == null)
+                {
+                    value = prop.GetValue(source, null);
+                }
+                else
+                {
+                    var parentObject = prop.GetValue(source, null);
+                    int result;
+                    if (int.TryParse((parentObject.GetType().GetProperty("UniqueId").ToString()), out result))
+                        value = result;
+                    else
+                        value = DBNull.Value;
+                }
                 row[c.ColumnName] = value;
             }
+            
         }
+		internal static HttpDataProvider HttpDataProvider { get; set; }
     }
 }

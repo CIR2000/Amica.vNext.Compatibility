@@ -4,9 +4,11 @@ using NUnit.Framework;
 using SQLite;
 using System;
 using System.Data;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using Amica.vNext.Models;
+using Amica.vNext.Models.Documents;
 
 namespace Amica.vNext.Compatibility.Tests
 {
@@ -93,6 +95,59 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
+        //[Test]
+		[Test]
+        public async void AddDocumentsRow()
+        {
+            // make sure remote remote endpoint is completely empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var td = ds.TipiDocumento.NewTipiDocumentoRow();
+            td.Nome = "Fattura differita";
+            td.Id = 4;
+            ds.TipiDocumento.AddTipiDocumentoRow(td);
+
+            var c = ds.Anagrafiche.NewAnagraficheRow();
+            c.RagioneSociale1 = "rs1";
+            c.PartitaIVA = "vat";
+            c.Indirizzo = "address";
+            ds.Anagrafiche.AddAnagraficheRow(c);
+
+            var d = ds.Documenti.NewDocumentiRow();
+            d.IdAnagrafica = c.Id;
+            d.IdTipoDocumento = (int)DocumentType.Invoice;
+            d.TotaleFattura = 99;
+            d.Data = DateTime.Now;
+            ds.Documenti.AddDocumentiRow(d);
+
+			// perform the operation
+            _httpDataProvider.LocalCompanyId = 99;
+            //await _httpDataProvider.UpdateDocumentiAsync(d);
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(d, "documents");
+            ValidateSyncDb(c, "contacts");
+            
+
+        }
         /// <summary>
         /// Test that a new datarow is properly processed
         /// </summary>
@@ -219,6 +274,7 @@ namespace Amica.vNext.Compatibility.Tests
             using (var client = new HttpClient {BaseAddress = new Uri(Service)}) {
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent); 
+                Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent); 
             }
             
             var rc = new EveClient {BaseAddress = new Uri(Service)};
@@ -281,8 +337,8 @@ namespace Amica.vNext.Compatibility.Tests
 
 			// if we try a sync again we don't get anything new since there have been no changes on the remote
 			await _httpDataProvider.GetAsync(companyDs);
-			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
-			Assert.AreEqual(1, companyDs.Nazioni.Count);
+            Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
+            Assert.AreEqual(1, companyDs.Nazioni.Count);
 
 			// test that if the remote object is updated...
 			country.Name = "We changed name";
