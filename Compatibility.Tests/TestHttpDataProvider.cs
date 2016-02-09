@@ -124,10 +124,15 @@ namespace Amica.vNext.Compatibility.Tests
             td.Id = 4;
             ds.TipiDocumento.AddTipiDocumentoRow(td);
 
+		    var n = ds.Nazioni.NewNazioniRow();
+		    n.Nome = "Italia";
+		    ds.Nazioni.AddNazioniRow(n);
+
             var c = ds.Anagrafiche.NewAnagraficheRow();
             c.RagioneSociale1 = "rs1";
             c.PartitaIVA = "vat";
             c.Indirizzo = "address";
+		    c.IdNazione = n.Id;
             ds.Anagrafiche.AddAnagraficheRow(c);
 
             var d = ds.Documenti.NewDocumentiRow();
@@ -145,6 +150,7 @@ namespace Amica.vNext.Compatibility.Tests
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
             ValidateSyncDb(d, "documents");
             ValidateSyncDb(c, "contacts");
+            ValidateSyncDb(n, "countries");
             
 
         }
