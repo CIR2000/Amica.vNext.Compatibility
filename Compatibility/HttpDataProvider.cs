@@ -580,6 +580,15 @@ namespace Amica.vNext.Compatibility
         }
 
         /// <summary>
+        /// Downloads Contacts changes from the server and merges them to the Anagrafiche table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        public async Task GetAnagraficheAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Contact>(dataSet.Anagrafiche);
+        }
+
+        /// <summary>
         /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
         /// </summary>
         /// <param name="dataSet">companyDataSet instance.</param>
