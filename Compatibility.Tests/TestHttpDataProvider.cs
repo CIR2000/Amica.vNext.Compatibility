@@ -104,6 +104,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -151,7 +152,27 @@ namespace Amica.vNext.Compatibility.Tests
             ValidateSyncDb(d, "documents");
             ValidateSyncDb(c, "contacts");
             ValidateSyncDb(n, "countries");
-            
+
+		    cds.AcceptChanges();
+		    ds.AcceptChanges();
+
+			// Changing a Contact should not affect the ContatMinimal in the Document.
+            ds.Anagrafiche.Rows[0]["PartitaIVA"] = "vat1";
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Modified, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(d, "documents");
+            ValidateSyncDb(ds.Anagrafiche.Rows[0], "contacts");
+
+            var adam = new EveClient (Service);
+		    var contacts = await adam.GetAsync<Contact>("contacts");
+		    var contact = contacts[0];
+		    Assert.AreEqual("vat1", contact.Vat);
+
+		    var docs = await adam.GetAsync<Document>("documents");
+		    var doc = docs[0];
+		    Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
+		    Assert.AreEqual("vat", doc.Contact.Vat);
 
         }
         /// <summary>
