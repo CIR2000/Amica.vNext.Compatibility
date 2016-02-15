@@ -174,6 +174,12 @@ namespace Amica.vNext.Compatibility.Tests
 		    Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
 		    Assert.AreEqual("vat", doc.Contact.Vat);
 
+            doc.Contact.Vat = "vat2";
+		    await adam.PutAsync("documents", doc);
+            await _httpDataProvider.GetAsync(ds);
+            Assert.AreEqual("vat1", ds.Anagrafiche.Rows[0]["PartitaIva"]);
+            Assert.AreEqual("IdAnagrafica", ds.Documenti.Rows[0]["IdAnagrafica"]);
+
         }
         /// <summary>
         /// Test that a new datarow is properly processed
