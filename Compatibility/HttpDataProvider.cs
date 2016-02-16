@@ -11,7 +11,6 @@ using Amica.vNext.Storage;
 using SQLite;
 using System.Diagnostics;
 using Amica.vNext.Models.Documents;
-using Amica.vNext.Models;
 
 // TODO
 // Allow 'batch' uploads of data that has not changed? When an account joins the first time, what/if/how do we upload data?
@@ -623,11 +622,25 @@ namespace Amica.vNext.Compatibility
 
             var readOnce = false;
 
-            foreach (DataTable dt in dataSet.Tables)
+            var done = new List<string>();
+            foreach (var dt in dataSet.Tables.Cast<DataTable>().Where(
+				dt => _resourcesMapping.ContainsKey(dt.TableName)))
             {
-                if (!_resourcesMapping.ContainsKey(dt.TableName)) continue;
-                var methodName = string.Format("Get{0}Async", dt.TableName);
-                await (Task)GetType().GetMethod(methodName).Invoke(this, new object[] { dataSet });
+                foreach (var parentTable in dt.ParentRelations.Cast<DataRelation>().Select(
+					parentRelation => parentRelation.ParentTable.TableName).Where(
+					parentTable => _resourcesMapping.ContainsKey(parentTable) && !done.Contains(parentTable) && parentTable != dt.TableName))
+                {
+                    await (Task)GetType().GetMethod(string.Format("Get{0}Async", parentTable)).Invoke(this, new object[] { dataSet });
+                    done.Add(parentTable);
+
+                    if (ActionPerformed == ActionPerformed.Read)
+                        readOnce = true;
+                }
+
+                if (done.Contains(dt.TableName)) continue;
+
+                await (Task)GetType().GetMethod(string.Format("Get{0}Async", dt.TableName)).Invoke(this, new object[] { dataSet });
+                done.Add(dt.TableName);
 
                 if (ActionPerformed == ActionPerformed.Read)
                     readOnce = true;
