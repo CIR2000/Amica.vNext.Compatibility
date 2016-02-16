@@ -11,6 +11,7 @@ using Amica.vNext.Storage;
 using SQLite;
 using System.Diagnostics;
 using Amica.vNext.Models.Documents;
+using Amica.vNext.Models;
 
 // TODO
 // Allow 'batch' uploads of data that has not changed? When an account joins the first time, what/if/how do we upload data?
@@ -469,6 +470,16 @@ namespace Amica.vNext.Compatibility
                     m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId) && m.LocalId.Equals(localId));
             return mapping != null ? mapping.RemoteId : null;
         }
+        internal int GetLocalRowId(IUniqueId obj)
+        {
+            _db.CreateTable<HttpMapping>();
+
+            var mapping = _db
+                .Table<HttpMapping>()
+                .FirstOrDefault(
+                    m => m.RemoteId.Equals(obj.UniqueId));
+            return mapping != null ? mapping.LocalId : 0;
+        }
 
         /// <summary>
         /// Downloads changes happened on a remote resource.
@@ -524,7 +535,7 @@ namespace Amica.vNext.Compatibility
                     dt.PrimaryKey = new[] {dt.Columns[0]};
 
 
-                DataRow row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
+                var row = (entry.LocalId == 0) ? dt.NewRow() : dt.Rows.Find(entry.LocalId);
                 if (row == null)
                     // TODO should we properly address this, instead of just throwing an exception?
                     throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");

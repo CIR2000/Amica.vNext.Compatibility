@@ -174,11 +174,15 @@ namespace Amica.vNext.Compatibility.Tests
 		    Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
 		    Assert.AreEqual("vat", doc.Contact.Vat);
 
+
             doc.Contact.Vat = "vat2";
 		    await adam.PutAsync("documents", doc);
+			Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
             await _httpDataProvider.GetAsync(ds);
+			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+			// Anagrafiche field and document reference have not changed
             Assert.AreEqual("vat1", ds.Anagrafiche.Rows[0]["PartitaIva"]);
-            Assert.AreEqual("IdAnagrafica", ds.Documenti.Rows[0]["IdAnagrafica"]);
+            Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
 
         }
         /// <summary>

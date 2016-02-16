@@ -107,11 +107,7 @@ namespace Amica.vNext.Compatibility
                 else
                 {
                     var parentObject = prop.GetValue(source, null);
-                    int result;
-                    if (int.TryParse((parentObject.GetType().GetProperty("UniqueId").ToString()), out result))
-                        value = result;
-                    else
-                        value = DBNull.Value;
+                    value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
                 }
                 row[c.ColumnName] = value;
             }

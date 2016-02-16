@@ -25,11 +25,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eve.Net4", "..\..\Eve.NET\E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage.Remote.Net4", "..\Storage\Storage.Remote\Storage.Remote.Net4\Storage.Remote.Net4.csproj", "{E67BDB25-4234-4FCA-BE8B-21AD435BB0D3}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Models.Core", "..\Models\Models.Core\Models.Core.shproj", "{71612766-1264-488D-8064-B3BDADC6D61F}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\Storage\Storage.Core\Storage.Core.projitems*{e67bdb25-4234-4fca-be8b-21ad435bb0d3}*SharedItemsImports = 4
 		..\Storage\Storage.Remote\Storage.Remote.Core\Storage.Remote.projitems*{e67bdb25-4234-4fca-be8b-21ad435bb0d3}*SharedItemsImports = 4
+		..\Storage\Storage.Core\Storage.Core.projitems*{e67bdb25-4234-4fca-be8b-21ad435bb0d3}*SharedItemsImports = 4
 		..\..\Eve.NET\Eve.Core\Eve.Core.projitems*{c5dead7a-1511-4516-9334-420ce21d3dc8}*SharedItemsImports = 4
+		..\Models\Models.Core\Models.Core.projitems*{71612766-1264-488d-8064-b3bdadc6d61f}*SharedItemsImports = 13
 		..\Discovery\Discovery.Core\Discovery.Core.projitems*{4b684125-389e-4edf-87e9-905785f700a5}*SharedItemsImports = 4
 		..\SimpleCache\SimpleCache.Core\SimpleCache.Core.projitems*{5a320348-7ae0-421a-b3ec-25ff8fed4243}*SharedItemsImports = 4
 		..\Models\Models.Core\Models.Core.projitems*{678d3308-5de9-4335-b0c8-1e0820b7515c}*SharedItemsImports = 4
