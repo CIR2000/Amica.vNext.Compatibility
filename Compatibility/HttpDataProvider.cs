@@ -621,36 +621,35 @@ namespace Amica.vNext.Compatibility
             dataSet.EnforceConstraints = false;
 
             var readOnce = false;
-
+            var readParentsOnce = false;
             var done = new List<string>();
-            foreach (var dt in dataSet.Tables.Cast<DataTable>().Where(
-				dt => _resourcesMapping.ContainsKey(dt.TableName)))
+
+            foreach (var table in dataSet.Tables.Cast<DataTable>().Where(dt => _resourcesMapping.ContainsKey(dt.TableName)))
             {
-                foreach (var parentTable in dt.ParentRelations.Cast<DataRelation>().Select(
-					parentRelation => parentRelation.ParentTable.TableName).Where(
-					parentTable => _resourcesMapping.ContainsKey(parentTable) && !done.Contains(parentTable) && parentTable != dt.TableName))
+                foreach (var parentTable in table.ParentRelations.Cast<DataRelation>().Select(
+					parentRelation => parentRelation.ParentTable).Where(
+					parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !done.Contains(parentTable.TableName) && parentTable != table))
                 {
-                    await (Task)GetType().GetMethod(string.Format("Get{0}Async", parentTable)).Invoke(this, new object[] { dataSet });
-                    done.Add(parentTable);
-
-                    if (ActionPerformed == ActionPerformed.Read)
-                        readOnce = true;
+                    readParentsOnce = await PerformGetTableMethod(parentTable);
+					done.Add(table.TableName);
                 }
-
-                if (done.Contains(dt.TableName)) continue;
-
-                await (Task)GetType().GetMethod(string.Format("Get{0}Async", dt.TableName)).Invoke(this, new object[] { dataSet });
-                done.Add(dt.TableName);
-
-                if (ActionPerformed == ActionPerformed.Read)
-                    readOnce = true;
+                readOnce = await PerformGetTableMethod(table);
+				done.Add(table.TableName);
             }
 
-            if (readOnce)
+            if (readOnce || readParentsOnce)
                 ActionPerformed = ActionPerformed.Read;
 
             // good luck
             dataSet.EnforceConstraints = true;
+        }
+
+        private async Task<bool> PerformGetTableMethod(DataTable table)
+        {
+
+			await (Task)GetType().GetMethod(string.Format("Get{0}Async", table.TableName)).Invoke(this, new object[] { table.DataSet});
+
+            return ActionPerformed == ActionPerformed.Read;
         }
         #endregion
 
