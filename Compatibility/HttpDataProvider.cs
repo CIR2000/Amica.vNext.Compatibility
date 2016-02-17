@@ -10,6 +10,7 @@ using Amica.vNext.Models;
 using Amica.vNext.Storage;
 using SQLite;
 using System.Diagnostics;
+using System.Reflection;
 using Amica.vNext.Models.Documents;
 
 // TODO
@@ -574,7 +575,7 @@ namespace Amica.vNext.Compatibility
         /// Downloads Companies changes from the server and merges them to the Aziende table on the local dataset.
         /// </summary>
         /// <param name="dataSet">configDataSet instance.</param>
-        public async Task GetAziendeAsync(configDataSet dataSet)
+        private async Task GetAziendeAsync(configDataSet dataSet)
         {
             await GetAndSyncConfigTable<Company>(dataSet.Aziende);
 
@@ -584,7 +585,7 @@ namespace Amica.vNext.Compatibility
         /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
         /// </summary>
         /// <param name="dataSet">companyDataSet instance.</param>
-        public async Task GetNazioniAsync(companyDataSet dataSet)
+        private async Task GetNazioniAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Country>(dataSet.Nazioni);
         }
@@ -593,7 +594,7 @@ namespace Amica.vNext.Compatibility
         /// Downloads Contacts changes from the server and merges them to the Anagrafiche table on the local dataset.
         /// </summary>
         /// <param name="dataSet">companyDataSet instance.</param>
-        public async Task GetAnagraficheAsync(companyDataSet dataSet)
+        private async Task GetAnagraficheAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Contact>(dataSet.Anagrafiche);
         }
@@ -602,7 +603,7 @@ namespace Amica.vNext.Compatibility
         /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
         /// </summary>
         /// <param name="dataSet">companyDataSet instance.</param>
-        public async Task GetDocumentiAsync(companyDataSet dataSet)
+        private async Task GetDocumentiAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Document>(dataSet.Documenti);
         }
@@ -618,38 +619,56 @@ namespace Amica.vNext.Compatibility
             // TODO: query the Eve OpLog to know which resources/tables have updates, 
             // should greatly reduce the number of superfluous requests.
 
-            dataSet.EnforceConstraints = false;
+            ActionPerformed = ActionPerformed.NoAction;
 
+            dataSet.EnforceConstraints = false;
             var readOnce = false;
-            var readParentsOnce = false;
-            var done = new List<string>();
 
             foreach (var table in dataSet.Tables.Cast<DataTable>().Where(dt => _resourcesMapping.ContainsKey(dt.TableName)))
             {
-                foreach (var parentTable in table.ParentRelations.Cast<DataRelation>().Select(
-					parentRelation => parentRelation.ParentTable).Where(
-					parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !done.Contains(parentTable.TableName) && parentTable != table))
-                {
-                    readParentsOnce = await PerformGetTableMethod(parentTable);
-					done.Add(table.TableName);
-                }
-                readOnce = await PerformGetTableMethod(table);
-				done.Add(table.TableName);
+                await GetAndSyncCompanyTableAndParents(table);
+                if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
             }
 
-            if (readOnce || readParentsOnce)
+            if (readOnce)
                 ActionPerformed = ActionPerformed.Read;
 
             // good luck
             dataSet.EnforceConstraints = true;
         }
 
-        private async Task<bool> PerformGetTableMethod(DataTable table)
+        private async Task GetAndSyncCompanyTableAndParents(DataTable table)
         {
+			await GetAndSyncCompanyParentTables(table);
+            var parentsActionPerformed = ActionPerformed;
 
-			await (Task)GetType().GetMethod(string.Format("Get{0}Async", table.TableName)).Invoke(this, new object[] { table.DataSet});
+			await PerformGetTableMethod(table);
 
-            return ActionPerformed == ActionPerformed.Read;
+            if (parentsActionPerformed == ActionPerformed.Read)
+                ActionPerformed = ActionPerformed.Read;
+        }
+		private async Task GetAndSyncCompanyParentTables(DataTable table)
+        {
+            var readOnce = false;
+            var done = new List<string>();
+
+			foreach (var parentTable in table.ParentRelations.Cast<DataRelation>().Select(
+				parentRelation => parentRelation.ParentTable).Where(
+				parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !done.Contains(parentTable.TableName) && parentTable != table))
+			{
+				await PerformGetTableMethod(parentTable);
+			    if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
+
+				done.Add(table.TableName);
+			}
+
+            if (readOnce)
+                ActionPerformed = ActionPerformed.Read;
+        }
+
+        private async Task PerformGetTableMethod(DataTable table)
+        {
+			await (Task)GetType().GetMethod(string.Format("Get{0}Async", table.TableName), BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
         }
         #endregion
 
