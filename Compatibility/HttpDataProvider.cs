@@ -10,6 +10,7 @@ using Amica.vNext.Models;
 using Amica.vNext.Storage;
 using SQLite;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Amica.vNext.Models.Documents;
 
@@ -24,6 +25,7 @@ namespace Amica.vNext.Compatibility
     /// <summary>
     /// Provides a compatibilty layer between Amica 10's ADO storage system and Eve REST APIs.
     /// </summary>
+    [SuppressMessage("ReSharper", "UnusedMember.Local")]
     public class HttpDataProvider : IDisposable, IRestoreDefaults
     {
 
@@ -572,44 +574,6 @@ namespace Amica.vNext.Compatibility
         }
 
         /// <summary>
-        /// Downloads Companies changes from the server and merges them to the Aziende table on the local dataset.
-        /// </summary>
-        /// <param name="dataSet">configDataSet instance.</param>
-        private async Task GetAziendeAsync(configDataSet dataSet)
-        {
-            await GetAndSyncConfigTable<Company>(dataSet.Aziende);
-
-        }
-
-        /// <summary>
-        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
-        /// </summary>
-        /// <param name="dataSet">companyDataSet instance.</param>
-        private async Task GetNazioniAsync(companyDataSet dataSet)
-        {
-            await GetAndSyncCompanyTable<Country>(dataSet.Nazioni);
-        }
-
-        /// <summary>
-        /// Downloads Contacts changes from the server and merges them to the Anagrafiche table on the local dataset.
-        /// </summary>
-        /// <param name="dataSet">companyDataSet instance.</param>
-        private async Task GetAnagraficheAsync(companyDataSet dataSet)
-        {
-            await GetAndSyncCompanyTable<Contact>(dataSet.Anagrafiche);
-        }
-
-        /// <summary>
-        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
-        /// </summary>
-        /// <param name="dataSet">companyDataSet instance.</param>
-        private async Task GetDocumentiAsync(companyDataSet dataSet)
-        {
-            await GetAndSyncCompanyTable<Document>(dataSet.Documenti);
-        }
-
-
-        /// <summary>
         /// Downloads all changes from the server and merges them to a local DataSet instance.
         /// </summary>
         /// <param name="dataSet">Local DataSet.</param>
@@ -626,7 +590,7 @@ namespace Amica.vNext.Compatibility
 
             foreach (var table in dataSet.Tables.Cast<DataTable>().Where(dt => _resourcesMapping.ContainsKey(dt.TableName)))
             {
-                await GetAndSyncCompanyTableAndParents(table);
+                await GetAndSyncTableIncludingParents(table);
                 if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
             }
 
@@ -637,17 +601,17 @@ namespace Amica.vNext.Compatibility
             dataSet.EnforceConstraints = true;
         }
 
-        private async Task GetAndSyncCompanyTableAndParents(DataTable table)
+        private async Task GetAndSyncTableIncludingParents(DataTable table)
         {
-			await GetAndSyncCompanyParentTables(table);
+			await GetAndSyncParentTables(table);
             var parentsActionPerformed = ActionPerformed;
 
-			await PerformGetTableMethod(table);
+			await GetAndSyncTable(table);
 
             if (parentsActionPerformed == ActionPerformed.Read)
                 ActionPerformed = ActionPerformed.Read;
         }
-		private async Task GetAndSyncCompanyParentTables(DataTable table)
+		private async Task GetAndSyncParentTables(DataTable table)
         {
             var readOnce = false;
             var done = new List<string>();
@@ -656,7 +620,7 @@ namespace Amica.vNext.Compatibility
 				parentRelation => parentRelation.ParentTable).Where(
 				parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !done.Contains(parentTable.TableName) && parentTable != table))
 			{
-				await PerformGetTableMethod(parentTable);
+				await GetAndSyncTable(parentTable);
 			    if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
 
 				done.Add(table.TableName);
@@ -666,10 +630,48 @@ namespace Amica.vNext.Compatibility
                 ActionPerformed = ActionPerformed.Read;
         }
 
-        private async Task PerformGetTableMethod(DataTable table)
+        private async Task GetAndSyncTable(DataTable table)
         {
-			await (Task)GetType().GetMethod(string.Format("Get{0}Async", table.TableName), BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
+			await (Task)GetType().GetMethod(string.Format("GetAndSync{0}Async", table.TableName), BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
         }
+
+        /// <summary>
+        /// Downloads Companies changes from the server and merges them to the Aziende table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">configDataSet instance.</param>
+        private async Task GetAndSyncAziendeAsync(configDataSet dataSet)
+        {
+            await GetAndSyncConfigTable<Company>(dataSet.Aziende);
+        }
+
+        /// <summary>
+        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncNazioniAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Country>(dataSet.Nazioni);
+        }
+
+        /// <summary>
+        /// Downloads Contacts changes from the server and merges them to the Anagrafiche table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncAnagraficheAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Contact>(dataSet.Anagrafiche);
+        }
+
+        /// <summary>
+        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncDocumentiAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Document>(dataSet.Documenti);
+        }
+
+
         #endregion
 
         #region "P R O P E R T I E S"
