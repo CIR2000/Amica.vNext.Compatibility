@@ -37,6 +37,7 @@ namespace Amica.vNext.Compatibility
         private readonly List<DataTable> _updatesPerformed;
         private readonly RemoteRepository _adam;
         private readonly Dictionary<string, string> _resourcesMapping;
+        private readonly List<string> _processedTables;
         private readonly SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
@@ -50,6 +51,7 @@ namespace Amica.vNext.Compatibility
             RestoreDefaults();
             _hasCompanyIdChanged = true;
             _updatesPerformed = new List<DataTable>();
+            _processedTables = new List<string>();
 
             Map.HttpDataProvider = this;
 
@@ -472,7 +474,7 @@ namespace Amica.vNext.Compatibility
                     m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId) && m.LocalId.Equals(localId));
             return mapping != null ? mapping.RemoteId : null;
         }
-        internal int GetLocalRowId(IUniqueId obj)
+        internal object GetLocalRowId(IUniqueId obj)
         {
             _db.CreateTable<HttpMapping>();
 
@@ -480,7 +482,10 @@ namespace Amica.vNext.Compatibility
                 .Table<HttpMapping>()
                 .FirstOrDefault(
                     m => m.RemoteId.Equals(obj.UniqueId));
-            return mapping != null ? mapping.LocalId : 0;
+
+            if (mapping != null)
+                return mapping.LocalId;
+			return DBNull.Value;
         }
 
         /// <summary>
@@ -567,11 +572,12 @@ namespace Amica.vNext.Compatibility
                 if (baseObj.Deleted)
                 {
                     row.Delete();
-                    //_db.Delete(entry);
                 }
 
             }
         }
+
+		private List<string> ProcessedTables { get { return _processedTables; } }
 
         /// <summary>
         /// Downloads all changes from the server and merges them to a local DataSet instance.
@@ -584,6 +590,7 @@ namespace Amica.vNext.Compatibility
             // should greatly reduce the number of superfluous requests.
 
             ActionPerformed = ActionPerformed.NoAction;
+            ProcessedTables.Clear();
 
             dataSet.EnforceConstraints = false;
             var readOnce = false;
@@ -594,8 +601,7 @@ namespace Amica.vNext.Compatibility
                 if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
             }
 
-            if (readOnce)
-                ActionPerformed = ActionPerformed.Read;
+            if (readOnce) ActionPerformed = ActionPerformed.Read;
 
             // good luck
             dataSet.EnforceConstraints = true;
@@ -614,25 +620,26 @@ namespace Amica.vNext.Compatibility
 		private async Task GetAndSyncParentTables(DataTable table)
         {
             var readOnce = false;
-            var done = new List<string>();
 
 			foreach (var parentTable in table.ParentRelations.Cast<DataRelation>().Select(
 				parentRelation => parentRelation.ParentTable).Where(
-				parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !done.Contains(parentTable.TableName) && parentTable != table))
+				parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !ProcessedTables.Contains(parentTable.TableName) && parentTable != table))
 			{
 				await GetAndSyncTable(parentTable);
 			    if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
 
-				done.Add(table.TableName);
+				ProcessedTables.Add(parentTable.TableName);
 			}
 
-            if (readOnce)
-                ActionPerformed = ActionPerformed.Read;
+            if (readOnce) ActionPerformed = ActionPerformed.Read;
         }
 
         private async Task GetAndSyncTable(DataTable table)
         {
 			await (Task)GetType().GetMethod(string.Format("GetAndSync{0}Async", table.TableName), BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
+
+            if (!ProcessedTables.Contains(table.TableName))
+                ProcessedTables.Add(table.TableName);
         }
 
         /// <summary>

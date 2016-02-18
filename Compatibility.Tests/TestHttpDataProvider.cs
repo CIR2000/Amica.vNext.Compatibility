@@ -4,7 +4,6 @@ using NUnit.Framework;
 using SQLite;
 using System;
 using System.Data;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using Amica.vNext.Models;
@@ -145,7 +144,6 @@ namespace Amica.vNext.Compatibility.Tests
 
 			// perform the operation
             _httpDataProvider.LocalCompanyId = 99;
-            //await _httpDataProvider.UpdateDocumentiAsync(d);
             await _httpDataProvider.UpdateAsync(ds);
 			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
@@ -312,6 +310,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent); 
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent); 
+                Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent); 
             }
             
             var rc = new EveClient {BaseAddress = new Uri(Service)};
@@ -322,6 +321,12 @@ namespace Amica.vNext.Compatibility.Tests
 
             // post a new country which holds a reference to the previously posted company
             var country = rc.PostAsync<Country>("countries", new Country() {Name = "Country", CompanyId = company.UniqueId}).Result;
+            Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
+
+            var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", Vat = "Vat", CompanyId = company.UniqueId}).Result;
+            Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
+
+            var doc = rc.PostAsync<Document>("documents", new Invoice() {Contact = new ContactMinimal { UniqueId = contact.UniqueId, Address = "Address", Vat = "Vat", Name = "name" }, CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
 			// test that we can download and sync with a new company being posted on the remote
@@ -363,6 +368,10 @@ namespace Amica.vNext.Compatibility.Tests
 
 			// test that we can download and sync with a new country posted on the remote
 			var companyDs = new companyDataSet();
+            var t = companyDs.TipiDocumento.NewTipiDocumentoRow();
+            t.Id = 4;
+            companyDs.TipiDocumento.AddTipiDocumentoRow(t);
+
 			await _httpDataProvider.GetAsync(companyDs);
 
 			// we downloaded one new object and added it to the corresponding table
