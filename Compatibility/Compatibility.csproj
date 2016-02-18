@@ -96,15 +96,19 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
-    <Compile Include="Maps\ContactMapInfo.cs" />
-    <Compile Include="Maps\MapInfo.cs" />
-    <Compile Include="Maps\CompanyMapInfo.cs" />
-    <Compile Include="Maps\ContactMinimalMapInfo.cs" />
-    <Compile Include="Maps\DocumentMapInfo.cs" />
-    <Compile Include="Maps\CountryMapInfo.cs" />
+    <Compile Include="Maps\ContactMapping.cs" />
+    <Compile Include="Maps\DocumentItemMapping.cs" />
+    <Compile Include="Maps\FieldMapping.cs" />
+    <Compile Include="Maps\IMapping.cs" />
+    <Compile Include="Maps\CompanyMapping.cs" />
+    <Compile Include="Maps\ContactMinimalMapping.cs" />
+    <Compile Include="Maps\DocumentMapping.cs" />
+    <Compile Include="Maps\CountryMapping.cs" />
     <Compile Include="HttpDataProvider.cs" />
     <Compile Include="Map.cs" />
     <Compile Include="HttpMapping.cs" />
+    <Compile Include="Maps\Mapping.cs" />
+    <Compile Include="Maps\DataRelationMapping.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLite.cs" />
     <Compile Include="SQLiteAsync.cs" />

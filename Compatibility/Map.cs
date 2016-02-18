@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -12,16 +13,17 @@ namespace Amica.vNext.Compatibility
 {
     public class Map
     {
-        private static readonly Dictionary<Type, Dictionary<string, MapInfo>> Topology =
-            new Dictionary<Type, Dictionary<string, MapInfo>>();
+        private static readonly Dictionary<Type, IMapping> Topology =
+            new Dictionary<Type, IMapping>();
 
         static Map()
         {
-            Topology.Add(typeof (Country), new CountryMapInfo());
-            Topology.Add(typeof (Company), new CompanyMapInfo());
-            Topology.Add(typeof (Document), new DocumentMapInfo());
-            Topology.Add(typeof(Contact), new ContactMapInfo());
-            Topology.Add(typeof (ContactMinimal), new ContactMinimalMapInfo());
+            Topology.Add(typeof(Country), new CountryMapping());
+            Topology.Add(typeof(Company), new CompanyMapping());
+            Topology.Add(typeof (Document), new DocumentMapping());
+            Topology.Add(typeof (DocumentItem), new DocumentItemMapping());
+            Topology.Add(typeof(Contact), new ContactMapping());
+            Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
         }
 
 #region "T O"
@@ -50,35 +52,64 @@ namespace Amica.vNext.Compatibility
             return instance;
         }
 
-        internal static void DataRowToObject(DataRow sourceRow, object target)
+        internal static void DataRowToObject(DataRow row, object target)
         {
-            var map = Topology[target.GetType()];
+            var mapping = Topology[target.GetType()];
 
-            foreach (DataColumn c in sourceRow.Table.Columns)
+            ProcessFields(row, target, mapping);
+            ProcessParentRows(row, target, mapping);
+            ProcessChildRows(row, target, mapping);
+        }
+		internal static void ProcessFields(DataRow row, object target, IMapping mapping)
+        {
+			foreach (var fieldMapping in mapping.Fields)
             {
-                var propName = c.ColumnName;
-                if (!map.ContainsKey(propName)) continue;
+                var column = row.Table.Columns[fieldMapping.Key];
+                var destProp = target.GetType().GetProperty(fieldMapping.Value.FieldName);
 
-                var mapInfo = map[propName];
-				var destProp = target.GetType().GetProperty(mapInfo.Destination);
                 object val;
 
-                if (mapInfo.ParentRelation == null)
+				if (destProp.PropertyType.IsEnum)
+					val = (int) Enum.Parse(destProp.PropertyType, row[column].ToString());
+				else if (column.ColumnName == "Id")
+					val = HttpDataProvider.GetRemoteRowId(row);
+				else
+					val = Convert.ChangeType(row[column], destProp.PropertyType);
+
+			    destProp.SetValue(target, val, null);
+            }
+        }
+		internal static void ProcessParentRows(DataRow row, object target, IMapping mapping)
+        {
+			foreach (var parentMapping in mapping.Parents)
+            {
+                var destProp = target.GetType().GetProperty(parentMapping.Value.FieldName);
+
+                var nestedObject = Activator.CreateInstance(parentMapping.Value.FieldType);
+                var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
+				DataRowToObject(parentRow, nestedObject);
+
+			    destProp.SetValue(target, nestedObject, null);
+            }
+        }
+		internal static void ProcessChildRows(DataRow row, object target, IMapping mapping)
+        {
+			foreach (var childMapping in mapping.Children)
+            {
+                var childRows = row.GetChildRows(childMapping.RelationName);
+                var destProp = target.GetType().GetProperty(childMapping.FieldName);
+
+				var listType = typeof(List<>);
+				var constructedListType = listType.MakeGenericType(childMapping.FieldType);
+				var list = (IList)Activator.CreateInstance(constructedListType);
+
+				foreach (var childRow in childRows)
                 {
-                    if (destProp.PropertyType.IsEnum)
-                        val = (int) Enum.Parse(destProp.PropertyType, sourceRow[c].ToString());
-					else if (c.ColumnName == "Id")
-						val = HttpDataProvider.GetRemoteRowId(sourceRow);
-					else
-						val = Convert.ChangeType(sourceRow[c], destProp.PropertyType);
+					var listItem = Activator.CreateInstance(childMapping.FieldType);
+					DataRowToObject(childRow, listItem);
+                    list.Add(listItem);
                 }
-                else 
-                {
-                    val = Activator.CreateInstance(mapInfo.ParentType);
-					var parentRow = sourceRow.GetParentRow(mapInfo.ParentRelation);
-					DataRowToObject(parentRow, val);
-                }
-			   destProp.SetValue(target, val, null);
+			    destProp.SetValue(target, list, null);
             }
         }
 
@@ -86,31 +117,32 @@ namespace Amica.vNext.Compatibility
 
         internal static void From(object source, DataRow row)
         {
-            var sourceType = source.GetType();
-            var map =  Topology[sourceType];
+            return;
+    //        var sourceType = source.GetType();
+    //        var map =  Topology[sourceType];
 
-            foreach (var c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
-            {
-                var fieldName = c.ColumnName;
-                if (!map.ContainsKey(fieldName)) continue;
+    //        foreach (var c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
+    //        {
+    //            var fieldName = c.ColumnName;
+    //            if (!map.ContainsKey(fieldName)) continue;
 
-                var mapInfo = map[fieldName];
+    //            var mapInfo = map[fieldName];
 
-                var prop = sourceType.GetProperty(mapInfo.Destination);
-                if (prop == null) continue;
-
-                object value;
-                if (mapInfo.ParentRelation == null)
-                {
-                    value = prop.GetValue(source, null);
-                }
-                else
-                {
-                    var parentObject = prop.GetValue(source, null);
-                    value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
-                }
-                row[c.ColumnName] = value;
-            }
+    //            var prop = sourceType.GetProperty(mapInfo.Destination);
+    //            if (prop == null) continue;
+				//row.Table.ChildRelations[""].
+    //            object value;
+    //            if (mapInfo.ParentRelation == null)
+    //            {
+    //                value = prop.GetValue(source, null);
+    //            }
+    //            else
+    //            {
+    //                var parentObject = prop.GetValue(source, null);
+    //                value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
+    //            }
+    //            row[c.ColumnName] = value;
+    //        }
             
         }
 		internal static HttpDataProvider HttpDataProvider { get; set; }
