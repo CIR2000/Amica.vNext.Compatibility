@@ -94,6 +94,135 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
+		[Test]
+        public async void DownloadDocuments()
+        {
+			// TODO check out why on second GetAsync still downloads all Country objects from remote.
+
+            // make sure remote remote endpoint is completely empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			// post it to remote
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+			// retrieve it so we can have its remote unique id
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+			// create vnext contact and post it
+		    var contact = new Contact
+		    {
+		        Name = "Name",
+		        Vat = "Vat",
+		        Address = "Address",
+		        CompanyId = company.UniqueId
+		    };
+		    contact = await adam.PostAsync<Contact>("contacts", contact);
+
+			// new vnext invoice, complete with contact and items, and post it
+		    var doc = new Invoice
+		    {
+		        CompanyId = company.UniqueId,
+		        Total = 100,
+		        Contact =
+		        {
+		            UniqueId = contact.UniqueId,
+		            Name = contact.Name,
+		            Vat = contact.Vat,
+		            Address = contact.Address
+		        }
+		    };
+
+		    var item = new DocumentItem
+		    {
+		        Description = "descriptrion",
+		        Sku = "sku"
+		    };
+		    doc.Items.Add(item);
+
+            adam.ResourceName = "documents";
+            doc = await adam.PostAsync<Invoice>(doc);
+
+			// now try downloading the new document into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            var t = companyDs.TipiDocumento.NewTipiDocumentoRow();
+            t.Id = 4;
+            companyDs.TipiDocumento.AddTipiDocumentoRow(t);
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(1));
+
+            var a = companyDs.Anagrafiche[0];
+            var d = companyDs.Documenti[0];
+            var ri = companyDs.Righe[0];
+            Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
+            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Address));
+            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
+
+            Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
+            Assert.That(d.TotaleFattura, Is.EqualTo(doc.Total));
+            Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+
+            Assert.That(ri.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
+            Assert.That(ri.Descrizione, Is.EqualTo(doc.Items[0].Description));
+
+            // now remotely update the document by changing 1 item and adding a new one
+            doc.Items[0].Sku = "updated sku";
+		    item = new DocumentItem
+		    {
+		        Description = "new description",
+		        Sku = "sku2"
+		    };
+		    doc.Items.Add(item);
+
+            doc = await adam.PutAsync<Invoice>(doc);
+
+			// test that it syncs fine on Amica classic
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
+
+            a = companyDs.Anagrafiche[0];
+            d = companyDs.Documenti[0];
+            ri = companyDs.Righe[0];
+            var ri2 = companyDs.Righe[1];
+
+            Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
+            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Address));
+            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
+
+            Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
+            Assert.That(d.TotaleFattura, Is.EqualTo(doc.Total));
+            Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+
+            Assert.That(ri.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
+            Assert.That(ri.Descrizione, Is.EqualTo(doc.Items[0].Description));
+            Assert.That(ri2.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
+            Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
+        }
         //[Test]
 		[Test]
         public async void AddDocumentsRow()
@@ -178,15 +307,20 @@ namespace Amica.vNext.Compatibility.Tests
 		    Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
 		    Assert.AreEqual("vat", doc.Contact.Vat);
 
+		    Assert.That(doc.Items.Count, Is.EqualTo(1));
+		    var docItem = doc.Items[0];
+		    Assert.That(docItem.Sku, Is.EqualTo("Sku"));
+		    Assert.That(docItem.Description, Is.EqualTo("Description"));
 
-   //         doc.Contact.Vat = "vat2";
-		 //   await adam.PutAsync("documents", doc);
-			//Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
-   //         await _httpDataProvider.GetAsync(ds);
-			//Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
-			//// Anagrafiche field and document reference have not changed
-   //         Assert.AreEqual("vat1", ds.Anagrafiche.Rows[0]["PartitaIva"]);
-   //         Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
+
+            doc.Contact.Vat = "vat2";
+            await adam.PutAsync("documents", doc);
+            Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
+            await _httpDataProvider.GetAsync(ds);
+            Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+            // Anagrafiche field and document reference have not changed
+            Assert.AreEqual("vat1", ds.Anagrafiche.Rows[0]["PartitaIva"]);
+            Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
 
         }
         /// <summary>
@@ -332,7 +466,7 @@ namespace Amica.vNext.Compatibility.Tests
             var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", Vat = "Vat", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            var doc = rc.PostAsync<Document>("documents", new Invoice() {Contact = new ContactMinimal { UniqueId = contact.UniqueId, Address = "Address", Vat = "Vat", Name = "name" }, CompanyId = company.UniqueId}).Result;
+            rc.PostAsync<Document>("documents", new Invoice() {Contact = new ContactMinimal { UniqueId = contact.UniqueId, Address = "Address", Vat = "Vat", Name = "name" }, CompanyId = company.UniqueId}).Wait();
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
 			// test that we can download and sync with a new company being posted on the remote

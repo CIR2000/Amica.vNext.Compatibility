@@ -6,7 +6,6 @@ using System.Linq;
 using Amica.vNext.Compatibility.Maps;
 using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
-using SQLite;
 using Company = Amica.vNext.Models.Company;
 
 namespace Amica.vNext.Compatibility
@@ -20,9 +19,9 @@ namespace Amica.vNext.Compatibility
         {
             Topology.Add(typeof(Country), new CountryMapping());
             Topology.Add(typeof(Company), new CompanyMapping());
-            Topology.Add(typeof (Document), new DocumentMapping());
-            Topology.Add(typeof (DocumentItem), new DocumentItemMapping());
+            Topology.Add(typeof(Document), new DocumentMapping());
             Topology.Add(typeof(Contact), new ContactMapping());
+            Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
             Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
         }
 
@@ -56,11 +55,11 @@ namespace Amica.vNext.Compatibility
         {
             var mapping = Topology[target.GetType()];
 
-            ProcessFields(row, target, mapping);
-            ProcessParentRows(row, target, mapping);
-            ProcessChildRows(row, target, mapping);
+            ProcessDataRowFields(row, target, mapping);
+            ProcessDataRowParents(row, target, mapping);
+            ProcessDataRowChildren(row, target, mapping);
         }
-		internal static void ProcessFields(DataRow row, object target, IMapping mapping)
+		internal static void ProcessDataRowFields(DataRow row, object target, IMapping mapping)
         {
 			foreach (var fieldMapping in mapping.Fields)
             {
@@ -79,7 +78,7 @@ namespace Amica.vNext.Compatibility
 			    destProp.SetValue(target, val, null);
             }
         }
-		internal static void ProcessParentRows(DataRow row, object target, IMapping mapping)
+		internal static void ProcessDataRowParents(DataRow row, object target, IMapping mapping)
         {
 			foreach (var parentMapping in mapping.Parents)
             {
@@ -92,7 +91,7 @@ namespace Amica.vNext.Compatibility
 			    destProp.SetValue(target, nestedObject, null);
             }
         }
-		internal static void ProcessChildRows(DataRow row, object target, IMapping mapping)
+		internal static void ProcessDataRowChildren(DataRow row, object target, IMapping mapping)
         {
 			foreach (var childMapping in mapping.Children)
             {
@@ -117,33 +116,76 @@ namespace Amica.vNext.Compatibility
 
         internal static void From(object source, DataRow row)
         {
-            return;
-    //        var sourceType = source.GetType();
-    //        var map =  Topology[sourceType];
+            var mapping = Topology[source.GetType()];
 
-    //        foreach (var c in from DataColumn c in row.Table.Columns where c != row.Table.PrimaryKey[0] select c)
-    //        {
-    //            var fieldName = c.ColumnName;
-    //            if (!map.ContainsKey(fieldName)) continue;
+            ProcessSimpleProperties(source, row, mapping);
+            ProcessObjectProperties(source, row, mapping);
+            ProcessListProperties(source, row, mapping);
+        }
 
-    //            var mapInfo = map[fieldName];
+        internal static void ProcessSimpleProperties(object source, DataRow row, IMapping mapping)
+        {
+            var sourceType = source.GetType();
 
-    //            var prop = sourceType.GetProperty(mapInfo.Destination);
-    //            if (prop == null) continue;
-				//row.Table.ChildRelations[""].
-    //            object value;
-    //            if (mapInfo.ParentRelation == null)
-    //            {
-    //                value = prop.GetValue(source, null);
-    //            }
-    //            else
-    //            {
-    //                var parentObject = prop.GetValue(source, null);
-    //                value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
-    //            }
-    //            row[c.ColumnName] = value;
-    //        }
-            
+            foreach (var fieldMapping in mapping.Fields)
+            {
+                if (fieldMapping.Key == "Id") continue;
+
+                var prop = sourceType.GetProperty(fieldMapping.Value.FieldName);
+
+                if (prop == null)
+                    throw new ArgumentException("Unknown property.", fieldMapping.Value.FieldName);
+                if (!row.Table.Columns.Contains(fieldMapping.Key))
+                    throw new ArgumentException("Unknown DataColumn", fieldMapping.Key);
+
+                row[fieldMapping.Key] = prop.GetValue(source, null);
+            }
+        }
+        internal static void ProcessObjectProperties(object source, DataRow row, IMapping mapping)
+        {
+            var sourceType = source.GetType();
+
+            foreach (var parentMapping in mapping.Parents)
+            {
+                var prop = sourceType.GetProperty(parentMapping.Value.FieldName);
+
+                if (prop == null)
+                    throw new ArgumentException("Unknown property.", parentMapping.Value.FieldName);
+                if (!row.Table.Columns.Contains(parentMapping.Key))
+                    throw new ArgumentException("Unknown DataColumn.", parentMapping.Key);
+
+				var parentObject = prop.GetValue(source, null);
+                row[parentMapping.Key] = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
+            }
+        }
+        internal static void ProcessListProperties(object source, DataRow row, IMapping mapping)
+        {
+            var sourceType = source.GetType();
+
+            foreach (var childMapping in mapping.Children)
+            {
+                var childRelation = row.Table.ChildRelations[childMapping.RelationName];
+                var childTable = childRelation.ChildTable;
+                var childColumn = childRelation.ChildColumns[0];
+
+                var existingRows = childTable.Select(string.Format("{0} = {1}", childColumn, row["Id"]));
+                foreach (var existingRow in existingRows)
+                    existingRow.Delete();
+
+                var prop = sourceType.GetProperty(childMapping.FieldName);
+
+                if (prop == null)
+                    throw new ArgumentException("Unknown property.", childMapping.FieldName);
+
+				var items = prop.GetValue(source, null);
+				foreach(var item in (IList)items)
+                {
+                    var childRow = childTable.NewRow();
+                    childRow[childColumn] = row["Id"];
+                    From(item, childRow);
+                    childTable.Rows.Add(childRow);
+                }
+            }
         }
 		internal static HttpDataProvider HttpDataProvider { get; set; }
     }

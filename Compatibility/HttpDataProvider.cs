@@ -535,6 +535,8 @@ namespace Amica.vNext.Compatibility
                     .Table<HttpMapping>()
                     .FirstOrDefault(v => v.RemoteId.Equals(baseObj.UniqueId)) ??  new HttpMapping();
 
+                if (baseObj.Deleted && entry.LocalId != 0) continue;
+
                 // address the weird lack of primary key on configDataSet tables.
                 if (dt.PrimaryKey.Length == 0)
                     // should probably be using "id" as index, but we always
@@ -546,6 +548,7 @@ namespace Amica.vNext.Compatibility
                 if (row == null)
                     // TODO should we properly address this, instead of just throwing an exception?
                     throw new Exception("Cannot locate a DataRow that matches the syncdb reference.");
+
 
                 Map.From(obj, row);
 
