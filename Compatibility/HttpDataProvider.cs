@@ -34,10 +34,8 @@ namespace Amica.vNext.Compatibility
         private bool _hasCompanyIdChanged;
         private int? _localCompanyId;
         private DataProvider _dataProvider;
-        private readonly List<DataTable> _updatesPerformed;
         private readonly RemoteRepository _adam;
         private readonly Dictionary<string, string> _resourcesMapping;
-        private readonly List<string> _processedTables;
         private readonly SQLiteConnection _db;
 
         #region "C O N S T R U C T O R S"
@@ -50,8 +48,8 @@ namespace Amica.vNext.Compatibility
             RemoteRepositorySetup();
             RestoreDefaults();
             _hasCompanyIdChanged = true;
-            _updatesPerformed = new List<DataTable>();
-            _processedTables = new List<string>();
+            UpdatesPerformed = new List<DataTable>();
+            ProcessedTables = new List<string>();
 
             Map.HttpDataProvider = this;
 
@@ -370,7 +368,7 @@ namespace Amica.vNext.Compatibility
 			if (!_resourcesMapping.ContainsKey(dt.TableName) || UpdatesPerformed.Contains(dt) || dt.Rows.Count == 0)
                 return;
 
-			var methodName = string.Format("Update{0}Async", dt.TableName);
+			var methodName = $"Update{dt.TableName}Async";
 
 			// TODO handle the case of a write error on a batch of rows. Right now
 			// the table is reported as not saved while in fact some rows might be saved
@@ -408,7 +406,7 @@ namespace Amica.vNext.Compatibility
             SyncTable(resource, dt, changes);
 
 			// TODO confirm that LocalCompanyId will never be 0. maybe even validate against it.
-            if (DataProvider != null) DataProvider.Update(LocalCompanyId ?? 0, dt);
+            DataProvider?.Update(LocalCompanyId ?? 0, dt);
         }
         /// <summary>
         ///  Implements the Download Changes and Sync them logic.
@@ -428,7 +426,7 @@ namespace Amica.vNext.Compatibility
 
             SyncTable(resource, dt, changes);
 
-            if (DataProvider != null) DataProvider.Update(0, dt);
+            DataProvider?.Update(0, dt);
         }
 
         /// <summary>
@@ -443,7 +441,7 @@ namespace Amica.vNext.Compatibility
             _db.CreateTable<HttpMapping>();
 
             if (LocalCompanyId == null)
-                throw new ArgumentNullException("LocalCompanyId");
+                throw new ArgumentNullException(nameof(LocalCompanyId));
 
             // retrieve IMS
             var imsEntry = _db.Table<HttpMapping>()
@@ -478,7 +476,7 @@ namespace Amica.vNext.Compatibility
                 .Table<HttpMapping>()
                 .FirstOrDefault(
                     m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId) && m.LocalId.Equals(localId));
-            return mapping != null ? mapping.RemoteId : null;
+            return mapping?.RemoteId;
         }
         internal object GetLocalRowId(IUniqueId obj)
         {
@@ -586,7 +584,7 @@ namespace Amica.vNext.Compatibility
             }
         }
 
-		private List<string> ProcessedTables { get { return _processedTables; } }
+		private List<string> ProcessedTables { get; }
 
         /// <summary>
         /// Downloads all changes from the server and merges them to a local DataSet instance.
@@ -645,7 +643,7 @@ namespace Amica.vNext.Compatibility
 
         private async Task GetAndSyncTable(DataTable table)
         {
-			await (Task)GetType().GetMethod(string.Format("GetAndSync{0}Async", table.TableName), BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
+			await (Task)GetType().GetMethod($"GetAndSync{table.TableName}Async", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
 
             if (!ProcessedTables.Contains(table.TableName))
                 ProcessedTables.Add(table.TableName);
@@ -723,7 +721,7 @@ namespace Amica.vNext.Compatibility
         /// <summary>
         /// Returns the name of the local database used for keeping Amica and remote service in sync.
         /// </summary>
-        public string SyncDatabaseName { get { return DbName; } }
+        public string SyncDatabaseName => DbName;
 
         /// <summary>
         /// Returns the action performed by the latest Update method invoked.
@@ -765,9 +763,7 @@ namespace Amica.vNext.Compatibility
         /// <summary>
         /// Returns a list of DataTables for which the latest update operation has been successful.
         /// </summary>
-        public List<DataTable> UpdatesPerformed {
-            get { return _updatesPerformed;}   
-        }
+        public List<DataTable> UpdatesPerformed { get; }
 
         #endregion
 
