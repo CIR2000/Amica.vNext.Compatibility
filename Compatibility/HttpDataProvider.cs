@@ -442,6 +442,9 @@ namespace Amica.vNext.Compatibility
             // ensure table exists 
             _db.CreateTable<HttpMapping>();
 
+            if (LocalCompanyId == null)
+                throw new ArgumentNullException(nameof(LocalCompanyId));
+
             // retrieve IMS
             var imsEntry = _db.Table<HttpMapping>()
                 .Where(m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId))

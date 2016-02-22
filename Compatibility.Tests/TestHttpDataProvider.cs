@@ -116,6 +116,7 @@ namespace Amica.vNext.Compatibility.Tests
 
 			// post it to remote
 			await _httpDataProvider.UpdateAziendeAsync(r);
+
 			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
 
@@ -163,6 +164,10 @@ namespace Amica.vNext.Compatibility.Tests
             var t = companyDs.TipiDocumento.NewTipiDocumentoRow();
             t.Id = 4;
             companyDs.TipiDocumento.AddTipiDocumentoRow(t);
+
+            Assert.That(async () => await _httpDataProvider.GetAsync(companyDs),
+                Throws.InstanceOf<ArgumentNullException>().With.Property("ParamName").EqualTo("LocalCompanyId"));
+            _httpDataProvider.LocalCompanyId = r.Id;
 
 			await _httpDataProvider.GetAsync(companyDs);
             Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
