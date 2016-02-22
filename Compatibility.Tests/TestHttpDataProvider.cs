@@ -100,8 +100,6 @@ namespace Amica.vNext.Compatibility.Tests
 		[Test]
         public async void DownloadDocuments()
         {
-			// TODO check out why on second GetAsync still downloads all Country objects from remote.
-
             // make sure remote remote endpoint is completely empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
@@ -295,7 +293,7 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 		[Test]
-        public async void AddDocumentsRow()
+        public async void UploadDocuments()
         {
             // make sure remote remote endpoint is completely empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
@@ -392,6 +390,12 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.AreEqual("vat1", ds.Anagrafiche.Rows[0]["PartitaIva"]);
             Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
 
+            // test that a locally deleted object is deleted fine also remotely
+            ds.Documenti[0].Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            doc = await adam.GetAsync<Invoice>("documents", doc);
+            Assert.That(doc, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
         /// <summary>
         /// Test that a new datarow is properly processed
