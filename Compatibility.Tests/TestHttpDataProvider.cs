@@ -18,6 +18,9 @@ namespace Amica.vNext.Compatibility.Tests
         private SQLiteConnection _db;
 		private HttpDataProvider _httpDataProvider;
 
+		// Adam has a 1s resolutoin when it comes to If-Modfied-Since datetimes.
+		private const int SleepLength = 1000;
+
         // We are running Windows in a VirtualBox VM so in order to access the OSX Host 'localhost'
         // where a local instance of the REST API is running, we use standard 10.0.2.2:5000
         private const string Service = "http://10.0.2.2:5000/";
@@ -248,6 +251,7 @@ namespace Amica.vNext.Compatibility.Tests
             };
             doc = await adam.PutAsync<Invoice>(doc);
 
+			System.Threading.Thread.Sleep(SleepLength);
 			// test that it syncs fine on Amica classic
             await _httpDataProvider.GetAsync(companyDs);
             Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
@@ -275,7 +279,19 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
             Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
 
+            // test that when a doc is deleted remotely, local sync
+            // gets rid of both main and child rows
 
+            await adam.DeleteAsync(doc);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+			System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            //Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(0));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(0));
         }
 
 		[Test]
@@ -544,7 +560,7 @@ namespace Amica.vNext.Compatibility.Tests
 			company.Name = "We changed name";
 			company = rc.PutAsync<Company>("companies", company).Result;
 
-			System.Threading.Thread.Sleep(1000);
+			System.Threading.Thread.Sleep(SleepLength);
 
 			// ... we can then sync it down effortlessly
 			await _httpDataProvider.GetAsync(configDs);
@@ -584,7 +600,7 @@ namespace Amica.vNext.Compatibility.Tests
 			country.Name = "We changed name";
 			country = rc.PutAsync<Country>("countries", country).Result;
 
-			System.Threading.Thread.Sleep(1000);
+			System.Threading.Thread.Sleep(SleepLength);
 
 			// ... we can then sync it down effortlessly
 			await _httpDataProvider.GetAsync(companyDs);
@@ -598,7 +614,7 @@ namespace Amica.vNext.Compatibility.Tests
 			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
 			Assert.AreEqual(1, companyDs.Nazioni.Count);
 
-			System.Threading.Thread.Sleep(1000);
+			System.Threading.Thread.Sleep(SleepLength);
 
 			// if we delete an object on remote...
 			var r = rc.DeleteAsync("countries", country).Result;

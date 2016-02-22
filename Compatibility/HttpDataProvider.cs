@@ -443,7 +443,7 @@ namespace Amica.vNext.Compatibility
             _db.CreateTable<HttpMapping>();
 
             if (LocalCompanyId == null)
-                throw new ArgumentNullException(nameof(LocalCompanyId));
+                throw new ArgumentNullException("LocalCompanyId");
 
             // retrieve IMS
             var imsEntry = _db.Table<HttpMapping>()
@@ -455,6 +455,9 @@ namespace Amica.vNext.Compatibility
             var ims = (imsEntry != null) ? imsEntry.LastUpdated : DateTime.MinValue;
 
             RemoteRepositorySetup();
+            if (RemoteCompanyId == null)
+                RetrieveRemoteCompanyId();
+
 			var changes = await _adam.Get<T>(ims, RemoteCompanyId);
 
 			HttpResponse = _adam.HttpResponseMessage;
@@ -538,7 +541,7 @@ namespace Amica.vNext.Compatibility
                     .Table<HttpMapping>()
                     .FirstOrDefault(v => v.RemoteId.Equals(baseObj.UniqueId)) ??  new HttpMapping();
 
-                if (baseObj.Deleted && entry.LocalId != 0) continue;
+                //if (baseObj.Deleted && entry.LocalId != 0) continue;
 
                 // address the weird lack of primary key on configDataSet tables.
                 if (dt.PrimaryKey.Length == 0)
