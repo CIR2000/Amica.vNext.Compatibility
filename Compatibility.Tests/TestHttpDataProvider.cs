@@ -227,8 +227,57 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(ri2.IdDocumento, Is.EqualTo(d.Id));
             Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
             Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
+
+			// On remote, add a new contact and update the document with it
+			// create vnext contact and post it
+		    var newContact = new Contact
+		    {
+		        Name = "new name",
+		        Vat = "new vat",
+		        Address = "new address",
+		        CompanyId = company.UniqueId
+		    };
+		    newContact = await adam.PostAsync<Contact>("contacts", newContact);
+
+            doc.Contact = new ContactMinimal
+            {
+                UniqueId = newContact.UniqueId,
+                Name = newContact.Name,
+                Vat = newContact.Vat,
+                Address = newContact.Address
+            };
+            doc = await adam.PutAsync<Invoice>(doc);
+
+			// test that it syncs fine on Amica classic
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
+
+            a = companyDs.Anagrafiche[1];
+            d = companyDs.Documenti[0];
+            ri = companyDs.Righe[0];
+            ri2 = companyDs.Righe[1];
+
+            Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
+            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Address));
+            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
+
+            Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
+            Assert.That(d.TotaleFattura, Is.EqualTo(doc.Total));
+            Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+
+            Assert.That(ri.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
+            Assert.That(ri.Descrizione, Is.EqualTo(doc.Items[0].Description));
+            Assert.That(ri2.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
+            Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
+
+
         }
-        //[Test]
+
 		[Test]
         public async void AddDocumentsRow()
         {
