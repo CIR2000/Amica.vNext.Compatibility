@@ -141,13 +141,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    {
 		        CompanyId = company.UniqueId,
 		        Total = 100,
-		        Contact =
-		        {
-		            UniqueId = contact.UniqueId,
-		            Name = contact.Name,
-		            Vat = contact.Vat,
-		            Address = contact.Address
-		        }
+		        Contact = new ContactMinimal(contact)
 		    };
 
 		    var item = new DocumentItem
@@ -239,14 +233,7 @@ namespace Amica.vNext.Compatibility.Tests
 		        CompanyId = company.UniqueId
 		    };
 		    newContact = await adam.PostAsync<Contact>("contacts", newContact);
-
-            doc.Contact = new ContactMinimal
-            {
-                UniqueId = newContact.UniqueId,
-                Name = newContact.Name,
-                Vat = newContact.Vat,
-                Address = newContact.Address
-            };
+            doc.Contact = new ContactMinimal(newContact);
             doc = await adam.PutAsync<Invoice>(doc);
 
 			System.Threading.Thread.Sleep(SleepLength);
@@ -540,7 +527,7 @@ namespace Amica.vNext.Compatibility.Tests
             var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", Vat = "Vat", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            rc.PostAsync<Document>("documents", new Invoice() {Contact = new ContactMinimal { UniqueId = contact.UniqueId, Address = "Address", Vat = "Vat", Name = "name" }, CompanyId = company.UniqueId}).Wait();
+            rc.PostAsync<Document>("documents", new Invoice() {Contact = new ContactMinimal(contact), CompanyId = company.UniqueId}).Wait();
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
 			// test that we can download and sync with a new company being posted on the remote
