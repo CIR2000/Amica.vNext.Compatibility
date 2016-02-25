@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-
-namespace Amica.vNext.Compatibility.Maps
+﻿namespace Amica.vNext.Compatibility.Maps
 {
     internal class CompanyMapping : Mapping
     {
-        internal CompanyMapping() : base()
+        internal CompanyMapping()
         {
             Fields.Add("Nome", new FieldMapping {FieldName = "Name"});
         }

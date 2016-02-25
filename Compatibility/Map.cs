@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using Amica.vNext.Compatibility.Maps;
 using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
@@ -64,18 +65,18 @@ namespace Amica.vNext.Compatibility
 			foreach (var fieldMapping in mapping.Fields)
             {
                 var column = row.Table.Columns[fieldMapping.Key];
-                var destProp = target.GetType().GetProperty(fieldMapping.Value.FieldName);
+
+                var prop = GetProperty(target, fieldMapping.Value.FieldName, out target);
 
                 object val;
+                if (prop.PropertyType.IsEnum)
+                    val = (int)Enum.Parse(prop.PropertyType, row[column].ToString());
+                else if (column.ColumnName == "Id")
+                    val = HttpDataProvider.GetRemoteRowId(row);
+                else
+                    val = Convert.ChangeType(row[column], prop.PropertyType);
 
-				if (destProp.PropertyType.IsEnum)
-					val = (int) Enum.Parse(destProp.PropertyType, row[column].ToString());
-				else if (column.ColumnName == "Id")
-					val = HttpDataProvider.GetRemoteRowId(row);
-				else
-					val = Convert.ChangeType(row[column], destProp.PropertyType);
-
-			    destProp.SetValue(target, val, null);
+                prop.SetValue(target, val, null);
             }
         }
 		internal static void ProcessDataRowParents(DataRow row, object target, IMapping mapping)
@@ -125,22 +126,45 @@ namespace Amica.vNext.Compatibility
 
         internal static void ProcessSimpleProperties(object source, DataRow row, IMapping mapping)
         {
-            var sourceType = source.GetType();
-
-            foreach (var fieldMapping in mapping.Fields)
+            foreach (var fieldMapping in mapping.Fields.Where(fieldMapping => fieldMapping.Key != "Id"))
             {
-                if (fieldMapping.Key == "Id") continue;
-
-                var prop = sourceType.GetProperty(fieldMapping.Value.FieldName);
-
-                if (prop == null)
-                    throw new ArgumentException("Unknown property.", fieldMapping.Value.FieldName);
                 if (!row.Table.Columns.Contains(fieldMapping.Key))
                     throw new ArgumentException("Unknown DataColumn", fieldMapping.Key);
 
-                row[fieldMapping.Key] = prop.GetValue(source, null);
+                object target;
+                var prop = GetProperty(source, fieldMapping.Value.FieldName, out target);
+
+                row[fieldMapping.Key] = prop.GetValue(target, null);
             }
         }
+
+        private static PropertyInfo GetProperty(object source, string name, out object target)
+        {
+			PropertyInfo prop = null;
+			var nameParts = name.Split('.');
+			target = source;
+
+			if (nameParts.Length == 1)
+            {
+                prop = source.GetType().GetProperty(name);
+            }
+            else
+            {
+				var lastPart = nameParts.Last();
+				foreach (var part in nameParts)
+				{
+					prop = target.GetType().GetProperty(part);
+                    if (part == lastPart) continue;
+					target = prop.GetValue(target, null);
+				}
+
+            }
+			if (prop == null)
+				throw new ArgumentException("Unknown property.", name);
+
+            return prop;
+        }
+
         internal static void ProcessObjectProperties(object source, DataRow row, IMapping mapping)
         {
             var sourceType = source.GetType();
@@ -168,7 +192,7 @@ namespace Amica.vNext.Compatibility
                 var childTable = childRelation.ChildTable;
                 var childColumn = childRelation.ChildColumns[0];
 
-                var existingRows = childTable.Select(string.Format("{0} = {1}", childColumn, row["Id"]));
+                var existingRows = childTable.Select($"{childColumn} = {row["Id"]}");
                 foreach (var existingRow in existingRows)
                     existingRow.Delete();
 

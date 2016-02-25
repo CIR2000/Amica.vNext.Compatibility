@@ -129,10 +129,13 @@ namespace Amica.vNext.Compatibility.Tests
 			// create vnext contact and post it
 		    var contact = new Contact
 		    {
+		        CompanyId = company.UniqueId,
 		        Name = "Name",
 		        Vat = "Vat",
-		        Address = "Address",
-		        CompanyId = company.UniqueId
+		        Address = new AddressEx
+                {
+                    Street = "Street",
+                }
 		    };
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
 
@@ -174,7 +177,7 @@ namespace Amica.vNext.Compatibility.Tests
             var d = companyDs.Documenti[0];
             var ri = companyDs.Righe[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
-            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Address));
+            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
 
             Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
@@ -209,7 +212,7 @@ namespace Amica.vNext.Compatibility.Tests
             var ri2 = companyDs.Righe[1];
 
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
-            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Address));
+            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
 
             Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
@@ -223,14 +226,17 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
             Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
 
-			// On remote, add a new contact and update the document with it
-			// create vnext contact and post it
-		    var newContact = new Contact
-		    {
+            // On remote, add a new contact and update the document with it
+            // create vnext contact and post it
+            var newContact = new Contact
+            {
+                CompanyId = company.UniqueId,
 		        Name = "new name",
 		        Vat = "new vat",
-		        Address = "new address",
-		        CompanyId = company.UniqueId
+		        Address = new AddressEx
+                {
+                    Street = "Street"
+                }
 		    };
 		    newContact = await adam.PostAsync<Contact>("contacts", newContact);
             doc.Contact = new ContactMinimal(newContact);
@@ -250,7 +256,7 @@ namespace Amica.vNext.Compatibility.Tests
             ri2 = companyDs.Righe[1];
 
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
-            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Address));
+            Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
 
             Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
