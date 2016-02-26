@@ -7,7 +7,11 @@ namespace Amica.vNext.Compatibility.Maps
 {
     public class DataRelationMapping : FieldMapping
     {
-		public Type FieldType { get; set; }
+		public DataRelationMapping()
+        {
+            ColumnName = "Id";
+        }
+		public Type PropertyType { get; set; }
 		public string RelationName { get; set; }
     }
 }

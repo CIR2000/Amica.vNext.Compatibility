@@ -5,26 +5,26 @@ namespace Amica.vNext.Compatibility.Maps
 {
     internal class DocumentMapping : Mapping
     {
-        internal DocumentMapping() : base()
+        internal DocumentMapping()
         {
-            Fields.Add("Data", new FieldMapping {FieldName = "Date"});
-            Fields.Add("IdTipoDocumento", new FieldMapping { FieldName = "Type"});
-			Fields.Add("TotaleFattura", new FieldMapping {FieldName = "Total"});
+            Fields.Add("Data", new FieldMapping {PropertyName = "Date"});
+            Fields.Add("IdTipoDocumento", new FieldMapping { PropertyName = "Type"});
+			Fields.Add("TotaleFattura", new FieldMapping {PropertyName = "Total"});
 
             Parents.Add(
                     "IdAnagrafica",
                     new DataRelationMapping {
-                        FieldName = "Contact",
+                        PropertyName = "Contact",
                         RelationName = "FK_Anagrafiche_Documenti",
-                        FieldType = typeof(ContactMinimal)
+                        PropertyType = typeof(ContactMinimal)
                     }
                 );
 
             Children.Add(
                 new DataRelationMapping
                 {
-                    FieldName = "Items",
-                    FieldType = typeof(DocumentItem),
+                    PropertyName = "Items",
+                    PropertyType = typeof(DocumentItem),
                     RelationName = "FK_Documenti_Righe",
                 }
 			);

@@ -9,8 +9,8 @@ namespace Amica.vNext.Compatibility.Maps
     {
         internal DocumentItemMapping() : base()
         {
-            Fields.Add("CodiceArticolo", new FieldMapping {FieldName = "Sku"});
-            Fields.Add("Descrizione", new FieldMapping { FieldName = "Description"});
+            Fields.Add("CodiceArticolo", new FieldMapping {PropertyName = "Sku"});
+            Fields.Add("Descrizione", new FieldMapping { PropertyName = "Description"});
 
    //         Parents.Add(
    //                 "IdAnagrafica",

@@ -18,7 +18,6 @@ namespace Amica.vNext.Compatibility
 
         static Map()
         {
-            Topology.Add(typeof(Country), new CountryMapping());
             Topology.Add(typeof(Company), new CompanyMapping());
             Topology.Add(typeof(Document), new DocumentMapping());
             Topology.Add(typeof(Contact), new ContactMapping());
@@ -43,12 +42,12 @@ namespace Amica.vNext.Compatibility
         /// Returns an object casted by a Asupported Amica10 DataRow.
         /// </summary>
         /// <typeparam name="T">The type of the object to be returned</typeparam>
-        /// <param name="dr">A supprted Amica10 DataRow</param>
+        /// <param name="row">A supprted Amica10 DataRow</param>
         /// <returns></returns>
-        public static T To<T>(DataRow dr) where T : new()
+        public static T To<T>(DataRow row) where T : new()
         {
             var instance = new T();
-            DataRowToObject(dr, instance);
+            DataRowToObject(row, instance);
             return instance;
         }
 
@@ -64,32 +63,32 @@ namespace Amica.vNext.Compatibility
         {
 			foreach (var fieldMapping in mapping.Fields)
             {
-                var column = row.Table.Columns[fieldMapping.Key];
+                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out target);
+                var value = GetAdjustedColumnValue(row, fieldMapping.Key, prop);
 
-                var prop = GetProperty(target, fieldMapping.Value.FieldName, out target);
-
-                object val;
-                if (prop.PropertyType.IsEnum)
-                    val = (int)Enum.Parse(prop.PropertyType, row[column].ToString());
-                else if (column.ColumnName == "Id")
-                    val = HttpDataProvider.GetRemoteRowId(row);
-                else
-                    val = Convert.ChangeType(row[column], prop.PropertyType);
-
-                prop.SetValue(target, val, null);
+                prop.SetValue(target, value, null);
             }
         }
 		internal static void ProcessDataRowParents(DataRow row, object target, IMapping mapping)
         {
 			foreach (var parentMapping in mapping.Parents)
             {
-                var destProp = target.GetType().GetProperty(parentMapping.Value.FieldName);
+                object realTarget, value;
 
-                var nestedObject = Activator.CreateInstance(parentMapping.Value.FieldType);
-                var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
-				DataRowToObject(parentRow, nestedObject);
+                var prop = GetProperty(target, parentMapping.Value.PropertyName, out realTarget);
+				var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
 
-			    destProp.SetValue(target, nestedObject, null);
+                if (parentMapping.Value.PropertyType == null)
+                {
+                    value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, prop);
+                }
+                else
+                {
+					value = Activator.CreateInstance(parentMapping.Value.PropertyType);
+					DataRowToObject(parentRow, value);
+                }
+				prop.SetValue(realTarget, value, null);
+
             }
         }
 		internal static void ProcessDataRowChildren(DataRow row, object target, IMapping mapping)
@@ -97,20 +96,34 @@ namespace Amica.vNext.Compatibility
 			foreach (var childMapping in mapping.Children)
             {
                 var childRows = row.GetChildRows(childMapping.RelationName);
-                var destProp = target.GetType().GetProperty(childMapping.FieldName);
+                var destProp = target.GetType().GetProperty(childMapping.PropertyName);
 
 				var listType = typeof(List<>);
-				var constructedListType = listType.MakeGenericType(childMapping.FieldType);
+				var constructedListType = listType.MakeGenericType(childMapping.PropertyType);
 				var list = (IList)Activator.CreateInstance(constructedListType);
 
 				foreach (var childRow in childRows)
                 {
-					var listItem = Activator.CreateInstance(childMapping.FieldType);
+					var listItem = Activator.CreateInstance(childMapping.PropertyType);
 					DataRowToObject(childRow, listItem);
                     list.Add(listItem);
                 }
 			    destProp.SetValue(target, list, null);
             }
+        }
+
+		private static object GetAdjustedColumnValue(DataRow row, string columnName, PropertyInfo prop)
+        {
+            var column = row.Table.Columns[columnName];
+
+			object val;
+			if (prop.PropertyType.IsEnum)
+				val = (int)Enum.Parse(prop.PropertyType, row[column].ToString());
+			else if (column.ColumnName == "Id")
+				val = HttpDataProvider.GetRemoteRowId(row);
+			else
+				val = Convert.ChangeType(row[column], prop.PropertyType);
+            return val;
         }
 
         #endregion
@@ -132,12 +145,78 @@ namespace Amica.vNext.Compatibility
                     throw new ArgumentException("Unknown DataColumn", fieldMapping.Key);
 
                 object target;
-                var prop = GetProperty(source, fieldMapping.Value.FieldName, out target);
+                var prop = GetProperty(source, fieldMapping.Value.PropertyName, out target);
 
                 row[fieldMapping.Key] = prop.GetValue(target, null);
             }
         }
 
+        internal static void ProcessObjectProperties(object source, DataRow row, IMapping mapping)
+        {
+            foreach (var parentMapping in mapping.Parents)
+            {
+                object realSource, value;
+
+                var prop = GetProperty(source, parentMapping.Value.PropertyName, out realSource);
+				if (parentMapping.Value.PropertyType == null)
+                {
+                    var parentTable = row.Table.ParentRelations[parentMapping.Value.RelationName].ParentTable;
+					var parentColumn = parentTable.Columns[parentMapping.Value.ColumnName];
+                    var parentValue = prop.GetValue(realSource, null);
+
+                    if (parentValue == null) continue;
+
+                    var parent = parentTable.Select($"{parentColumn} = '{parentValue}'");
+
+					if (parent.Length > 0)
+                    {
+                        value = parent[0]["Id"];
+                    }
+                    else
+                    {
+                        var newParentRow = parentTable.NewRow();
+                        newParentRow[parentColumn] = parentValue;
+                        parentTable.Rows.Add(newParentRow);
+                        value = newParentRow["Id"];
+                    }
+                }
+                else
+                {
+					var parentObject = prop.GetValue(realSource, null);
+					value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
+                }
+                row[parentMapping.Key] = value;
+            }
+        }
+        internal static void ProcessListProperties(object source, DataRow row, IMapping mapping)
+        {
+            var sourceType = source.GetType();
+
+            foreach (var childMapping in mapping.Children)
+            {
+                var childRelation = row.Table.ChildRelations[childMapping.RelationName];
+                var childTable = childRelation.ChildTable;
+                var childColumn = childRelation.ChildColumns[0];
+
+                var existingRows = childTable.Select($"{childColumn} = {row["Id"]}");
+                foreach (var existingRow in existingRows)
+                    existingRow.Delete();
+
+                var prop = sourceType.GetProperty(childMapping.PropertyName);
+
+                if (prop == null)
+                    throw new ArgumentException("Unknown property.", childMapping.PropertyName);
+
+				var items = prop.GetValue(source, null);
+				foreach(var item in (IList)items)
+                {
+                    var childRow = childTable.NewRow();
+                    childRow[childColumn] = row["Id"];
+                    From(item, childRow);
+                    childTable.Rows.Add(childRow);
+                }
+            }
+        }
         private static PropertyInfo GetProperty(object source, string name, out object target)
         {
 			PropertyInfo prop = null;
@@ -165,52 +244,6 @@ namespace Amica.vNext.Compatibility
             return prop;
         }
 
-        internal static void ProcessObjectProperties(object source, DataRow row, IMapping mapping)
-        {
-            var sourceType = source.GetType();
-
-            foreach (var parentMapping in mapping.Parents)
-            {
-                var prop = sourceType.GetProperty(parentMapping.Value.FieldName);
-
-                if (prop == null)
-                    throw new ArgumentException("Unknown property.", parentMapping.Value.FieldName);
-                if (!row.Table.Columns.Contains(parentMapping.Key))
-                    throw new ArgumentException("Unknown DataColumn.", parentMapping.Key);
-
-				var parentObject = prop.GetValue(source, null);
-                row[parentMapping.Key] = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
-            }
-        }
-        internal static void ProcessListProperties(object source, DataRow row, IMapping mapping)
-        {
-            var sourceType = source.GetType();
-
-            foreach (var childMapping in mapping.Children)
-            {
-                var childRelation = row.Table.ChildRelations[childMapping.RelationName];
-                var childTable = childRelation.ChildTable;
-                var childColumn = childRelation.ChildColumns[0];
-
-                var existingRows = childTable.Select($"{childColumn} = {row["Id"]}");
-                foreach (var existingRow in existingRows)
-                    existingRow.Delete();
-
-                var prop = sourceType.GetProperty(childMapping.FieldName);
-
-                if (prop == null)
-                    throw new ArgumentException("Unknown property.", childMapping.FieldName);
-
-				var items = prop.GetValue(source, null);
-				foreach(var item in (IList)items)
-                {
-                    var childRow = childTable.NewRow();
-                    childRow[childColumn] = row["Id"];
-                    From(item, childRow);
-                    childTable.Rows.Add(childRow);
-                }
-            }
-        }
 		internal static HttpDataProvider HttpDataProvider { get; set; }
     }
 }

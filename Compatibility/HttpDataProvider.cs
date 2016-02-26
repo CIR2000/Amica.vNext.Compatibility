@@ -55,7 +55,6 @@ namespace Amica.vNext.Compatibility
 
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
-                {"Nazioni", "countries"},
                 {"Documenti", "documents"},
                 {"Anagrafiche", "contacts"}
             };
@@ -297,15 +296,6 @@ namespace Amica.vNext.Compatibility
         public async Task UpdateDocumentiAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<Document>(row, batch);
-        }
-        /// <summary>
-        /// Stores a companyDataSet.NazioniDataTable.NazioniRow to a remote API endpoint.
-        /// </summary>
-        /// <param name="row">Source DataRow</param>
-        /// <param name="batch">Wether this is part of a batch operation or not.</param>
-        public async Task UpdateNazioniAsync(DataRow row, bool batch = false) 
-        {
-            await UpdateRowAsync<Country>(row, batch);
         }
 
         /// <summary>
@@ -656,15 +646,6 @@ namespace Amica.vNext.Compatibility
         private async Task GetAndSyncAziendeAsync(configDataSet dataSet)
         {
             await GetAndSyncConfigTable<Company>(dataSet.Aziende);
-        }
-
-        /// <summary>
-        /// Downloads Countries changes from the server and merges them to the Nazioni table on the local dataset.
-        /// </summary>
-        /// <param name="dataSet">companyDataSet instance.</param>
-        private async Task GetAndSyncNazioniAsync(companyDataSet dataSet)
-        {
-            await GetAndSyncCompanyTable<Country>(dataSet.Nazioni);
         }
 
         /// <summary>

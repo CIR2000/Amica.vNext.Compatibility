@@ -105,7 +105,6 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
-            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -135,6 +134,7 @@ namespace Amica.vNext.Compatibility.Tests
 		        Address = new AddressEx
                 {
                     Street = "Street",
+					Country = "Italia"
                 }
 		    };
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
@@ -149,13 +149,23 @@ namespace Amica.vNext.Compatibility.Tests
 
 		    var item = new DocumentItem
 		    {
-		        Description = "descriptrion",
-		        Sku = "sku"
+		        Description = "descriptrion1",
+		        Sku = "sku1"
 		    };
 		    doc.Items.Add(item);
 
             adam.ResourceName = "documents";
             doc = await adam.PostAsync<Invoice>(doc);
+
+            var doc2 = new Invoice
+            {
+                CompanyId = company.UniqueId,
+                Total = 99,
+                Contact = doc.Contact,
+            };
+			doc2.Items.Add(new DocumentItem { Description = "description3", Sku = "sku3" });
+
+            doc2 = await adam.PostAsync<Invoice>(doc2);
 
 			// now try downloading the new document into Amica companyDataSet
 			var companyDs = new companyDataSet();
@@ -170,30 +180,40 @@ namespace Amica.vNext.Compatibility.Tests
 			await _httpDataProvider.GetAsync(companyDs);
             Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
             Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Righe.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
 
             var a = companyDs.Anagrafiche[0];
-            var d = companyDs.Documenti[0];
-            var ri = companyDs.Righe[0];
+            var d1 = companyDs.Documenti[0];
+            var d2 = companyDs.Documenti[1];
+            var ri1 = companyDs.Righe[0];
+            var ri2 = companyDs.Righe[1];
+            var n = companyDs.Nazioni[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
+            Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.Contact.Country));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
 
-            Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
-            Assert.That(d.TotaleFattura, Is.EqualTo(doc.Total));
-            Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+            Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
+            Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
+            Assert.That(d1.IdTipoDocumento, Is.EqualTo((int)doc.Type));
 
-            Assert.That(ri.IdDocumento, Is.EqualTo(d.Id));
-            Assert.That(ri.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
-            Assert.That(ri.Descrizione, Is.EqualTo(doc.Items[0].Description));
+            Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
+            Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
+            Assert.That(ri1.Descrizione, Is.EqualTo(doc.Items[0].Description));
+            Assert.That(ri2.IdDocumento, Is.EqualTo(d2.Id));
+            Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc2.Items[0].Sku));
+            Assert.That(ri2.Descrizione, Is.EqualTo(doc2.Items[0].Description));
+
+            Assert.That(n.Nome, Is.EqualTo(doc.Contact.Country));
 
             // now remotely update the document by changing 1 item and adding a new one
-            doc.Items[0].Sku = "updated sku";
+            doc.Items[0].Sku = "updated sku1";
 		    item = new DocumentItem
 		    {
 		        Description = "new description",
-		        Sku = "sku2"
+		        Sku = "new sku"
 		    };
 		    doc.Items.Add(item);
 
@@ -203,28 +223,34 @@ namespace Amica.vNext.Compatibility.Tests
             await _httpDataProvider.GetAsync(companyDs);
             Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
             Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(3));
 
             a = companyDs.Anagrafiche[0];
-            d = companyDs.Documenti[0];
-            ri = companyDs.Righe[0];
-            var ri2 = companyDs.Righe[1];
+            d1 = companyDs.Documenti[0];
+            d2 = companyDs.Documenti[1];
+            var righe = companyDs.Righe.Select("", "IdDocumento");
+            ri1 = (companyDataSet.RigheRow)righe[0];
+            ri2 = (companyDataSet.RigheRow)righe[1];
+            var ri3 = (companyDataSet.RigheRow)righe[2];
 
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
 
-            Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
-            Assert.That(d.TotaleFattura, Is.EqualTo(doc.Total));
-            Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+            Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
+            Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
+            Assert.That(d1.IdTipoDocumento, Is.EqualTo((int)doc.Type));
 
-            Assert.That(ri.IdDocumento, Is.EqualTo(d.Id));
-            Assert.That(ri.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
-            Assert.That(ri.Descrizione, Is.EqualTo(doc.Items[0].Description));
-            Assert.That(ri2.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
+            Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
+            Assert.That(ri1.Descrizione, Is.EqualTo(doc.Items[0].Description));
+            Assert.That(ri2.IdDocumento, Is.EqualTo(d1.Id));
             Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
             Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
+            Assert.That(ri3.IdDocumento, Is.EqualTo(d2.Id));
+            Assert.That(ri3.CodiceArticolo, Is.EqualTo(doc2.Items[0].Sku));
+            Assert.That(ri3.Descrizione, Is.EqualTo(doc2.Items[0].Description));
 
             // On remote, add a new contact and update the document with it
             // create vnext contact and post it
@@ -235,7 +261,8 @@ namespace Amica.vNext.Compatibility.Tests
 		        Vat = "new vat",
 		        Address = new AddressEx
                 {
-                    Street = "Street"
+                    Street = "Street",
+					Country = "Russia"
                 }
 		    };
 		    newContact = await adam.PostAsync<Contact>("contacts", newContact);
@@ -243,30 +270,36 @@ namespace Amica.vNext.Compatibility.Tests
             doc = await adam.PutAsync<Invoice>(doc);
 
 			System.Threading.Thread.Sleep(SleepLength);
+
 			// test that it syncs fine on Amica classic
             await _httpDataProvider.GetAsync(companyDs);
             Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
             Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(2));
-            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(3));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
 
-            a = companyDs.Anagrafiche[1];
-            d = companyDs.Documenti[0];
-            ri = companyDs.Righe[0];
-            ri2 = companyDs.Righe[1];
+            var anagrafiche = companyDs.Anagrafiche.Select("", "Id");
+            a = (companyDataSet.AnagraficheRow)anagrafiche[1];
+            var docs = companyDs.Documenti.Select("", "Id");
+            d1 = (companyDataSet.DocumentiRow)docs[0];
+            righe = companyDs.Righe.Select("", "IdDocumento");
+            ri1 = (companyDataSet.RigheRow)righe[0];
+            ri2 = (companyDataSet.RigheRow)righe[1];
 
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
+            Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.Contact.Country));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
 
-            Assert.That(d.IdAnagrafica, Is.EqualTo(a.Id));
-            Assert.That(d.TotaleFattura, Is.EqualTo(doc.Total));
-            Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+            Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
+            Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
+            Assert.That(d1.IdTipoDocumento, Is.EqualTo((int)doc.Type));
 
-            Assert.That(ri.IdDocumento, Is.EqualTo(d.Id));
-            Assert.That(ri.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
-            Assert.That(ri.Descrizione, Is.EqualTo(doc.Items[0].Description));
-            Assert.That(ri2.IdDocumento, Is.EqualTo(d.Id));
+            Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
+            Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
+            Assert.That(ri1.Descrizione, Is.EqualTo(doc.Items[0].Description));
+            Assert.That(ri2.IdDocumento, Is.EqualTo(d1.Id));
             Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
             Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
 
@@ -281,8 +314,9 @@ namespace Amica.vNext.Compatibility.Tests
             await _httpDataProvider.GetAsync(companyDs);
             //Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
             Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(2));
-            Assert.That(companyDs.Documenti.Count, Is.EqualTo(0));
-            Assert.That(companyDs.Righe.Count, Is.EqualTo(0));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Righe.Count, Is.EqualTo(1));
         }
 
 		[Test]
@@ -345,13 +379,14 @@ namespace Amica.vNext.Compatibility.Tests
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
             ValidateSyncDb(d, "documents");
             ValidateSyncDb(c, "contacts");
-            ValidateSyncDb(n, "countries");
+            //ValidateSyncDb(n, "countries");
 
 		    cds.AcceptChanges();
 		    ds.AcceptChanges();
 
 			// Changing a Contact should not affect the ContatMinimal in the Document.
             ds.Anagrafiche.Rows[0]["PartitaIVA"] = "vat1";
+            ds.Nazioni.Rows[0]["Nome"] = "Russia";
             await _httpDataProvider.UpdateAsync(ds);
 			Assert.AreEqual(ActionPerformed.Modified, _httpDataProvider.ActionPerformed);
 			Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
@@ -362,11 +397,13 @@ namespace Amica.vNext.Compatibility.Tests
 		    var contacts = await adam.GetAsync<Contact>("contacts");
 		    var contact = contacts[0];
 		    Assert.AreEqual("vat1", contact.Vat);
+		    Assert.AreEqual("Russia", contact.Address.Country);
 
 		    var docs = await adam.GetAsync<Document>("documents");
 		    var doc = docs[0];
 		    Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
 		    Assert.AreEqual("vat", doc.Contact.Vat);
+		    Assert.AreEqual("Italia", doc.Contact.Country);
 
 		    Assert.That(doc.Items.Count, Is.EqualTo(1));
 		    var docItem = doc.Items[0];
@@ -375,12 +412,14 @@ namespace Amica.vNext.Compatibility.Tests
 
 
             doc.Contact.Vat = "vat2";
+            doc.Contact.Country = "USA";
             await adam.PutAsync("documents", doc);
             Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
             await _httpDataProvider.GetAsync(ds);
             Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
             // Anagrafiche field and document reference have not changed
             Assert.AreEqual("vat1", ds.Anagrafiche.Rows[0]["PartitaIva"]);
+            Assert.AreEqual("Russia", ds.Nazioni.Rows[0]["Nome"]);
             Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
 
             // test that a locally deleted object is deleted fine also remotely
@@ -515,7 +554,6 @@ namespace Amica.vNext.Compatibility.Tests
             // clear remote endpoints
             using (var client = new HttpClient {BaseAddress = new Uri(Service)}) {
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
-                Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent); 
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent); 
                 Assert.IsTrue(client.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent); 
             }
@@ -526,14 +564,10 @@ namespace Amica.vNext.Compatibility.Tests
             var company = rc.PostAsync<Company>("companies", new Company() {Name = "Company"}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            // post a new country which holds a reference to the previously posted company
-            var country = rc.PostAsync<Country>("countries", new Country() {Name = "Country", CompanyId = company.UniqueId}).Result;
-            Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
-
             var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", Vat = "Vat", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            rc.PostAsync<Document>("documents", new Invoice() {Contact = new ContactMinimal(contact), CompanyId = company.UniqueId}).Wait();
+            var doc = rc.PostAsync<Document>("documents", new Invoice() { Contact = new ContactMinimal(contact), CompanyId = company.UniqueId }).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
 			// test that we can download and sync with a new company being posted on the remote
@@ -583,45 +617,48 @@ namespace Amica.vNext.Compatibility.Tests
 
 			// we downloaded one new object and added it to the corresponding table
 			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
-			Assert.AreEqual(1, companyDs.Nazioni.Count);
-			var nazioniRow = companyDs.Nazioni[0];
-			Assert.AreEqual(country.Name, nazioniRow.Nome);
-			ValidateSyncDb(nazioniRow, "countries", false);
+			Assert.AreEqual(1, companyDs.Anagrafiche.Count);
+			var anagraficheRow = companyDs.Anagrafiche[0];
+			Assert.AreEqual(contact.Name, anagraficheRow.RagioneSociale1);
+			ValidateSyncDb(anagraficheRow, "contacts", false);
 
 			// if we try a sync again we don't get anything new since there have been no changes on the remote
 			await _httpDataProvider.GetAsync(companyDs);
             Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
-            Assert.AreEqual(1, companyDs.Nazioni.Count);
+            Assert.AreEqual(1, companyDs.Anagrafiche.Count);
 
 			// test that if the remote object is updated...
-			country.Name = "We changed name";
-			country = rc.PutAsync<Country>("countries", country).Result;
+			contact.Name = "We changed name";
+			contact = rc.PutAsync<Contact>("contacts", contact).Result;
 
 			System.Threading.Thread.Sleep(SleepLength);
 
 			// ... we can then sync it down effortlessly
 			await _httpDataProvider.GetAsync(companyDs);
 			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
-			nazioniRow = companyDs.Nazioni[0];
-			Assert.AreEqual(country.Name, nazioniRow.Nome);
-			ValidateSyncDb(nazioniRow, "countries", false);
+			anagraficheRow = companyDs.Anagrafiche[0];
+			Assert.AreEqual(contact.Name, anagraficheRow.RagioneSociale1);
+			ValidateSyncDb(anagraficheRow, "contacts", false);
 
 			// if we try a sync again we don't get anything new since there have been no changes on the remote
 			await _httpDataProvider.GetAsync(companyDs);
 			Assert.AreEqual(ActionPerformed.ReadNoChanges, _httpDataProvider.ActionPerformed);
-			Assert.AreEqual(1, companyDs.Nazioni.Count);
+			Assert.AreEqual(1, companyDs.Anagrafiche.Count);
 
 			System.Threading.Thread.Sleep(SleepLength);
 
-			// if we delete an object on remote...
-			var r = rc.DeleteAsync("countries", country).Result;
+            // if we delete an object on remote...
+            var r = await rc.DeleteAsync("contacts", contact);
+			Assert.AreEqual(HttpStatusCode.NoContent, r.StatusCode);
+            r = await rc.DeleteAsync("documents", doc);
 			Assert.AreEqual(HttpStatusCode.NoContent, r.StatusCode);
 
 
 			// ... we can then sync the delete down.
 			await _httpDataProvider.GetAsync(companyDs);
 			Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
-			Assert.AreEqual(0, companyDs.Nazioni.Count);
+			Assert.AreEqual(0, companyDs.Anagrafiche.Count);
+			Assert.AreEqual(0, companyDs.Documenti.Count);
         }
 
         public  async void ValidateUnknownRow(DataRow r, string endpoint)

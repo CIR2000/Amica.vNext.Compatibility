@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Amica.vNext.Compatibility.Maps
+﻿namespace Amica.vNext.Compatibility.Maps
 {
     public class FieldMapping
     {
-		public string FieldName { get; set; }
+		public string PropertyName { get; set; }
+		public string ColumnName { get; set; }
     }
 }

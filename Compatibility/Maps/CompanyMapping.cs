@@ -4,7 +4,7 @@
     {
         internal CompanyMapping()
         {
-            Fields.Add("Nome", new FieldMapping {FieldName = "Name"});
+            Fields.Add("Nome", new FieldMapping {PropertyName = "Name"});
         }
     }
 

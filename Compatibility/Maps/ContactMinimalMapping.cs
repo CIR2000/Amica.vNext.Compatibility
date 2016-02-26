@@ -4,10 +4,22 @@
     {
         internal ContactMinimalMapping()
         {
-            Fields.Add("Id", new FieldMapping {FieldName = "UniqueId"});
-            Fields.Add("RagioneSociale1", new FieldMapping { FieldName = "Name"});
-			Fields.Add("Indirizzo", new FieldMapping {FieldName = "Street"});
-			Fields.Add("PartitaIVA", new FieldMapping {FieldName = "Vat"});
+            Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
+            Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
+			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Street"});
+			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "Vat"});
+
+            Parents.Add(
+                "IdNazione",
+                new DataRelationMapping
+                {
+                    PropertyName = "Country",
+                    ColumnName = "Nome",
+                    RelationName = "FK_Nazioni_Anagrafiche",
+                    //FieldType = typeof (Country)
+                }
+				);
+
         }
     }
 }
