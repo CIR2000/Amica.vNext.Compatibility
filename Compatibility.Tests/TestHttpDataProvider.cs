@@ -131,6 +131,7 @@ namespace Amica.vNext.Compatibility.Tests
 		        CompanyId = company.UniqueId,
 		        Name = "Name",
 		        Vat = "Vat",
+				MarketArea = "Lombardia",
 		        Address = new AddressEx
                 {
                     Street = "Street",
@@ -183,6 +184,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Documenti.Count, Is.EqualTo(2));
             Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
             Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
+            Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
 
             var a = companyDs.Anagrafiche[0];
             var d1 = companyDs.Documenti[0];
@@ -190,6 +192,7 @@ namespace Amica.vNext.Compatibility.Tests
             var ri1 = companyDs.Righe[0];
             var ri2 = companyDs.Righe[1];
             var n = companyDs.Nazioni[0];
+            var ag = companyDs.AreeGeografiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.Contact.Country));
@@ -207,6 +210,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(ri2.Descrizione, Is.EqualTo(doc2.Items[0].Description));
 
             Assert.That(n.Nome, Is.EqualTo(doc.Contact.Country));
+            Assert.That(ag.Nome, Is.EqualTo(contact.MarketArea));
 
             // now remotely update the document by changing 1 item and adding a new one
             doc.Items[0].Sku = "updated sku1";
@@ -327,7 +331,6 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
-            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "countries")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -352,11 +355,16 @@ namespace Amica.vNext.Compatibility.Tests
 		    n.Nome = "Italia";
 		    ds.Nazioni.AddNazioniRow(n);
 
+		    var ag = ds.AreeGeografiche.NewAreeGeograficheRow();
+		    ag.Nome = "Lombardia";
+		    ds.AreeGeografiche.AddAreeGeograficheRow(ag);
+
             var c = ds.Anagrafiche.NewAnagraficheRow();
             c.RagioneSociale1 = "rs1";
             c.PartitaIVA = "vat";
             c.Indirizzo = "address";
 		    c.IdNazione = n.Id;
+            c.IdAreaGeografica = ag.Id;
             ds.Anagrafiche.AddAnagraficheRow(c);
 
             var d = ds.Documenti.NewDocumentiRow();
@@ -379,7 +387,6 @@ namespace Amica.vNext.Compatibility.Tests
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
             ValidateSyncDb(d, "documents");
             ValidateSyncDb(c, "contacts");
-            //ValidateSyncDb(n, "countries");
 
 		    cds.AcceptChanges();
 		    ds.AcceptChanges();
@@ -398,6 +405,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    var contact = contacts[0];
 		    Assert.AreEqual("vat1", contact.Vat);
 		    Assert.AreEqual("Russia", contact.Address.Country);
+		    Assert.AreEqual(ag.Nome, contact.MarketArea);
 
 		    var docs = await adam.GetAsync<Document>("documents");
 		    var doc = docs[0];

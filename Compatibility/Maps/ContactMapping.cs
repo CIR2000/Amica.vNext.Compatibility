@@ -16,9 +16,16 @@
                     PropertyName = "Address.Country",
                     ColumnName = "Nome",
                     RelationName = "FK_Nazioni_Anagrafiche",
-                    //FieldType = typeof (Country)
-                }
-				);
+                });
+
+			Parents.Add(
+                "IdAreaGeografica",
+                new DataRelationMapping
+                {
+                    PropertyName = "MarketArea",
+                    ColumnName = "Nome",
+                    RelationName = "FK_AreeGeografiche_Anagrafiche",
+                } );
         }
     }
 
