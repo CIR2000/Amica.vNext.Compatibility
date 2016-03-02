@@ -11,6 +11,14 @@ namespace Amica.vNext.Compatibility.Maps
 			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "Vat"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});
 
+			Fields.Add("IsAttivo", new FieldMapping {PropertyName = "Is.Active"});
+			Fields.Add("IsPersonaGiuridica", new FieldMapping {PropertyName = "Is.Company"});
+			Fields.Add("IsCliente", new FieldMapping {PropertyName = "Is.Client"});
+			Fields.Add("IsFornitore", new FieldMapping {PropertyName = "Is.Vendor"});
+			Fields.Add("IsAgente", new FieldMapping {PropertyName = "Is.Agent"});
+			Fields.Add("IsVettore", new FieldMapping {PropertyName = "Is.Courier"});
+			Fields.Add("IsCapoArea", new FieldMapping {PropertyName = "Is.AreaManager"});
+
             Parents.Add(
                 "IdNazione",
                 new DataRelationMapping

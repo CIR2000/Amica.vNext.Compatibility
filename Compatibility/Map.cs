@@ -64,10 +64,11 @@ namespace Amica.vNext.Compatibility
         {
 			foreach (var fieldMapping in mapping.Fields)
             {
-                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out target);
+                object activeTarget;
+                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget);
                 var value = GetAdjustedColumnValue(row, fieldMapping.Key, prop);
 
-                prop.SetValue(target, value, null);
+                prop.SetValue(activeTarget, value, null);
             }
         }
 		internal static void ProcessDataRowParents(DataRow row, object target, IMapping mapping)

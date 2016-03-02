@@ -162,6 +162,13 @@ namespace Amica.vNext.Compatibility.Tests
 
             var a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
+            Assert.That(a.IsAttivo, Is.True);
+            Assert.That(a.IsPersonaGiuridica, Is.True);
+            Assert.That(a.IsCliente, Is.False);
+            Assert.That(a.IsFornitore, Is.False);
+            Assert.That(a.IsAgente, Is.False);
+            Assert.That(a.IsCapoArea, Is.False);
+            Assert.That(a.IsVettore, Is.False);
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
@@ -176,6 +183,8 @@ namespace Amica.vNext.Compatibility.Tests
             contact.Address.Country = "USA";
             contact.MarketArea = "new marketarea";
             contact.Name = "New Name";
+            contact.Is.Client = true;
+            contact.Is.AreaManager = true;
 
             adam.ResourceName = "contacts";
             contact = await adam.PutAsync<Contact>(contact);
@@ -198,6 +207,13 @@ namespace Amica.vNext.Compatibility.Tests
 
             a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
+            Assert.That(a.IsAttivo, Is.True);
+            Assert.That(a.IsPersonaGiuridica, Is.True);
+            Assert.That(a.IsCliente, Is.True);
+            Assert.That(a.IsFornitore, Is.False);
+            Assert.That(a.IsAgente, Is.False);
+            Assert.That(a.IsCapoArea, Is.True);
+            Assert.That(a.IsVettore, Is.False);
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
             Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
@@ -492,6 +508,13 @@ namespace Amica.vNext.Compatibility.Tests
 		    a.IdNazione = n.Id;
             a.IdAreaGeografica = ag.Id;
             a.IdValuta = v.Id;
+            a.IsAgente = true;
+            a.IsCapoArea = true;
+            a.IsCliente = true;
+            a.IsFornitore = true;
+            a.IsPersonaGiuridica = true;
+            a.IsAttivo = true;
+            a.IsVettore = true;
             ds.Anagrafiche.AddAnagraficheRow(a);
 
             _httpDataProvider.LocalCompanyId = 99;
@@ -509,6 +532,13 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
+            Assert.That(a.IsPersonaGiuridica, Is.EqualTo(contact.Is.Company));
+            Assert.That(a.IsAttivo, Is.EqualTo(contact.Is.Active));
+            Assert.That(a.IsCliente, Is.EqualTo(contact.Is.Client));
+            Assert.That(a.IsFornitore, Is.EqualTo(contact.Is.Vendor));
+            Assert.That(a.IsVettore, Is.EqualTo(contact.Is.Courier));
+            Assert.That(a.IsAgente, Is.EqualTo(contact.Is.Agent));
+            Assert.That(a.IsCapoArea, Is.EqualTo(contact.Is.AreaManager));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
             Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
@@ -518,9 +548,11 @@ namespace Amica.vNext.Compatibility.Tests
 
 			// test that changing a row locally will sync fine upstream
             a.RagioneSociale1 = "changed rs";
+            a.IsCapoArea = false;
             await _httpDataProvider.UpdateAsync(ds);
             contact = await adam.GetAsync<Contact>(contact);
             Assert.That(contact.Name, Is.EqualTo(a.RagioneSociale1));
+            Assert.That(contact.Is.AreaManager, Is.EqualTo(a.IsCapoArea));
 
             ds.AcceptChanges();
 
