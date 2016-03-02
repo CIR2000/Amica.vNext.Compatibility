@@ -128,7 +128,8 @@ namespace Amica.vNext.Compatibility.Tests
 		        CompanyId = company.UniqueId,
 		        Name = "Name",
 		        Vat = "Vat",
-				IdCode="id_code",
+				IdCode = "id_code",
+				TaxIdCode = "tax_id_code",
 				MarketArea = "Lombardia",
 				Currency = new Currency
                 {
@@ -164,6 +165,7 @@ namespace Amica.vNext.Compatibility.Tests
             var a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
             Assert.That(a.IsAttivo, Is.True);
@@ -186,6 +188,7 @@ namespace Amica.vNext.Compatibility.Tests
             contact.MarketArea = "new marketarea";
             contact.Name = "New Name";
             contact.IdCode = "New IdCode";
+            contact.TaxIdCode = "New TaxIdCode";
             contact.Is.Client = true;
             contact.Is.AreaManager = true;
 
@@ -211,6 +214,7 @@ namespace Amica.vNext.Compatibility.Tests
             a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
             Assert.That(a.IsAttivo, Is.True);
             Assert.That(a.IsPersonaGiuridica, Is.True);
             Assert.That(a.IsCliente, Is.True);
@@ -509,6 +513,7 @@ namespace Amica.vNext.Compatibility.Tests
             a.RagioneSociale1 = "rs1";
             a.PartitaIVA = "vat";
             a.Codice = "idcode";
+            a.CodiceFiscale = "taxidcode";
             a.Indirizzo = "address";
 		    a.IdNazione = n.Id;
             a.IdAreaGeografica = ag.Id;
@@ -537,6 +542,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
             Assert.That(a.IsPersonaGiuridica, Is.EqualTo(contact.Is.Company));
             Assert.That(a.IsAttivo, Is.EqualTo(contact.Is.Active));
@@ -556,11 +562,13 @@ namespace Amica.vNext.Compatibility.Tests
             a.RagioneSociale1 = "changed rs";
             a.IsCapoArea = false;
             a.Codice = "new idcode";
+            a.CodiceFiscale = "new taxidcode";
             await _httpDataProvider.UpdateAsync(ds);
             contact = await adam.GetAsync<Contact>(contact);
             Assert.That(contact.Name, Is.EqualTo(a.RagioneSociale1));
             Assert.That(contact.Is.AreaManager, Is.EqualTo(a.IsCapoArea));
             Assert.That(contact.IdCode, Is.EqualTo(a.Codice));
+            Assert.That(contact.TaxIdCode, Is.EqualTo(a.CodiceFiscale));
 
             ds.AcceptChanges();
 
