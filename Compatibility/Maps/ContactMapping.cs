@@ -9,6 +9,7 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
 			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "Vat"});
+			Fields.Add("Codice", new FieldMapping {PropertyName = "IdCode"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});
 
 			Fields.Add("IsAttivo", new FieldMapping {PropertyName = "Is.Active"});
