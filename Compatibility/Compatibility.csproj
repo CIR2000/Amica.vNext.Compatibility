@@ -96,6 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
+    <Compile Include="Maps\CurrencyMapping.cs" />
     <Compile Include="Maps\ContactMapping.cs" />
     <Compile Include="Maps\DocumentItemMapping.cs" />
     <Compile Include="Maps\FieldMapping.cs" />

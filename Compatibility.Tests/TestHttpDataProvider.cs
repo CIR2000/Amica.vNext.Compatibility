@@ -97,7 +97,128 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
+
 		[Test]
+        public async void DownloadContact()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+			// create vnext contact and post it
+		    var contact = new Contact
+		    {
+		        CompanyId = company.UniqueId,
+		        Name = "Name",
+		        Vat = "Vat",
+				MarketArea = "Lombardia",
+				Currency = new Currency
+                {
+					Name = "Euro",
+					Code = "EUR",
+					Symbol="€"
+                },
+		        Address = new AddressEx
+                {
+                    Street = "Street",
+					Country = "Italia"
+                }
+		    };
+		    contact = await adam.PostAsync<Contact>("contacts", contact);
+
+			// try downloading the new contact into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            var t = companyDs.TipiDocumento.NewTipiDocumentoRow();
+            t.Id = 4;
+            companyDs.TipiDocumento.AddTipiDocumentoRow(t);
+
+            Assert.That(async () => await _httpDataProvider.GetAsync(companyDs),
+                Throws.InstanceOf<ArgumentNullException>().With.Property("ParamName").EqualTo("LocalCompanyId"));
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
+            Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Valute.Count, Is.EqualTo(1));
+
+            var a = companyDs.Anagrafiche[0];
+            Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
+            Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
+            Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
+            Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
+            Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
+            Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
+            Assert.That(a.ValuteRow.Sigla, Is.EqualTo(contact.Currency.Code));
+
+            // remotely edit the contact 
+            contact.MarketArea = "Emilia";
+            contact.Currency.Name = "US Dollar";
+            contact.Currency.Code = "USD";
+            contact.Address.Country = "USA";
+            contact.MarketArea = "new marketarea";
+            contact.Name = "New Name";
+
+            adam.ResourceName = "contacts";
+            contact = await adam.PutAsync<Contact>(contact);
+
+			// make it happen that the downloaded Address.Country is already present in Nazioni
+            var n = companyDs.Nazioni.NewNazioniRow();
+            n.Nome = contact.Address.Country;
+            companyDs.Nazioni.AddNazioniRow(n);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            // test that remotely changed contact syncs fine with Amica classic
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
+			// parent tables got a new record
+            Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Valute.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
+
+            a = companyDs.Anagrafiche[0];
+            Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
+            Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
+            Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
+            Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
+            Assert.That(a.ValuteRow.Sigla, Is.EqualTo(contact.Currency.Code));
+
+
+            await adam.DeleteAsync(contact);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(0));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
+            Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Valute.Count, Is.EqualTo(2));
+        }
+
+
+        [Test]
         public async void DownloadDocuments()
         {
             // make sure remote remote endpoint is completely empty
@@ -132,6 +253,12 @@ namespace Amica.vNext.Compatibility.Tests
 		        Name = "Name",
 		        Vat = "Vat",
 				MarketArea = "Lombardia",
+				Currency = new Currency
+                {
+					Name = "Euro",
+					Code = "EUR",
+					Symbol="€"
+                },
 		        Address = new AddressEx
                 {
                     Street = "Street",
@@ -324,6 +451,88 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 		[Test]
+        public async void UploadContact()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+		    var n = ds.Nazioni.NewNazioniRow();
+		    n.Nome = "Italia";
+		    ds.Nazioni.AddNazioniRow(n);
+
+		    var ag = ds.AreeGeografiche.NewAreeGeograficheRow();
+		    ag.Nome = "Lombardia";
+		    ds.AreeGeografiche.AddAreeGeograficheRow(ag);
+
+            var v = ds.Valute.NewValuteRow();
+            v.Nome = "Euro";
+            v.Sigla = "EUR";
+            ds.Valute.AddValuteRow(v);
+
+            var a = ds.Anagrafiche.NewAnagraficheRow();
+            a.RagioneSociale1 = "rs1";
+            a.PartitaIVA = "vat";
+            a.Indirizzo = "address";
+		    a.IdNazione = n.Id;
+            a.IdAreaGeografica = ag.Id;
+            a.IdValuta = v.Id;
+            ds.Anagrafiche.AddAnagraficheRow(a);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(a, "contacts");
+
+            var adam = new EveClient(Service) { ResourceName = "contacts" };
+            var contacts = await adam.GetAsync<Contact>();
+            Assert.That(contacts.Count, Is.EqualTo(1));
+            var contact = contacts[0];
+            Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
+            Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
+            Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
+            Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
+            Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
+            Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
+            Assert.That(a.ValuteRow.Sigla, Is.EqualTo(contact.Currency.Code));
+
+            ds.AcceptChanges();
+
+			// test that changing a row locally will sync fine upstream
+            a.RagioneSociale1 = "changed rs";
+            await _httpDataProvider.UpdateAsync(ds);
+            contact = await adam.GetAsync<Contact>(contact);
+            Assert.That(contact.Name, Is.EqualTo(a.RagioneSociale1));
+
+            ds.AcceptChanges();
+
+			// test that deleting a contact locally will also delete it upstream
+            a.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            contact = await adam.GetAsync<Contact>(contact);
+            Assert.That(contact, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+		[Test]
         public async void UploadDocuments()
         {
             // make sure remote remote endpoint is completely empty
@@ -359,13 +568,20 @@ namespace Amica.vNext.Compatibility.Tests
 		    ag.Nome = "Lombardia";
 		    ds.AreeGeografiche.AddAreeGeograficheRow(ag);
 
+            var v = ds.Valute.NewValuteRow();
+            v.Nome = "US Dollars";
+            v.Sigla = "USD";
+            ds.Valute.AddValuteRow(v);
+
             var c = ds.Anagrafiche.NewAnagraficheRow();
             c.RagioneSociale1 = "rs1";
             c.PartitaIVA = "vat";
             c.Indirizzo = "address";
 		    c.IdNazione = n.Id;
             c.IdAreaGeografica = ag.Id;
+            c.IdValuta = v.Id;
             ds.Anagrafiche.AddAnagraficheRow(c);
+
 
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
@@ -406,6 +622,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    Assert.AreEqual("vat1", contact.Vat);
 		    Assert.AreEqual("Russia", contact.Address.Country);
 		    Assert.AreEqual(ag.Nome, contact.MarketArea);
+		    Assert.AreEqual(v.Nome, contact.Currency.Name);
 
 		    var docs = await adam.GetAsync<Document>("documents");
 		    var doc = docs[0];

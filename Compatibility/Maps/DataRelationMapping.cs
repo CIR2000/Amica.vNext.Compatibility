@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Amica.vNext.Compatibility.Maps
 {
@@ -11,7 +8,7 @@ namespace Amica.vNext.Compatibility.Maps
         {
             ColumnName = "Id";
         }
-		public Type PropertyType { get; set; }
+		public Type TargetType { get; set; }
 		public string RelationName { get; set; }
     }
 }

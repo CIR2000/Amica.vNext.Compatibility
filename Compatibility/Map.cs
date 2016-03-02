@@ -23,6 +23,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Contact), new ContactMapping());
             Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
             Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
+            Topology.Add(typeof(Currency), new CurrencyMapping());
         }
 
 #region "T O"
@@ -78,14 +79,15 @@ namespace Amica.vNext.Compatibility
                 var prop = GetProperty(target, parentMapping.Value.PropertyName, out realTarget);
 				var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
 
-                if (parentMapping.Value.PropertyType == null)
+                if (parentMapping.Value.TargetType == null)
                 {
                     value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, prop);
                 }
                 else
                 {
-					value = Activator.CreateInstance(parentMapping.Value.PropertyType);
-					DataRowToObject(parentRow, value);
+					value = Activator.CreateInstance(parentMapping.Value.TargetType);
+					if (parentRow != null)
+						DataRowToObject(parentRow, value);
                 }
 				prop.SetValue(realTarget, value, null);
 
@@ -99,12 +101,12 @@ namespace Amica.vNext.Compatibility
                 var destProp = target.GetType().GetProperty(childMapping.PropertyName);
 
 				var listType = typeof(List<>);
-				var constructedListType = listType.MakeGenericType(childMapping.PropertyType);
+				var constructedListType = listType.MakeGenericType(childMapping.TargetType);
 				var list = (IList)Activator.CreateInstance(constructedListType);
 
 				foreach (var childRow in childRows)
                 {
-					var listItem = Activator.CreateInstance(childMapping.PropertyType);
+					var listItem = Activator.CreateInstance(childMapping.TargetType);
 					DataRowToObject(childRow, listItem);
                     list.Add(listItem);
                 }
@@ -114,6 +116,8 @@ namespace Amica.vNext.Compatibility
 
 		private static object GetAdjustedColumnValue(DataRow row, string columnName, PropertyInfo prop)
         {
+            if (row == null) return null;
+
             var column = row.Table.Columns[columnName];
 
 			object val;
@@ -157,8 +161,13 @@ namespace Amica.vNext.Compatibility
             {
                 object realSource, value;
 
-                var prop = GetProperty(source, parentMapping.Value.PropertyName, out realSource);
-				if (parentMapping.Value.PropertyType == null)
+                var keyField = (parentMapping.Value.KeyField != null) ?
+                    parentMapping.Value.PropertyName + "." + parentMapping.Value.KeyField :
+                    parentMapping.Value.PropertyName;
+
+                var prop = GetProperty(source, keyField, out realSource);
+
+				if (parentMapping.Value.ColumnName != "Id")
                 {
                     var parentTable = row.Table.ParentRelations[parentMapping.Value.RelationName].ParentTable;
 					var parentColumn = parentTable.Columns[parentMapping.Value.ColumnName];
@@ -166,19 +175,19 @@ namespace Amica.vNext.Compatibility
 
                     if (parentValue == null) continue;
 
-                    var parent = parentTable.Select($"{parentColumn} = '{parentValue}'");
+                    var parents = parentTable.Select($"{parentColumn} = '{parentValue}'");
 
-					if (parent.Length > 0)
-                    {
-                        value = parent[0]["Id"];
-                    }
-                    else
-                    {
-                        var newParentRow = parentTable.NewRow();
-                        newParentRow[parentColumn] = parentValue;
-                        parentTable.Rows.Add(newParentRow);
-                        value = newParentRow["Id"];
-                    }
+                    var targetRow = (parents.Length>0) ? parents[0] : parentTable.NewRow();
+
+					if (parentMapping.Value.TargetType != null)
+						ProcessSimpleProperties(realSource, targetRow, Topology[parentMapping.Value.TargetType]);
+					else
+						targetRow[parentColumn] = parentValue;
+
+                    if (targetRow.RowState == DataRowState.Detached)
+                        parentTable.Rows.Add(targetRow);
+
+					value = targetRow["Id"];
                 }
                 else
                 {

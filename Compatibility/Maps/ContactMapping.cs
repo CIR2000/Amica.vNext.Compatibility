@@ -1,4 +1,6 @@
-﻿namespace Amica.vNext.Compatibility.Maps
+﻿using Amica.vNext.Models;
+
+namespace Amica.vNext.Compatibility.Maps
 {
     internal class ContactMapping : Mapping
     {
@@ -25,6 +27,17 @@
                     PropertyName = "MarketArea",
                     ColumnName = "Nome",
                     RelationName = "FK_AreeGeografiche_Anagrafiche",
+                } );
+
+			Parents.Add(
+                "IdValuta",
+                new DataRelationMapping
+                {
+                    PropertyName = "Currency",
+					KeyField = "Name",
+                    ColumnName = "Nome",
+                    RelationName = "FK_Valute_Anagrafiche",
+					TargetType = typeof(Currency)
                 } );
         }
     }
