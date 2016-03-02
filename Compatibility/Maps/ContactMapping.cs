@@ -13,6 +13,9 @@ namespace Amica.vNext.Compatibility.Maps
 			Fields.Add("CodiceFiscale", new FieldMapping {PropertyName = "TaxIdCode"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});
 
+			Fields.Add("BancaNome", new FieldMapping {PropertyName = "Bank.Name"});
+			Fields.Add("BancaIBAN", new FieldMapping {PropertyName = "Bank.IbanCode"});
+
 			Fields.Add("IsAttivo", new FieldMapping {PropertyName = "Is.Active"});
 			Fields.Add("IsPersonaGiuridica", new FieldMapping {PropertyName = "Is.Company"});
 			Fields.Add("IsCliente", new FieldMapping {PropertyName = "Is.Client"});

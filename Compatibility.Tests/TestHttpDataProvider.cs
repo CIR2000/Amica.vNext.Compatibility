@@ -141,7 +141,13 @@ namespace Amica.vNext.Compatibility.Tests
                 {
                     Street = "Street",
 					Country = "Italia"
-                }
+                },
+				Bank = new Bank
+				{
+					Name = "Bank",
+					IbanCode="Iban",
+					BicSwiftCode="Swift"
+				},
 		    };
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
 
@@ -175,6 +181,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.IsAgente, Is.False);
             Assert.That(a.IsCapoArea, Is.False);
             Assert.That(a.IsVettore, Is.False);
+            Assert.That(a.BancaNome, Is.EqualTo(contact.Bank.Name));
+            Assert.That(a.BancaIBAN, Is.EqualTo(contact.Bank.IbanCode));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
             Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
@@ -191,6 +199,8 @@ namespace Amica.vNext.Compatibility.Tests
             contact.TaxIdCode = "New TaxIdCode";
             contact.Is.Client = true;
             contact.Is.AreaManager = true;
+            contact.Bank.Name = "new bank name";
+            contact.Bank.IbanCode = "new iban code";
 
             adam.ResourceName = "contacts";
             contact = await adam.PutAsync<Contact>(contact);
@@ -215,6 +225,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
             Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
+            Assert.That(a.BancaNome, Is.EqualTo(contact.Bank.Name));
+            Assert.That(a.BancaIBAN, Is.EqualTo(contact.Bank.IbanCode));
             Assert.That(a.IsAttivo, Is.True);
             Assert.That(a.IsPersonaGiuridica, Is.True);
             Assert.That(a.IsCliente, Is.True);
@@ -525,6 +537,8 @@ namespace Amica.vNext.Compatibility.Tests
             a.IsPersonaGiuridica = true;
             a.IsAttivo = true;
             a.IsVettore = true;
+            a.BancaNome = "bank name";
+            a.BancaIBAN = "iban";
             ds.Anagrafiche.AddAnagraficheRow(a);
 
             _httpDataProvider.LocalCompanyId = 99;
@@ -551,6 +565,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.IsVettore, Is.EqualTo(contact.Is.Courier));
             Assert.That(a.IsAgente, Is.EqualTo(contact.Is.Agent));
             Assert.That(a.IsCapoArea, Is.EqualTo(contact.Is.AreaManager));
+            Assert.That(a.BancaNome, Is.EqualTo(contact.Bank.Name));
+            Assert.That(a.BancaIBAN, Is.EqualTo(contact.Bank.IbanCode));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(contact.Address.Country));
             Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
@@ -563,12 +579,17 @@ namespace Amica.vNext.Compatibility.Tests
             a.IsCapoArea = false;
             a.Codice = "new idcode";
             a.CodiceFiscale = "new taxidcode";
+            a.BancaNome = "new bank name";
+            a.BancaIBAN = "new bank iban";
+
             await _httpDataProvider.UpdateAsync(ds);
             contact = await adam.GetAsync<Contact>(contact);
             Assert.That(contact.Name, Is.EqualTo(a.RagioneSociale1));
             Assert.That(contact.Is.AreaManager, Is.EqualTo(a.IsCapoArea));
             Assert.That(contact.IdCode, Is.EqualTo(a.Codice));
             Assert.That(contact.TaxIdCode, Is.EqualTo(a.CodiceFiscale));
+            Assert.That(contact.Bank.Name, Is.EqualTo(a.BancaNome));
+            Assert.That(contact.Bank.IbanCode, Is.EqualTo(a.BancaIBAN));
 
             ds.AcceptChanges();
 
