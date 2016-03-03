@@ -24,6 +24,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
             Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
             Topology.Add(typeof(Currency), new CurrencyMapping());
+            Topology.Add(typeof(OtherAddress), new OtherAddressMapping());
         }
 
 #region "T O"

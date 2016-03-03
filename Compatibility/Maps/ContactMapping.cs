@@ -53,6 +53,15 @@ namespace Amica.vNext.Compatibility.Maps
                     RelationName = "FK_Valute_Anagrafiche",
 					TargetType = typeof(Currency)
                 } );
+
+            Children.Add(
+                new DataRelationMapping
+                {
+                    PropertyName = "OtherAddresses",
+                    TargetType = typeof(OtherAddress),
+                    RelationName = "FK_Anagrafiche_Indirizzi",
+                }
+			);
         }
     }
 

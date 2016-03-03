@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
+using System.Collections.Generic;
 
 namespace Amica.vNext.Compatibility.Tests
 {
@@ -122,34 +123,38 @@ namespace Amica.vNext.Compatibility.Tests
 		    var companies = await adam.GetAsync<Company>("companies");
             var company = companies[0];
 
-			// create vnext contact and post it
-		    var contact = new Contact
-		    {
-		        CompanyId = company.UniqueId,
-		        Name = "Name",
-		        Vat = "Vat",
-				IdCode = "id_code",
-				TaxIdCode = "tax_id_code",
-				MarketArea = "Lombardia",
-				PublicAdministrationIndex = "123456",
-				Currency = new Currency
+            // create vnext contact and post it
+            var contact = new Contact
+            {
+                CompanyId = company.UniqueId,
+                Name = "Name",
+                Vat = "Vat",
+                IdCode = "id_code",
+                TaxIdCode = "tax_id_code",
+                MarketArea = "Lombardia",
+                PublicAdministrationIndex = "123456",
+                Currency = new Currency
                 {
-					Name = "Euro",
-					Code = "EUR",
-					Symbol="€"
+                    Name = "Euro",
+                    Code = "EUR",
+                    Symbol = "€"
                 },
-		        Address = new AddressEx
+                Address = new AddressEx
                 {
                     Street = "Street",
-					Country = "Italia"
+                    Country = "Italia"
                 },
-				Bank = new Bank
-				{
-					Name = "Bank",
-					IbanCode="Iban",
-					BicSwiftCode="Swift"
-				},
-		    };
+                Bank = new Bank
+                {
+                    Name = "Bank",
+                    IbanCode = "Iban",
+                    BicSwiftCode = "Swift"
+                },
+                OtherAddresses = new List<OtherAddress> {
+                    new OtherAddress { Name="addr1"},
+                    new OtherAddress { Name="addr2" }
+                }
+            };
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
 
 			// try downloading the new contact into Amica companyDataSet
@@ -168,6 +173,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
             Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
             Assert.That(companyDs.Valute.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Indirizzi.Count, Is.EqualTo(2));
 
             var a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
@@ -190,6 +196,10 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
             Assert.That(a.ValuteRow.Sigla, Is.EqualTo(contact.Currency.Code));
 
+            Assert.That(a.GetChildRows("FK_Anagrafiche_Indirizzi").Length, Is.EqualTo(2));
+            Assert.That(companyDs.Indirizzi[0].RagioneSociale1, Is.EqualTo(contact.OtherAddresses[0].Name));
+            Assert.That(companyDs.Indirizzi[1].RagioneSociale1, Is.EqualTo(contact.OtherAddresses[1].Name));
+
             // remotely edit the contact 
             contact.MarketArea = "Emilia";
             contact.Currency.Name = "US Dollar";
@@ -204,6 +214,8 @@ namespace Amica.vNext.Compatibility.Tests
             contact.Bank.Name = "new bank name";
             contact.Bank.IbanCode = "new iban code";
             contact.PublicAdministrationIndex = "newidx";
+            contact.OtherAddresses[0].Name = "new addr1";
+            contact.OtherAddresses.RemoveAt(1);
 
             adam.ResourceName = "contacts";
             contact = await adam.PutAsync<Contact>(contact);
@@ -223,6 +235,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(2));
             Assert.That(companyDs.Valute.Count, Is.EqualTo(2));
             Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Indirizzi.Count, Is.EqualTo(1));
 
             a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
@@ -242,6 +255,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
             Assert.That(a.ValuteRow.Sigla, Is.EqualTo(contact.Currency.Code));
+            Assert.That(a.GetChildRows("FK_Anagrafiche_Indirizzi").Length, Is.EqualTo(1));
+            Assert.That(companyDs.Indirizzi[0].RagioneSociale1, Is.EqualTo(contact.OtherAddresses[0].Name));
 
 
             await adam.DeleteAsync(contact);
@@ -255,6 +270,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
             Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(2));
             Assert.That(companyDs.Valute.Count, Is.EqualTo(2));
+            Assert.That(companyDs.Indirizzi.Count, Is.EqualTo(0));
         }
 
 
@@ -546,6 +562,19 @@ namespace Amica.vNext.Compatibility.Tests
             a.IndicePA = "paidx";
             ds.Anagrafiche.AddAnagraficheRow(a);
 
+            var i = ds.Indirizzi.NewIndirizziRow();
+            i.RagioneSociale1 = "name";
+            i.Indirizzo = "indir";
+            i.CAP = "cap";
+            i.Provincia = "pr";
+            i.Località = "loc";
+            i.Telefono1 = "tel1";
+            i.Telefono2 = "tel2";
+            i.Fax = "fax";
+            i.Email = "mail";
+            i.IdAnagrafica = a.Id;
+            ds.Indirizzi.AddIndirizziRow(i);
+
             _httpDataProvider.LocalCompanyId = 99;
 
 			// perform the operation
@@ -577,6 +606,17 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.AreeGeograficheRow.Nome, Is.EqualTo(contact.MarketArea));
             Assert.That(a.ValuteRow.Nome, Is.EqualTo(contact.Currency.Name));
             Assert.That(a.ValuteRow.Sigla, Is.EqualTo(contact.Currency.Code));
+            Assert.That(i.RagioneSociale1, Is.EqualTo(contact.OtherAddresses[0].Name));
+
+            Assert.That(contact.OtherAddresses.Count, Is.EqualTo(1));
+            Assert.That(i.Indirizzo, Is.EqualTo(contact.OtherAddresses[0].Street));
+            Assert.That(i.CAP, Is.EqualTo(contact.OtherAddresses[0].PostalCode));
+            Assert.That(i.Provincia, Is.EqualTo(contact.OtherAddresses[0].StateOrProvince));
+            Assert.That(i.Località, Is.EqualTo(contact.OtherAddresses[0].Town));
+            Assert.That(i.Telefono1, Is.EqualTo(contact.OtherAddresses[0].Phone));
+            Assert.That(i.Telefono2, Is.EqualTo(contact.OtherAddresses[0].Mobile));
+            Assert.That(i.Fax, Is.EqualTo(contact.OtherAddresses[0].Fax));
+            Assert.That(i.Email, Is.EqualTo(contact.OtherAddresses[0].Mail));
 
             ds.AcceptChanges();
 
@@ -588,6 +628,7 @@ namespace Amica.vNext.Compatibility.Tests
             a.BancaNome = "new bank name";
             a.BancaIBAN = "new bank iban";
             a.IndicePA = "npaidx";
+            i.RagioneSociale1 = "changed rs";
 
             await _httpDataProvider.UpdateAsync(ds);
             contact = await adam.GetAsync<Contact>(contact);
@@ -598,6 +639,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(contact.Bank.Name, Is.EqualTo(a.BancaNome));
             Assert.That(contact.Bank.IbanCode, Is.EqualTo(a.BancaIBAN));
             Assert.That(contact.PublicAdministrationIndex, Is.EqualTo(a.IndicePA));
+            Assert.That(contact.OtherAddresses.Count, Is.EqualTo(1));
+            Assert.That(i.RagioneSociale1, Is.EqualTo(contact.OtherAddresses[0].Name));
 
             ds.AcceptChanges();
 
