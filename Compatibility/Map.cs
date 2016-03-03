@@ -128,7 +128,9 @@ namespace Amica.vNext.Compatibility
 			else if (column.ColumnName == "Id")
 				val = HttpDataProvider.GetRemoteRowId(row);
 			else
-				val = Convert.ChangeType(row[column], prop.PropertyType);
+				val = (string.IsNullOrEmpty(row[column].ToString())) 
+					? null 
+					: Convert.ChangeType(row[column], prop.PropertyType);
             return val;
         }
 
