@@ -24,10 +24,10 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
             Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
             Topology.Add(typeof(Currency), new CurrencyMapping());
-            Topology.Add(typeof(OtherAddress), new OtherAddressMapping());
+            Topology.Add(typeof(AddressExWithName), new OtherAddressMapping());
         }
 
-#region "T O"
+#region TO
 
         /// <summary>
         /// Returns a List of objects casted by a Amica10 DataTable source.
@@ -41,7 +41,7 @@ namespace Amica.vNext.Compatibility
         }
 
         /// <summary>
-        /// Returns an object casted by a Asupported Amica10 DataRow.
+        /// Returns an object casted by a supported Amica10 DataRow.
         /// </summary>
         /// <typeparam name="T">The type of the object to be returned</typeparam>
         /// <param name="row">A supprted Amica10 DataRow</param>
@@ -155,7 +155,14 @@ namespace Amica.vNext.Compatibility
                 object target;
                 var prop = GetProperty(source, fieldMapping.Value.PropertyName, out target);
 
-                row[fieldMapping.Key] = prop.GetValue(target, null);
+                var val = prop.GetValue(target, null);
+                var maxLength = row.Table.Columns[fieldMapping.Key].MaxLength;
+
+                // Since one cant set a DataColumn's MaxLength unless it is of string type, we rely on
+                // MaxLength and choose not to test the DataColumn type.
+                row[fieldMapping.Key] = (maxLength > 0 && val != null && ((string)val).Length > maxLength)
+                    ? ((string)val).Substring(0, maxLength)
+                    : val;
             }
         }
 

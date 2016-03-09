@@ -130,7 +130,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Name = "Name",
                 Vat = "Vat",
                 IdCode = "id_code",
-                TaxIdCode = "tax_id_code",
+                TaxIdentificationNumber = "tax_id_code",
                 MarketArea = "Lombardia",
                 PublicAdministrationIndex = "123456",
                 Currency = new Currency
@@ -150,9 +150,9 @@ namespace Amica.vNext.Compatibility.Tests
                     IbanCode = "Iban",
                     BicSwiftCode = "Swift"
                 },
-                OtherAddresses = new List<OtherAddress> {
-                    new OtherAddress { Name="addr1"},
-                    new OtherAddress { Name="addr2" }
+                OtherAddresses = new List<AddressExWithName> {
+                    new AddressExWithName { Name="addr1"},
+                    new AddressExWithName { Name="addr2" }
                 }
             };
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
@@ -178,7 +178,7 @@ namespace Amica.vNext.Compatibility.Tests
             var a = companyDs.Anagrafiche[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
-            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdentificationNumber));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
             Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
             Assert.That(a.IsAttivo, Is.True);
@@ -206,9 +206,9 @@ namespace Amica.vNext.Compatibility.Tests
             contact.Currency.Code = "USD";
             contact.Address.Country = "USA";
             contact.MarketArea = "new marketarea";
-            contact.Name = "New Name";
+            contact.Name = new string('A', companyDs.Anagrafiche.RagioneSociale1Column.MaxLength + 1);
             contact.IdCode = "New IdCode";
-            contact.TaxIdCode = "New TaxIdCode";
+            contact.TaxIdentificationNumber = "New TaxIdCode";
             contact.Is.Client = true;
             contact.Is.AreaManager = true;
             contact.Bank.Name = "new bank name";
@@ -238,9 +238,10 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Indirizzi.Count, Is.EqualTo(1));
 
             a = companyDs.Anagrafiche[0];
-            Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
+			// also test that an object property which is longer than destination DataColumn MaxLength gets truncated
+            Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name.Substring(0, companyDs.Anagrafiche.RagioneSociale1Column.MaxLength)));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
-            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdentificationNumber));
             Assert.That(a.BancaNome, Is.EqualTo(contact.Bank.Name));
             Assert.That(a.BancaIBAN, Is.EqualTo(contact.Bank.IbanCode));
             Assert.That(a.IsAttivo, Is.True);
@@ -590,7 +591,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
             Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
-            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdCode));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdentificationNumber));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
             Assert.That(a.IsPersonaGiuridica, Is.EqualTo(contact.Is.Company));
             Assert.That(a.IsAttivo, Is.EqualTo(contact.Is.Active));
@@ -635,7 +636,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(contact.Name, Is.EqualTo(a.RagioneSociale1));
             Assert.That(contact.Is.AreaManager, Is.EqualTo(a.IsCapoArea));
             Assert.That(contact.IdCode, Is.EqualTo(a.Codice));
-            Assert.That(contact.TaxIdCode, Is.EqualTo(a.CodiceFiscale));
+            Assert.That(contact.TaxIdentificationNumber, Is.EqualTo(a.CodiceFiscale));
             Assert.That(contact.Bank.Name, Is.EqualTo(a.BancaNome));
             Assert.That(contact.Bank.IbanCode, Is.EqualTo(a.BancaIBAN));
             Assert.That(contact.PublicAdministrationIndex, Is.EqualTo(a.IndicePA));

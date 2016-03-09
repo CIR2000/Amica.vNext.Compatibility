@@ -10,7 +10,7 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
 			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "Vat"});
 			Fields.Add("Codice", new FieldMapping {PropertyName = "IdCode"});
-			Fields.Add("CodiceFiscale", new FieldMapping {PropertyName = "TaxIdCode"});
+			Fields.Add("CodiceFiscale", new FieldMapping {PropertyName = "TaxIdentificationNumber"});
 			Fields.Add("IndicePA", new FieldMapping {PropertyName = "PublicAdministrationIndex"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});
 
@@ -58,7 +58,7 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "OtherAddresses",
-                    TargetType = typeof(OtherAddress),
+                    TargetType = typeof(AddressExWithName),
                     RelationName = "FK_Anagrafiche_Indirizzi",
                 }
 			);
