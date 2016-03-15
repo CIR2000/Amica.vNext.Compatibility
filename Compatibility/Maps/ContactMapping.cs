@@ -4,13 +4,14 @@ namespace Amica.vNext.Compatibility.Maps
 {
     internal class ContactMapping : Mapping
     {
+
         internal ContactMapping()
         {
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
 			Fields.Add("Codice", new FieldMapping {PropertyName = "IdCode"});
-			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "VatIdentificationNumber"});
 			Fields.Add("CodiceFiscale", new FieldMapping {PropertyName = "TaxIdentificationNumber"});
+            Fields.Add("PartitaIVA", new VatIdNumberFieldMapping());
 			Fields.Add("IndicePA", new FieldMapping {PropertyName = "PublicAdministrationIndex"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});
 			Fields.Add("http", new FieldMapping {PropertyName = "Address.WebSite"});

@@ -67,7 +67,7 @@ namespace Amica.vNext.Compatibility
             {
                 object activeTarget;
                 var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget);
-                var value = GetAdjustedColumnValue(row, fieldMapping.Key, prop);
+                var value = GetAdjustedColumnValue(row, fieldMapping.Key, fieldMapping.Value.Transform, prop);
 
                 prop.SetValue(activeTarget, value, null);
             }
@@ -83,7 +83,7 @@ namespace Amica.vNext.Compatibility
 
                 if (parentMapping.Value.TargetType == null)
                 {
-                    value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, prop);
+                    value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, parentMapping.Value.Transform, prop);
                 }
                 else
                 {
@@ -116,21 +116,22 @@ namespace Amica.vNext.Compatibility
             }
         }
 
-		private static object GetAdjustedColumnValue(DataRow row, string columnName, PropertyInfo prop)
+		private static object GetAdjustedColumnValue(DataRow row, string columnName, Func<object, object> transform, PropertyInfo prop)
         {
             if (row == null) return null;
 
             var column = row.Table.Columns[columnName];
+            var transformed = transform(row[column]);
 
 			object val;
 			if (prop.PropertyType.IsEnum)
-				val = (int)Enum.Parse(prop.PropertyType, row[column].ToString());
+				val = (int)Enum.Parse(prop.PropertyType, transformed.ToString());
 			else if (column.ColumnName == "Id")
 				val = HttpDataProvider.GetRemoteRowId(row);
 			else
-				val = (string.IsNullOrEmpty(row[column].ToString())) 
+				val = (string.IsNullOrEmpty(transformed.ToString())) 
 					? null 
-					: Convert.ChangeType(row[column], prop.PropertyType);
+					: Convert.ChangeType(transformed, prop.PropertyType);
             return val;
         }
 

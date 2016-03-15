@@ -96,7 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
-    <Compile Include="Maps\OtherAddressMapping.cs" />
+    <Compile Include="Maps\AddressExWithNameMapping.cs" />
     <Compile Include="Maps\CurrencyMapping.cs" />
     <Compile Include="Maps\ContactMapping.cs" />
     <Compile Include="Maps\DocumentItemMapping.cs" />
@@ -110,6 +110,7 @@
     <Compile Include="HttpMapping.cs" />
     <Compile Include="Maps\Mapping.cs" />
     <Compile Include="Maps\DataRelationMapping.cs" />
+    <Compile Include="Maps\VatIdNumberFieldMapping.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLite.cs" />
     <Compile Include="SQLiteAsync.cs" />

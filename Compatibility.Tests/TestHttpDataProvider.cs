@@ -546,7 +546,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             var a = ds.Anagrafiche.NewAnagraficheRow();
             a.RagioneSociale1 = "rs1";
-            a.PartitaIVA = "IT01180680397";
+            a.PartitaIVA = "01180680397";
             a.Codice = "idcode";
             a.CodiceFiscale = "rccncl70m27b519e";
             a.Indirizzo = "address";
@@ -592,7 +592,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(contacts.Count, Is.EqualTo(1));
             var contact = contacts[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
-            Assert.That(a.PartitaIVA, Is.EqualTo(contact.VatIdentificationNumber));
+            Assert.That("IT" + a.PartitaIVA, Is.EqualTo(contact.VatIdentificationNumber));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
             Assert.That(a.CodiceFiscale.ToUpper(), Is.EqualTo(contact.TaxIdentificationNumber));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
@@ -698,7 +698,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             var c = ds.Anagrafiche.NewAnagraficheRow();
             c.RagioneSociale1 = "rs1";
-            c.PartitaIVA = "IT01180680397";
+            c.PartitaIVA = "01180680397";
             c.Indirizzo = "address";
 		    c.IdNazione = n.Id;
             c.IdAreaGeografica = ag.Id;
