@@ -13,6 +13,7 @@ namespace Amica.vNext.Compatibility.Maps
 			Fields.Add("CodiceFiscale", new FieldMapping {PropertyName = "TaxIdentificationNumber"});
 			Fields.Add("IndicePA", new FieldMapping {PropertyName = "PublicAdministrationIndex"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});
+			Fields.Add("http", new FieldMapping {PropertyName = "Address.WebSite"});
 
 			Fields.Add("BancaNome", new FieldMapping {PropertyName = "Bank.Name"});
 			Fields.Add("BancaIBAN", new FieldMapping {PropertyName = "Bank.IbanCode"});

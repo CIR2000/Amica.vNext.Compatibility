@@ -2,9 +2,9 @@
 
 namespace Amica.vNext.Compatibility.Maps
 {
-    internal class OtherAddressMapping : Mapping
+    internal class AddressExWithNameMapping : Mapping
     {
-        internal OtherAddressMapping()
+        internal AddressExWithNameMapping()
         {
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Street"});
