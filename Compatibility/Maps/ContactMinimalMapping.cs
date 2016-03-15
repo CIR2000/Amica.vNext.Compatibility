@@ -7,7 +7,7 @@
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Street"});
-			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "Vat"});
+			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "VatIdentificationNumber"});
 
             Parents.Add(
                 "IdNazione",

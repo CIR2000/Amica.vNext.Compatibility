@@ -8,8 +8,8 @@ namespace Amica.vNext.Compatibility.Maps
         {
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
-			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "Vat"});
 			Fields.Add("Codice", new FieldMapping {PropertyName = "IdCode"});
+			Fields.Add("PartitaIVA", new FieldMapping {PropertyName = "VatIdentificationNumber"});
 			Fields.Add("CodiceFiscale", new FieldMapping {PropertyName = "TaxIdentificationNumber"});
 			Fields.Add("IndicePA", new FieldMapping {PropertyName = "PublicAdministrationIndex"});
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Address.Street"});

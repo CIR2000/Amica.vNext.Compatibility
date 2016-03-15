@@ -128,7 +128,7 @@ namespace Amica.vNext.Compatibility.Tests
             {
                 CompanyId = company.UniqueId,
                 Name = "Name",
-                Vat = "IT01180680397",
+                VatIdentificationNumber = "IT01180680397",
                 IdCode = "id_code",
                 TaxIdentificationNumber = "RCCNCL70M27B519E",
                 MarketArea = "Lombardia",
@@ -181,7 +181,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
             Assert.That(a.CodiceFiscale, Is.EqualTo(contact.TaxIdentificationNumber));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
-            Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
+            Assert.That(a.PartitaIVA, Is.EqualTo(contact.VatIdentificationNumber));
             Assert.That(a.IsAttivo, Is.True);
             Assert.That(a.IsPersonaGiuridica, Is.True);
             Assert.That(a.IsCliente, Is.False);
@@ -310,7 +310,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    {
 		        CompanyId = company.UniqueId,
 		        Name = "Name",
-		        Vat = "IT01180680397",
+		        VatIdentificationNumber = "IT01180680397",
 				MarketArea = "Lombardia",
 				Currency = new Currency
                 {
@@ -382,7 +382,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.Contact.Country));
-            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
+            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.VatIdentificationNumber));
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
@@ -426,7 +426,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
-            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
+            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.VatIdentificationNumber));
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
@@ -448,7 +448,7 @@ namespace Amica.vNext.Compatibility.Tests
             {
                 CompanyId = company.UniqueId,
 		        Name = "new name",
-		        Vat = "IT02182030391",
+		        VatIdentificationNumber = "IT02182030391",
 		        Address = new AddressEx
                 {
                     Street = "Street",
@@ -480,7 +480,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.RagioneSociale1, Is.EqualTo(doc.Contact.Name));
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.Contact.Country));
-            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.Vat));
+            Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.VatIdentificationNumber));
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
@@ -592,7 +592,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(contacts.Count, Is.EqualTo(1));
             var contact = contacts[0];
             Assert.That(a.RagioneSociale1, Is.EqualTo(contact.Name));
-            Assert.That(a.PartitaIVA, Is.EqualTo(contact.Vat));
+            Assert.That(a.PartitaIVA, Is.EqualTo(contact.VatIdentificationNumber));
             Assert.That(a.Codice, Is.EqualTo(contact.IdCode));
             Assert.That(a.CodiceFiscale.ToUpper(), Is.EqualTo(contact.TaxIdentificationNumber));
             Assert.That(a.Indirizzo, Is.EqualTo(contact.Address.Street));
@@ -742,7 +742,7 @@ namespace Amica.vNext.Compatibility.Tests
             var adam = new EveClient (Service);
 		    var contacts = await adam.GetAsync<Contact>("contacts");
 		    var contact = contacts[0];
-		    Assert.AreEqual("IT02182030391", contact.Vat);
+		    Assert.AreEqual("IT02182030391", contact.VatIdentificationNumber);
 		    Assert.AreEqual("Russia", contact.Address.Country);
 		    Assert.AreEqual(ag.Nome, contact.MarketArea);
 		    Assert.AreEqual(v.Nome, contact.Currency.Name);
@@ -750,7 +750,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    var docs = await adam.GetAsync<Document>("documents");
 		    var doc = docs[0];
 		    Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
-		    Assert.AreEqual("IT01180680397", doc.Contact.Vat);
+		    Assert.AreEqual("IT01180680397", doc.Contact.VatIdentificationNumber);
 		    Assert.AreEqual("Italia", doc.Contact.Country);
 
 		    Assert.That(doc.Items.Count, Is.EqualTo(1));
@@ -759,7 +759,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    Assert.That(docItem.Description, Is.EqualTo("Description"));
 
 
-            doc.Contact.Vat = "IT92078790398";
+            doc.Contact.VatIdentificationNumber = "IT92078790398";
             doc.Contact.Country = "USA";
             await adam.PutAsync("documents", doc);
             Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
@@ -912,7 +912,7 @@ namespace Amica.vNext.Compatibility.Tests
             var company = rc.PostAsync<Company>("companies", new Company() {Name = "Company"}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", Vat = "Vat", CompanyId = company.UniqueId}).Result;
+            var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", VatIdentificationNumber = "Vat", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
             var doc = rc.PostAsync<Document>("documents", new Invoice() { Contact = new ContactMinimal(contact), CompanyId = company.UniqueId }).Result;
