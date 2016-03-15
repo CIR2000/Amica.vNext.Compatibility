@@ -311,6 +311,7 @@ namespace Amica.vNext.Compatibility.Tests
 		        CompanyId = company.UniqueId,
 		        Name = "Name",
 		        VatIdentificationNumber = "IT01180680397",
+		        TaxIdentificationNumber = "RCCNCL70M27B519E",
 				MarketArea = "Lombardia",
 				Currency = new Currency
                 {
@@ -383,6 +384,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(a.Indirizzo, Is.EqualTo(doc.Contact.Street));
             Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.Contact.Country));
             Assert.That(a.PartitaIVA, Is.EqualTo(doc.Contact.VatIdentificationNumber));
+            Assert.That(a.CodiceFiscale, Is.EqualTo(doc.Contact.TaxIdentificationNumber));
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
@@ -699,6 +701,7 @@ namespace Amica.vNext.Compatibility.Tests
             var c = ds.Anagrafiche.NewAnagraficheRow();
             c.RagioneSociale1 = "rs1";
             c.PartitaIVA = "01180680397";
+            c.CodiceFiscale = "RCCNCL70M27B519E";
             c.Indirizzo = "address";
 		    c.IdNazione = n.Id;
             c.IdAreaGeografica = ag.Id;
@@ -743,6 +746,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    var contacts = await adam.GetAsync<Contact>("contacts");
 		    var contact = contacts[0];
 		    Assert.AreEqual("IT02182030391", contact.VatIdentificationNumber);
+		    Assert.AreEqual(c.CodiceFiscale, contact.TaxIdentificationNumber);
 		    Assert.AreEqual("Russia", contact.Address.Country);
 		    Assert.AreEqual(ag.Nome, contact.MarketArea);
 		    Assert.AreEqual(v.Nome, contact.Currency.Name);
