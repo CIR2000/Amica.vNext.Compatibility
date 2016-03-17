@@ -133,7 +133,7 @@ namespace Amica.vNext.Compatibility.Tests
 				NonDeductible = 0.2,
 				IsIntraCommunity = true,
 				IsSplitPayment = true,
-				NaturaPA = new Models.ItalianPA.NaturaPA { Code = "N1", Description = string.Empty }
+				NaturaPA = new Models.ItalianPA.NaturaPA { Code = "N1", Description = "description" }
             };
 		    vat = await adam.PostAsync<Vat>("vat", vat);
 
