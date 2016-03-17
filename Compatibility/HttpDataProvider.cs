@@ -56,7 +56,8 @@ namespace Amica.vNext.Compatibility
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
                 {"Documenti", "documents"},
-                {"Anagrafiche", "contacts"}
+                {"Anagrafiche", "contacts"},
+                {"CausaliIVA", "vat"}
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -296,6 +297,16 @@ namespace Amica.vNext.Compatibility
         public async Task UpdateDocumentiAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<Document>(row, batch);
+        }
+
+        /// <summary>
+        /// Stores a companyDataSet.CausaliIVADataTable.CausaliIVARow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateCausaliIVAAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Vat>(row, batch);
         }
 
         /// <summary>
@@ -664,6 +675,15 @@ namespace Amica.vNext.Compatibility
         private async Task GetAndSyncDocumentiAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Document>(dataSet.Documenti);
+        }
+
+        /// <summary>
+        /// Downloads Vat changes from the server and merges them to the CausaliIVA table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncCausaliIVAAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Vat>(dataSet.CausaliIVA);
         }
 
 

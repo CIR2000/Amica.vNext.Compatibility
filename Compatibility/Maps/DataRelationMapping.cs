@@ -9,6 +9,7 @@ namespace Amica.vNext.Compatibility.Maps
             ColumnName = "Id";
         }
 		public Type TargetType { get; set; }
+		public object TargetCollection { get; set; }
 		public string RelationName { get; set; }
     }
 }

@@ -25,6 +25,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
             Topology.Add(typeof(Currency), new CurrencyMapping());
             Topology.Add(typeof(AddressExWithName), new AddressExWithNameMapping());
+            Topology.Add(typeof(Vat), new VatMapping());
         }
 
 #region TO
@@ -77,23 +78,42 @@ namespace Amica.vNext.Compatibility
 			foreach (var parentMapping in mapping.Parents)
             {
                 object realTarget, value;
+				var prop = GetProperty(target, parentMapping.Value.PropertyName, out realTarget);
 
-                var prop = GetProperty(target, parentMapping.Value.PropertyName, out realTarget);
-				var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
-
-                if (parentMapping.Value.TargetType == null)
+				if (parentMapping.Value.TargetCollection != null)
                 {
-                    value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, parentMapping.Value.Transform, prop);
+                    value = GetMatchingCollectionItem(row, parentMapping.Value);
                 }
                 else
                 {
-					value = Activator.CreateInstance(parentMapping.Value.TargetType);
-					if (parentRow != null)
-						DataRowToObject(parentRow, value);
+					var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
+
+					if (parentMapping.Value.TargetType == null)
+					{
+						value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, parentMapping.Value.Transform, prop);
+					}
+					else
+					{
+						value = Activator.CreateInstance(parentMapping.Value.TargetType);
+						if (parentRow != null)
+							DataRowToObject(parentRow, value);
+					}
+
                 }
+
 				prop.SetValue(realTarget, value, null);
 
             }
+        }
+		internal static object GetMatchingCollectionItem(DataRow row, DataRelationMapping mapping)
+        {
+            var sourceValue = mapping.Transform(row[mapping.ColumnName]);
+			foreach (var obj in (IList)mapping.TargetCollection)
+            {
+                var objValue = obj.GetType().GetProperty(mapping.KeyField).GetValue(obj, null);
+                if (objValue == sourceValue) return obj;
+            }
+            return null;
         }
 		internal static void ProcessDataRowChildren(DataRow row, object target, IMapping mapping)
         {
@@ -179,32 +199,39 @@ namespace Amica.vNext.Compatibility
 
                 var prop = GetProperty(source, keyField, out realSource);
 
-				if (parentMapping.Value.ColumnName != "Id")
+				if (parentMapping.Value.TargetCollection != null)
                 {
-                    var parentTable = row.Table.ParentRelations[parentMapping.Value.RelationName].ParentTable;
-					var parentColumn = parentTable.Columns[parentMapping.Value.ColumnName];
-                    var parentValue = prop.GetValue(realSource, null);
-
-                    if (parentValue == null) continue;
-
-                    var parents = parentTable.Select($"{parentColumn} = '{parentValue}'");
-
-                    var targetRow = (parents.Length>0) ? parents[0] : parentTable.NewRow();
-
-					if (parentMapping.Value.TargetType != null)
-						ProcessSimpleProperties(realSource, targetRow, Topology[parentMapping.Value.TargetType]);
-					else
-						targetRow[parentColumn] = parentValue;
-
-                    if (targetRow.RowState == DataRowState.Detached)
-                        parentTable.Rows.Add(targetRow);
-
-					value = targetRow["Id"];
+                    value = prop.GetValue(realSource, null);
                 }
                 else
                 {
-					var parentObject = prop.GetValue(realSource, null);
-					value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
+					if (parentMapping.Value.ColumnName != "Id")
+					{
+						var parentTable = row.Table.ParentRelations[parentMapping.Value.RelationName].ParentTable;
+						var parentColumn = parentTable.Columns[parentMapping.Value.ColumnName];
+						var parentValue = prop.GetValue(realSource, null);
+
+						if (parentValue == null) continue;
+
+						var parents = parentTable.Select($"{parentColumn} = '{parentValue}'");
+
+						var targetRow = (parents.Length>0) ? parents[0] : parentTable.NewRow();
+
+						if (parentMapping.Value.TargetType != null)
+							ProcessSimpleProperties(realSource, targetRow, Topology[parentMapping.Value.TargetType]);
+						else
+							targetRow[parentColumn] = parentValue;
+
+						if (targetRow.RowState == DataRowState.Detached)
+							parentTable.Rows.Add(targetRow);
+
+						value = targetRow["Id"];
+					}
+					else
+					{
+						var parentObject = prop.GetValue(realSource, null);
+						value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
+					}
                 }
                 row[parentMapping.Key] = value;
             }

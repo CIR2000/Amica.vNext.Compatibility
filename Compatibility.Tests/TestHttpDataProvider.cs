@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
+using Amica.vNext.Models.ItalianPA;
 using System.Collections.Generic;
 
 namespace Amica.vNext.Compatibility.Tests
@@ -98,8 +99,102 @@ namespace Amica.vNext.Compatibility.Tests
             }
         }
 
-
 		[Test]
+        public async void DownloadVat()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+            // create vnext contact and post it
+            var vat = new Vat
+            {
+                CompanyId = company.UniqueId,
+                Name = "name",
+				Code = "123456",
+				Rate = 0.1,
+				NonDeductible = 0.2,
+				IsIntraCommunity = true,
+				IsSplitPayment = true,
+				NaturaPA = new Models.ItalianPA.NaturaPA { Code = "N1", Description = string.Empty }
+            };
+		    vat = await adam.PostAsync<Vat>("vat", vat);
+
+			// try downloading the new contact into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.CausaliIVA.Count, Is.EqualTo(1));
+
+            var c = companyDs.CausaliIVA[0];
+            Assert.That(c.Nome, Is.EqualTo(vat.Name));
+            Assert.That(c.Codice, Is.EqualTo(vat.Code.Substring(0, c.Table.Columns["Codice"].MaxLength)));
+            Assert.That(c.Aliquota, Is.EqualTo(vat.Rate));
+            Assert.That(c.Indeducibilità, Is.EqualTo(vat.NonDeductible));
+            Assert.That(c.IsIntracomunitaria, Is.EqualTo(vat.IsIntraCommunity));
+            Assert.That(c.IsSplitPayment, Is.EqualTo(vat.IsSplitPayment));
+            Assert.That(c.Natura, Is.EqualTo(vat.NaturaPA.Code));
+
+            // test that remotely changed vat syncs fine with Amica classic
+            vat.Name = "new name";
+            vat.Code = "54321";
+            vat.Rate = 0.99;
+            vat.NonDeductible = 0.98;
+            vat.IsIntraCommunity = false;
+            vat.IsSplitPayment = false;
+            vat.NaturaPA = PACollections.NaturaPA[1];
+
+            System.Threading.Thread.Sleep(SleepLength);
+            adam.ResourceName = "vat";
+            vat = await adam.PutAsync<Vat>(vat);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.CausaliIVA.Count, Is.EqualTo(1));
+
+            c = companyDs.CausaliIVA[0];
+            Assert.That(c.Nome, Is.EqualTo(vat.Name));
+            Assert.That(c.Codice, Is.EqualTo(vat.Code));
+            Assert.That(c.Aliquota, Is.EqualTo(vat.Rate));
+            Assert.That(c.Indeducibilità, Is.EqualTo(vat.NonDeductible));
+            Assert.That(c.IsIntracomunitaria, Is.EqualTo(vat.IsIntraCommunity));
+            Assert.That(c.IsSplitPayment, Is.EqualTo(vat.IsSplitPayment));
+            Assert.That(c.Natura, Is.EqualTo(vat.NaturaPA.Code));
+
+            await adam.DeleteAsync(vat);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.CausaliIVA.Count, Is.EqualTo(0));
+        }
+
+
+
+        [Test]
         public async void DownloadContact()
         {
             // make sure remote target remote endpoints are empty
@@ -512,6 +607,89 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 		[Test]
+        public async void UploadVat()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var c = ds.CausaliIVA.NewCausaliIVARow();
+            c.Codice = "12345";
+		    c.Nome = "Italia";
+            c.Aliquota = 0.22;
+            c.Indeducibilità = 0.1;
+            c.IsSplitPayment = true;
+            c.IsIntracomunitaria = true;
+            c.Natura = "N2";
+            ds.CausaliIVA.AddCausaliIVARow(c);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(c, "vat");
+
+            var adam = new EveClient(Service) { ResourceName = "vat" };
+            var vats = await adam.GetAsync<Vat>();
+            Assert.That(vats.Count, Is.EqualTo(1));
+            var vat  = vats[0];
+            Assert.That(c.Nome, Is.EqualTo(vat.Name));
+            Assert.That(c.Codice, Is.EqualTo(vat.Code));
+            Assert.That(c.Aliquota, Is.EqualTo(vat.Rate));
+            Assert.That(c.IsIntracomunitaria, Is.EqualTo(vat.IsIntraCommunity));
+            Assert.That(c.IsSplitPayment, Is.EqualTo(vat.IsSplitPayment));
+            Assert.That(c.Natura, Is.EqualTo(vat.NaturaPA.Code));
+
+            ds.AcceptChanges();
+
+            // test that changing a row locally will sync fine upstream
+            c.Codice = "54321";
+            c.Nome = "USA";
+            c.Aliquota = 0.23;
+            c.Indeducibilità = 0.2;
+            c.IsSplitPayment = false;
+            c.IsIntracomunitaria = false;
+            c.Natura = "N6";
+
+            await _httpDataProvider.UpdateAsync(ds);
+            vat = await adam.GetAsync<Vat>(vat);
+            Assert.That(c.Nome, Is.EqualTo(vat.Name));
+            Assert.That(c.Codice, Is.EqualTo(vat.Code));
+            Assert.That(c.Aliquota, Is.EqualTo(vat.Rate));
+            Assert.That(c.IsIntracomunitaria, Is.EqualTo(vat.IsIntraCommunity));
+            Assert.That(c.IsSplitPayment, Is.EqualTo(vat.IsSplitPayment));
+            Assert.That(c.Natura, Is.EqualTo(vat.NaturaPA.Code));
+
+            ds.AcceptChanges();
+
+            // test that deleting a contact locally will also delete it upstream
+            c.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            vat = await adam.GetAsync<Vat>(vat);
+            Assert.That(vat, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+
+
+        [Test]
         public async void UploadContact()
         {
             // make sure remote endpoints are empty
