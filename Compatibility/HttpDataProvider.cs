@@ -57,7 +57,8 @@ namespace Amica.vNext.Compatibility
                 {"Aziende", "companies"},
                 {"Documenti", "documents"},
                 {"Anagrafiche", "contacts"},
-                {"CausaliIVA", "vat"}
+                {"CausaliIVA", "vat"},
+                {"ModalitàPagamento", "payment-options"},
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -307,6 +308,16 @@ namespace Amica.vNext.Compatibility
         public async Task UpdateCausaliIVAAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<Vat>(row, batch);
+        }
+
+        /// <summary>
+        /// Stores a companyDataSet.ModalitàPagamentoDataTable.ModalitàPagamentoRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateModalitàPagamentoAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<PaymentOption>(row, batch);
         }
 
         /// <summary>
@@ -684,6 +695,15 @@ namespace Amica.vNext.Compatibility
         private async Task GetAndSyncCausaliIVAAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Vat>(dataSet.CausaliIVA);
+        }
+
+        /// <summary>
+        /// Downloads payment option changes from the server and merges them to the ModalitàPagamento table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncModalitàPagamentoAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<PaymentOption>(dataSet.ModalitàPagamento);
         }
 
 

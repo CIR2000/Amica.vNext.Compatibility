@@ -26,6 +26,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Currency), new CurrencyMapping());
             Topology.Add(typeof(AddressExWithName), new AddressExWithNameMapping());
             Topology.Add(typeof(Vat), new VatMapping());
+            Topology.Add(typeof(PaymentOption), new PaymentOptionMapping());
         }
 
 #region TO
