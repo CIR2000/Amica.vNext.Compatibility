@@ -8,7 +8,7 @@ namespace Amica.vNext.Compatibility.Maps
         {
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("Nome", new FieldMapping { PropertyName = "Name"});
-            Fields.Add("IsRiBa", new FieldMapping { PropertyName = "IsRiBa" });
+            Fields.Add("IsRiBa", new FieldMapping { PropertyName = "IsBankReceipt" });
 
             Parents.Add(
                 "CodicePagamentoPA",

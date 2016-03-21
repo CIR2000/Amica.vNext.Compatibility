@@ -128,7 +128,7 @@ namespace Amica.vNext.Compatibility.Tests
             {
                 CompanyId = company.UniqueId,
                 Name = "option1",
-				IsRiBa = true,
+				IsBankReceipt = true,
 				ModalitaPagamentoPA = new ModalitaPagamentoPA { Code = "code", Description = "desc" }
             };
 		    option = await adam.PostAsync<PaymentOption>("payment-options", option);
@@ -143,12 +143,12 @@ namespace Amica.vNext.Compatibility.Tests
 
             var o = companyDs.ModalitàPagamento[0];
             Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsRiBa));
+            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
             Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
 
             // test that remotely changed vat syncs fine with Amica classic
             option.Name = "option2";
-            option.IsRiBa	 = false;
+            option.IsBankReceipt	 = false;
             option.ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP05"];
 
             System.Threading.Thread.Sleep(SleepLength);
@@ -163,7 +163,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             o = companyDs.ModalitàPagamento[0];
             Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsRiBa));
+            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
             Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
 
             await adam.DeleteAsync(option);
@@ -723,7 +723,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(options.Count, Is.EqualTo(1));
             var option  = options[0];
             Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsRiBa));
+            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
             Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
             Assert.That(option.ModalitaPagamentoPA.Description, 
 				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[o.CodicePagamentoPA]).Description));
@@ -738,7 +738,7 @@ namespace Amica.vNext.Compatibility.Tests
             await _httpDataProvider.UpdateAsync(ds);
             option = await adam.GetAsync<PaymentOption>(option);
             Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsRiBa));
+            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
             Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
             Assert.That(option.ModalitaPagamentoPA.Description, 
 				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[o.CodicePagamentoPA]).Description));
