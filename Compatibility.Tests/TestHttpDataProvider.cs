@@ -133,7 +133,7 @@ namespace Amica.vNext.Compatibility.Tests
 				NonDeductible = 0.2,
 				IsIntraCommunity = true,
 				IsSplitPayment = true,
-				NaturaPA = new Models.ItalianPA.NaturaPA { Code = "N1", Description = "description" }
+				NaturaPA = new NaturaPA { Code = "N1", Description = "description" }
             };
 		    vat = await adam.PostAsync<Vat>("vat", vat);
 
@@ -161,7 +161,7 @@ namespace Amica.vNext.Compatibility.Tests
             vat.NonDeductible = 0.98;
             vat.IsIntraCommunity = false;
             vat.IsSplitPayment = false;
-            vat.NaturaPA = PACollections.NaturaPA[1];
+            vat.NaturaPA = (NaturaPA)PACollections.NaturaPA["N1"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "vat";

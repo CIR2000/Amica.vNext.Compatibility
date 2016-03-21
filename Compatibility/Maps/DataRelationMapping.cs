@@ -1,4 +1,5 @@
 ﻿using System;
+using Amica.vNext.Models;
 
 namespace Amica.vNext.Compatibility.Maps
 {
@@ -9,7 +10,7 @@ namespace Amica.vNext.Compatibility.Maps
             ColumnName = "Id";
         }
 		public Type TargetType { get; set; }
-		public object TargetCollection { get; set; }
+		public ReadOnlyDictionary<string, object> TargetCollection { get; set; }
 		public string RelationName { get; set; }
     }
 }

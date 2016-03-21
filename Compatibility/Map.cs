@@ -108,12 +108,11 @@ namespace Amica.vNext.Compatibility
 		internal static object GetMatchingCollectionItem(DataRow row, DataRelationMapping mapping)
         {
             var sourceValue = mapping.Transform(row[mapping.ColumnName]);
-			foreach (var obj in (IList)mapping.TargetCollection)
-            {
-                var objValue = obj.GetType().GetProperty(mapping.KeyField).GetValue(obj, null);
-                if (objValue == sourceValue) return obj;
-            }
-            return null;
+
+            object obj;
+            mapping.TargetCollection.TryGetValue(sourceValue.ToString(), out obj);
+
+            return obj;
         }
 		internal static void ProcessDataRowChildren(DataRow row, object target, IMapping mapping)
         {
