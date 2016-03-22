@@ -59,6 +59,7 @@ namespace Amica.vNext.Compatibility
                 {"Anagrafiche", "contacts"},
                 {"CausaliIVA", "vat"},
                 {"ModalitàPagamento", "payment-options"},
+                {"Spese", "fees"},
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -318,6 +319,16 @@ namespace Amica.vNext.Compatibility
         public async Task UpdateModalitàPagamentoAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<PaymentOption>(row, batch);
+        }
+
+        /// <summary>
+        /// Stores a companyDataSet.SpeseDataTable.SpeseRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateSpeseAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Fee>(row, batch);
         }
 
         /// <summary>
@@ -706,6 +717,14 @@ namespace Amica.vNext.Compatibility
             await GetAndSyncCompanyTable<PaymentOption>(dataSet.ModalitàPagamento);
         }
 
+        /// <summary>
+        /// Downloads payment option changes from the server and merges them to the Spese table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncSpeseAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Fee>(dataSet.Spese);
+        }
 
         #endregion
 

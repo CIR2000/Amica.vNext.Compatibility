@@ -100,6 +100,93 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 		[Test]
+        public async void DownloadFee()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+            // create vnext fee and post it
+            var fee = new Fee
+            {
+                CompanyId = company.UniqueId,
+                Name = "fee1",
+                Amount = 99,
+            };
+            fee.Vat.Code = "NEW";
+            fee.Vat.Name = "NEW VAT";
+            fee.Vat.Rate = 0.22;
+            fee.Vat.NaturaPA.Code = "N2";
+            fee.Vat.NaturaPA.Description = "desc";
+
+		    fee = await adam.PostAsync<Fee>("fees", fee);
+
+			// try downloading the new fee into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Spese.Count, Is.EqualTo(1));
+            Assert.That(companyDs.CausaliIVA.Count, Is.EqualTo(1));
+
+            var s = companyDs.Spese[0];
+            var i = companyDs.CausaliIVA[0];
+
+            Assert.That(s.Nome, Is.EqualTo(fee.Name));
+            Assert.That(s.Importo, Is.EqualTo(fee.Amount));
+            Assert.That(s.CausaliIVARow.Codice, Is.EqualTo(fee.Vat.Code));
+
+            // test that remotely changed vat syncs fine with Amica classic
+            fee.Name = "fee2";
+            fee.Amount = 999;
+            fee.Vat.Code = "NEW1";
+
+            System.Threading.Thread.Sleep(SleepLength);
+            adam.ResourceName = "fees";
+            fee = await adam.PutAsync<Fee>(fee);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Spese.Count, Is.EqualTo(1));
+
+            s = companyDs.Spese[0];
+            Assert.That(s.Nome, Is.EqualTo(fee.Name));
+            Assert.That(s.Importo, Is.EqualTo(fee.Amount));
+            Assert.That(s.CausaliIVARow.Codice, Is.EqualTo(fee.Vat.Code));
+            Assert.That(companyDs.CausaliIVA.Count, Is.EqualTo(2));
+
+            await adam.DeleteAsync(fee);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Spese.Count, Is.EqualTo(0));
+        }
+
+
+		[Test]
         public async void DownloadPaymentOption()
         {
             // make sure remote target remote endpoints are empty
@@ -682,6 +769,82 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
             Assert.That(companyDs.Righe.Count, Is.EqualTo(1));
         }
+
+		[Test]
+        public async void UploadFee()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var i = ds.CausaliIVA.NewCausaliIVARow();
+            i.Aliquota = 0.22;
+            i.Nome = "Vat1";
+            i.Natura = "N1";
+            i.Codice = "VAT1";
+            ds.CausaliIVA.AddCausaliIVARow(i);
+
+            var s = ds.Spese.NewSpeseRow();
+            s.Nome = "fee1";
+            s.Importo = 10.1;
+            s.IdCausaleIVA = i.Id;
+            ds.Spese.AddSpeseRow(s);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(s, "fees");
+
+            var adam = new EveClient(Service) { ResourceName = "fees" };
+            var fees = await adam.GetAsync<Fee>();
+            Assert.That(fees.Count, Is.EqualTo(1));
+            var fee  = fees[0];
+            Assert.That(s.Nome, Is.EqualTo(fee.Name));
+            Assert.That(s.Importo, Is.EqualTo(fee.Amount));
+            Assert.That(s.CausaliIVARow.Codice, Is.EqualTo(fee.Vat.Code));
+
+            ds.AcceptChanges();
+
+            // test that changing a row locally will sync fine upstream
+            s.Nome = "fee2";
+            s.Importo = 199;
+            i.Codice = "VAT11";
+
+            await _httpDataProvider.UpdateAsync(ds);
+            fee = await adam.GetAsync<Fee>(fee);
+            Assert.That(s.Nome, Is.EqualTo(fee.Name));
+            Assert.That(s.Importo, Is.EqualTo(fee.Amount));
+            Assert.That(s.CausaliIVARow.Codice, Is.EqualTo(fee.Vat.Code));
+
+            ds.AcceptChanges();
+
+            // test that deleting a ModalitàPagamento locally will also delete it upstream
+            s.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            fee = await adam.GetAsync<Fee>(fee);
+            Assert.That(fee, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
 		[Test]
         public async void UploadPaymentOption()
         {
