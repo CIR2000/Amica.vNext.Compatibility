@@ -16,7 +16,7 @@ namespace Amica.vNext.Compatibility.Maps
                     new DataRelationMapping {
                         PropertyName = "Contact",
                         RelationName = "FK_Anagrafiche_Documenti",
-                        TargetType = typeof(ContactMinimal)
+                        ChildType = typeof(ContactMinimal)
                     }
                 );
 
@@ -24,7 +24,7 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "Items",
-                    TargetType = typeof(DocumentItem),
+                    ChildType = typeof(DocumentItem),
                     RelationName = "FK_Documenti_Righe",
                 }
 			);

@@ -90,13 +90,13 @@ namespace Amica.vNext.Compatibility
                 {
 					var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
 
-					if (parentMapping.Value.TargetType == null)
+					if (parentMapping.Value.ChildType == null)
 					{
-						value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ColumnName, parentMapping.Value.Transform, prop);
+						value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ParentColumn, parentMapping.Value.Transform, prop);
 					}
 					else
 					{
-						value = Activator.CreateInstance(parentMapping.Value.TargetType);
+						value = Activator.CreateInstance(parentMapping.Value.ChildType);
 						if (parentRow != null)
 							DataRowToObject(parentRow, value);
 					}
@@ -109,7 +109,7 @@ namespace Amica.vNext.Compatibility
         }
 		internal static object GetMatchingCollectionItem(DataRow row, DataRelationMapping mapping)
         {
-            var sourceValue = mapping.Transform(row[mapping.ColumnName]);
+            var sourceValue = mapping.Transform(row[mapping.ParentColumn]);
 
             object obj;
             mapping.TargetCollection.TryGetValue(sourceValue.ToString(), out obj);
@@ -124,12 +124,12 @@ namespace Amica.vNext.Compatibility
                 var destProp = target.GetType().GetProperty(childMapping.PropertyName);
 
 				var listType = typeof(List<>);
-				var constructedListType = listType.MakeGenericType(childMapping.TargetType);
+				var constructedListType = listType.MakeGenericType(childMapping.ChildType);
 				var list = (IList)Activator.CreateInstance(constructedListType);
 
 				foreach (var childRow in childRows)
                 {
-					var listItem = Activator.CreateInstance(childMapping.TargetType);
+					var listItem = Activator.CreateInstance(childMapping.ChildType);
 					DataRowToObject(childRow, listItem);
                     list.Add(listItem);
                 }
@@ -194,8 +194,8 @@ namespace Amica.vNext.Compatibility
             {
                 object realSource, value;
 
-                var keyField = (parentMapping.Value.KeyField != null) ?
-                    parentMapping.Value.PropertyName + "." + parentMapping.Value.KeyField :
+                var keyField = (parentMapping.Value.ChildProperty != null) ?
+                    parentMapping.Value.PropertyName + "." + parentMapping.Value.ChildProperty :
                     parentMapping.Value.PropertyName;
 
                 var prop = GetProperty(source, keyField, out realSource);
@@ -206,10 +206,10 @@ namespace Amica.vNext.Compatibility
                 }
                 else
                 {
-					if (parentMapping.Value.ColumnName != "Id")
+					if (parentMapping.Value.ParentColumn != "Id")
 					{
 						var parentTable = row.Table.ParentRelations[parentMapping.Value.RelationName].ParentTable;
-						var parentColumn = parentTable.Columns[parentMapping.Value.ColumnName];
+						var parentColumn = parentTable.Columns[parentMapping.Value.ParentColumn];
 						var parentValue = prop.GetValue(realSource, null);
 
 						if (parentValue == null) continue;
@@ -218,8 +218,8 @@ namespace Amica.vNext.Compatibility
 
 						var targetRow = (parents.Length>0) ? parents[0] : parentTable.NewRow();
 
-						if (parentMapping.Value.TargetType != null)
-							ProcessSimpleProperties(realSource, targetRow, Topology[parentMapping.Value.TargetType]);
+						if (parentMapping.Value.ChildType != null)
+							ProcessSimpleProperties(realSource, targetRow, Topology[parentMapping.Value.ChildType]);
 						else
 							targetRow[parentColumn] = parentValue;
 

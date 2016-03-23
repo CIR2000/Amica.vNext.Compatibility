@@ -15,7 +15,7 @@
                 new DataRelationMapping
                 {
                     PropertyName = "Country",
-                    ColumnName = "Nome",
+                    ParentColumn = "Nome",
                     RelationName = "FK_Nazioni_Anagrafiche",
                 }
 				);

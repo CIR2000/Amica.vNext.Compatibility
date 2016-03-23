@@ -7,9 +7,9 @@ namespace Amica.vNext.Compatibility.Maps
     {
 		public DataRelationMapping()
         {
-            ColumnName = "Id";
+            ParentColumn = "Id";
         }
-		public Type TargetType { get; set; }
+		public Type ChildType { get; set; }
 		public ReadOnlyDictionary<string, object> TargetCollection { get; set; }
 		public string RelationName { get; set; }
     }

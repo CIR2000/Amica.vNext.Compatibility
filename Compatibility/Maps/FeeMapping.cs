@@ -14,10 +14,10 @@ namespace Amica.vNext.Compatibility.Maps
                 "IdCausaleIVA",
                 new DataRelationMapping
                 {
+					ParentColumn = "Codice",
                     PropertyName = "Vat",
-					KeyField = "Code",
-					ColumnName = "Codice",
-					TargetType = typeof(Vat),
+					ChildProperty = "Code",
+					ChildType = typeof(Vat),
 					RelationName = "FK_CausaliIVA_Spese"
                 });
         }

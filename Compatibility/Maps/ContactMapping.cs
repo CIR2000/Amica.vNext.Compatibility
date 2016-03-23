@@ -32,7 +32,7 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "Address.Country",
-                    ColumnName = "Nome",
+                    ParentColumn = "Nome",
                     RelationName = "FK_Nazioni_Anagrafiche",
                 });
 
@@ -41,7 +41,7 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "MarketArea",
-                    ColumnName = "Nome",
+                    ParentColumn = "Nome",
                     RelationName = "FK_AreeGeografiche_Anagrafiche",
                 } );
 
@@ -50,17 +50,17 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "Currency",
-					KeyField = "Name",
-                    ColumnName = "Nome",
+					ChildProperty = "Name",
+                    ParentColumn = "Nome",
                     RelationName = "FK_Valute_Anagrafiche",
-					TargetType = typeof(Currency)
+					ChildType = typeof(Currency)
                 } );
 
             Children.Add(
                 new DataRelationMapping
                 {
                     PropertyName = "OtherAddresses",
-                    TargetType = typeof(AddressExWithName),
+                    ChildType = typeof(AddressExWithName),
                     RelationName = "FK_Anagrafiche_Indirizzi",
                 }
 			);

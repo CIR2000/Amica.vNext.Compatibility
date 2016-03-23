@@ -15,9 +15,9 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "ModalitaPagamentoPA",
-					ColumnName = "CodicePagamentoPA",
+					ParentColumn = "CodicePagamentoPA",
                     TargetCollection = PACollections.ModalitaPagamentoPA,
-					KeyField = "Code"
+					ChildProperty = "Code"
                 });
         }
     }

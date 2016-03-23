@@ -19,9 +19,9 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "NaturaPA",
-					ColumnName = "Natura",
+					ParentColumn = "Natura",
                     TargetCollection = PACollections.NaturaPA,
-					KeyField = "Code"
+					ChildProperty = "Code"
                 });
         }
     }
