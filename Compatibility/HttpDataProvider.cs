@@ -58,7 +58,7 @@ namespace Amica.vNext.Compatibility
                 {"Documenti", "documents"},
                 {"Anagrafiche", "contacts"},
                 {"CausaliIVA", "vat"},
-                {"ModalitàPagamento", "payment-options"},
+                {"ModalitàPagamento", "payment-methods"},
                 {"Spese", "fees"},
             };
 
@@ -318,7 +318,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="batch">Wether this is part of a batch operation or not.</param>
         public async Task UpdateModalitàPagamentoAsync(DataRow row, bool batch = false) 
         {
-            await UpdateRowAsync<PaymentOption>(row, batch);
+            await UpdateRowAsync<PaymentMethod>(row, batch);
         }
 
         /// <summary>
@@ -714,7 +714,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="dataSet">companyDataSet instance.</param>
         private async Task GetAndSyncModalitàPagamentoAsync(companyDataSet dataSet)
         {
-            await GetAndSyncCompanyTable<PaymentOption>(dataSet.ModalitàPagamento);
+            await GetAndSyncCompanyTable<PaymentMethod>(dataSet.ModalitàPagamento);
         }
 
         /// <summary>

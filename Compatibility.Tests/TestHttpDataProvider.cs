@@ -187,12 +187,12 @@ namespace Amica.vNext.Compatibility.Tests
 
 
 		[Test]
-        public async void DownloadPaymentOption()
+        public async void DownloadPaymentMethod()
         {
             // make sure remote target remote endpoints are empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
-            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-options")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company and post it to remote, then retrive the unique remote id
@@ -211,14 +211,14 @@ namespace Amica.vNext.Compatibility.Tests
             var company = companies[0];
 
             // create vnext contact and post it
-            var option = new PaymentOption
+            var method = new PaymentMethod
             {
                 CompanyId = company.UniqueId,
-                Name = "option1",
+                Name = "method1",
 				IsBankReceipt = true,
 				ModalitaPagamentoPA = new ModalitaPagamentoPA { Code = "code", Description = "desc" }
             };
-		    option = await adam.PostAsync<PaymentOption>("payment-options", option);
+		    method = await adam.PostAsync<PaymentMethod>("payment-methods", method);
 
 			// try downloading the new contact into Amica companyDataSet
 			var companyDs = new companyDataSet();
@@ -229,18 +229,18 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(1));
 
             var o = companyDs.ModalitàPagamento[0];
-            Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
-            Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
+            Assert.That(o.Nome, Is.EqualTo(method.Name));
+            Assert.That(o.IsRiBa, Is.EqualTo(method.IsBankReceipt));
+            Assert.That(o.CodicePagamentoPA, Is.EqualTo(method.ModalitaPagamentoPA.Code));
 
             // test that remotely changed vat syncs fine with Amica classic
-            option.Name = "option2";
-            option.IsBankReceipt	 = false;
-            option.ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP05"];
+            method.Name = "option2";
+            method.IsBankReceipt	 = false;
+            method.ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP05"];
 
             System.Threading.Thread.Sleep(SleepLength);
-            adam.ResourceName = "payment-options";
-            option = await adam.PutAsync<PaymentOption>(option);
+            adam.ResourceName = "payment-methods";
+            method = await adam.PutAsync<PaymentMethod>(method);
 
             System.Threading.Thread.Sleep(SleepLength);
 
@@ -249,11 +249,11 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(1));
 
             o = companyDs.ModalitàPagamento[0];
-            Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
-            Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
+            Assert.That(o.Nome, Is.EqualTo(method.Name));
+            Assert.That(o.IsRiBa, Is.EqualTo(method.IsBankReceipt));
+            Assert.That(o.CodicePagamentoPA, Is.EqualTo(method.ModalitaPagamentoPA.Code));
 
-            await adam.DeleteAsync(option);
+            await adam.DeleteAsync(method);
             Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
             System.Threading.Thread.Sleep(SleepLength);
@@ -846,12 +846,12 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 		[Test]
-        public async void UploadPaymentOption()
+        public async void UploadPaymentMethod()
         {
             // make sure remote endpoints are empty
             var rc = new HttpClient {BaseAddress = new Uri(Service)};
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
-            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-options")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -867,11 +867,11 @@ namespace Amica.vNext.Compatibility.Tests
 
             var ds = new companyDataSet();
 
-            var o = ds.ModalitàPagamento.NewModalitàPagamentoRow();
-            o.Nome = "option1";
-            o.IsRiBa = true;
-            o.CodicePagamentoPA = "MP02";
-            ds.ModalitàPagamento.AddModalitàPagamentoRow(o);
+            var m = ds.ModalitàPagamento.NewModalitàPagamentoRow();
+            m.Nome = "option1";
+            m.IsRiBa = true;
+            m.CodicePagamentoPA = "MP02";
+            ds.ModalitàPagamento.AddModalitàPagamentoRow(m);
 
             _httpDataProvider.LocalCompanyId = 99;
 
@@ -879,40 +879,40 @@ namespace Amica.vNext.Compatibility.Tests
             await _httpDataProvider.UpdateAsync(ds);
 			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
-            ValidateSyncDb(o, "payment-options");
+            ValidateSyncDb(m, "payment-methods");
 
-            var adam = new EveClient(Service) { ResourceName = "payment-options" };
-            var options = await adam.GetAsync<PaymentOption>();
-            Assert.That(options.Count, Is.EqualTo(1));
-            var option  = options[0];
-            Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
-            Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
-            Assert.That(option.ModalitaPagamentoPA.Description, 
-				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[o.CodicePagamentoPA]).Description));
+            var adam = new EveClient(Service) { ResourceName = "payment-methods" };
+            var methods = await adam.GetAsync<PaymentMethod>();
+            Assert.That(methods.Count, Is.EqualTo(1));
+            var method  = methods[0];
+            Assert.That(m.Nome, Is.EqualTo(method.Name));
+            Assert.That(m.IsRiBa, Is.EqualTo(method.IsBankReceipt));
+            Assert.That(m.CodicePagamentoPA, Is.EqualTo(method.ModalitaPagamentoPA.Code));
+            Assert.That(method.ModalitaPagamentoPA.Description, 
+				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[m.CodicePagamentoPA]).Description));
 
             ds.AcceptChanges();
 
             // test that changing a row locally will sync fine upstream
-            o.Nome = "option2";
-            o.IsRiBa = false;
-            o.CodicePagamentoPA = "MP06";
+            m.Nome = "option2";
+            m.IsRiBa = false;
+            m.CodicePagamentoPA = "MP06";
 
             await _httpDataProvider.UpdateAsync(ds);
-            option = await adam.GetAsync<PaymentOption>(option);
-            Assert.That(o.Nome, Is.EqualTo(option.Name));
-            Assert.That(o.IsRiBa, Is.EqualTo(option.IsBankReceipt));
-            Assert.That(o.CodicePagamentoPA, Is.EqualTo(option.ModalitaPagamentoPA.Code));
-            Assert.That(option.ModalitaPagamentoPA.Description, 
-				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[o.CodicePagamentoPA]).Description));
+            method = await adam.GetAsync<PaymentMethod>(method);
+            Assert.That(m.Nome, Is.EqualTo(method.Name));
+            Assert.That(m.IsRiBa, Is.EqualTo(method.IsBankReceipt));
+            Assert.That(m.CodicePagamentoPA, Is.EqualTo(method.ModalitaPagamentoPA.Code));
+            Assert.That(method.ModalitaPagamentoPA.Description, 
+				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[m.CodicePagamentoPA]).Description));
 
             ds.AcceptChanges();
 
             // test that deleting a ModalitàPagamento locally will also delete it upstream
-            o.Delete();
+            m.Delete();
             await _httpDataProvider.UpdateAsync(ds);
-            option = await adam.GetAsync<PaymentOption>(option);
-            Assert.That(option, Is.Null);
+            method = await adam.GetAsync<PaymentMethod>(method);
+            Assert.That(method, Is.Null);
             Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
