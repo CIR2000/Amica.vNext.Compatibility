@@ -55,11 +55,12 @@ namespace Amica.vNext.Compatibility
 
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
-                {"Documenti", "documents"},
+                //{"Documenti", "documents"},
                 {"Anagrafiche", "contacts"},
                 {"CausaliIVA", "vat"},
                 {"ModalitàPagamento", "payment-methods"},
                 {"Spese", "fees"},
+                {"Pagamenti", "payments"},
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -331,6 +332,15 @@ namespace Amica.vNext.Compatibility
             await UpdateRowAsync<Fee>(row, batch);
         }
 
+        /// <summary>
+        /// Stores a companyDataSet.PagamentiDataTable.PagamentiRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdatePagamentiAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Payment>(row, batch);
+        }
         /// <summary>
         /// Stores a configDataSet.AziendeDataTable.AziendeRow to a remote API endpoint.
         /// </summary>
@@ -726,6 +736,14 @@ namespace Amica.vNext.Compatibility
             await GetAndSyncCompanyTable<Fee>(dataSet.Spese);
         }
 
+        /// <summary>
+        /// Downloads Vat changes from the server and merges them to the Pagamenti table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncPagamentiAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Payment>(dataSet.Pagamenti);
+        }
         #endregion
 
         #region "P R O P E R T I E S"

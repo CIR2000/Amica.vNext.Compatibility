@@ -97,8 +97,9 @@
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
     <Compile Include="Maps\AddressExWithNameMapping.cs" />
+    <Compile Include="Maps\PaymentMapping.cs" />
     <Compile Include="Maps\FeeMapping.cs" />
-    <Compile Include="Maps\PaymentOptionMapping.cs" />
+    <Compile Include="Maps\PaymentMethodMapping.cs" />
     <Compile Include="Maps\VatMapping.cs" />
     <Compile Include="Maps\CurrencyMapping.cs" />
     <Compile Include="Maps\ContactMapping.cs" />

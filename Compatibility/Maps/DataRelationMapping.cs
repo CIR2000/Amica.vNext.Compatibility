@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Amica.vNext.Models;
 
 namespace Amica.vNext.Compatibility.Maps
@@ -10,7 +11,11 @@ namespace Amica.vNext.Compatibility.Maps
             ParentColumn = "Id";
         }
 		public Type ChildType { get; set; }
-		public ReadOnlyDictionary<string, object> TargetCollection { get; set; }
 		public string RelationName { get; set; }
+    }
+
+    public class DataRelationMapping<TKey, TValue> : DataRelationMapping
+    {
+		public IDictionary<TKey, TValue> TargetCollection { get; set; }
     }
 }

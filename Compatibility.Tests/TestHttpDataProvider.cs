@@ -100,6 +100,124 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 		[Test]
+        public async void DownloadPayment()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payments")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+            var payMethod = new PaymentMethod
+            {
+                CompanyId = company.UniqueId,
+                Name = "pm1",
+                IsBankReceipt = true,
+                ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP01"]
+            };
+            payMethod = await adam.PostAsync<PaymentMethod>("payment-methods", payMethod);
+
+			var fee = new Fee
+            {
+				Name ="fee1",
+				CompanyId = company.UniqueId,
+				Amount=1
+			};
+            fee = await adam.PostAsync<Fee>("fees", fee);
+
+            var payment = new Payment
+            {
+                CompanyId = company.UniqueId,
+                Name = "payment1",
+				ExtraDays = 30,
+				ExactDays = true,
+				Fee = fee,
+				//Bank
+				Discount = 0.11,
+				FirstPaymentDate = PaymentOptions.FirstPaymentDates[2],
+				FirstPaymentOption = PaymentOptions.FirstPaymentOptions[2],
+				ForceEndOfMonth = false,
+				FirstPaymentDateAdditionalDays = 13,
+				Installments = 2,
+				InstallmentsEveryNumberOfDays = 4,
+				PaymentMethod = payMethod,
+            };
+		    payment = await adam.PostAsync<Payment>("payments", payment);
+
+			// try downloading the new contact into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Pagamenti.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Spese.Count, Is.EqualTo(1));
+            Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(1));
+
+            var p = companyDs.Pagamenti[0];
+            Assert.That(p.Nome, Is.EqualTo(payment.Name));
+            Assert.That(p.GiorniExtra, Is.EqualTo(payment.ExtraDays));
+            Assert.That(p.GiorniEsatti, Is.EqualTo(payment.ExactDays));
+            Assert.That(p.FineMese, Is.EqualTo(payment.ForceEndOfMonth));
+            Assert.That(p.Rate, Is.EqualTo(payment.Installments));
+            Assert.That(p.Periodicità, Is.EqualTo(payment.InstallmentsEveryNumberOfDays));
+            Assert.That(p.PeriodoPrimaRata, Is.EqualTo(payment.FirstPaymentDate.Code));
+            Assert.That(p.TipoPrimaRata, Is.EqualTo(payment.FirstPaymentOption.Code));
+            Assert.That(p.Sconto, Is.EqualTo(payment.Discount));
+            Assert.That(p.InizioScadenze, Is.EqualTo(payment.FirstPaymentDateAdditionalDays));
+            Assert.That(p.ModalitàPagamentoRow.Nome, Is.EqualTo(payment.PaymentMethod.Name));
+            Assert.That(p.ModalitàPagamentoRow.IsRiBa, Is.EqualTo(payment.PaymentMethod.IsBankReceipt));
+            Assert.That(p.ModalitàPagamentoRow.CodicePagamentoPA, Is.EqualTo(payment.PaymentMethod.ModalitaPagamentoPA.Code));
+
+            // test that remotely changed vat syncs fine with Amica classic
+            payment.Name = "payment2";
+            payment.Discount = 0.22;
+            payment.PaymentMethod.ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP01"];
+
+            System.Threading.Thread.Sleep(SleepLength);
+            adam.ResourceName = "payments";
+            payment = await adam.PutAsync<Payment>(payment);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Pagamenti.Count, Is.EqualTo(1));
+
+            p = companyDs.Pagamenti[0];
+            Assert.That(p.Nome, Is.EqualTo(payment.Name));
+            Assert.That(p.Sconto, Is.EqualTo(payment.Discount));
+            Assert.That(p.ModalitàPagamentoRow.Nome, Is.EqualTo(payment.PaymentMethod.Name));
+            Assert.That(p.ModalitàPagamentoRow.IsRiBa, Is.EqualTo(payment.PaymentMethod.IsBankReceipt));
+            Assert.That(p.ModalitàPagamentoRow.CodicePagamentoPA, Is.EqualTo(payment.PaymentMethod.ModalitaPagamentoPA.Code));
+
+            //await adam.DeleteAsync(method);
+            //Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            //System.Threading.Thread.Sleep(SleepLength);
+
+            //await _httpDataProvider.GetAsync(companyDs);
+            //Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            //Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(0));
+        }
+
+
+		[Test]
         public async void DownloadFee()
         {
             // make sure remote target remote endpoints are empty
@@ -129,12 +247,19 @@ namespace Amica.vNext.Compatibility.Tests
                 CompanyId = company.UniqueId,
                 Name = "fee1",
                 Amount = 99,
+				Vat = new Vat
+                {
+					CompanyId = company.UniqueId,
+					Code = "NEW",
+					Name = "NEW VAT",
+					Rate = 0.22,
+					NaturaPA = new NaturaPA
+                    {
+						Code = "N2",
+						Description = "desc",
+                    }
+                }
             };
-            fee.Vat.Code = "NEW";
-            fee.Vat.Name = "NEW VAT";
-            fee.Vat.Rate = 0.22;
-            fee.Vat.NaturaPA.Code = "N2";
-            fee.Vat.NaturaPA.Description = "desc";
 
 		    fee = await adam.PostAsync<Fee>("fees", fee);
 
@@ -842,6 +967,101 @@ namespace Amica.vNext.Compatibility.Tests
             await _httpDataProvider.UpdateAsync(ds);
             fee = await adam.GetAsync<Fee>(fee);
             Assert.That(fee, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+		[Test]
+        public async void UploadPayment()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payments")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var b = ds.Banche.NewBancheRow();
+            b.Nome = "bank1";
+            ds.Banche.AddBancheRow(b);
+
+            var mp = ds.ModalitàPagamento.NewModalitàPagamentoRow();
+            mp.Nome = "payment-method";
+            mp.CodicePagamentoPA = "MP01";
+            ds.ModalitàPagamento.AddModalitàPagamentoRow(mp);
+
+            var p = ds.Pagamenti.NewPagamentiRow();
+            p.Nome = "payment1";
+            p.FineMese = true;
+            p.GiorniEsatti = true;
+            p.GiorniExtra = 5;
+            p.InizioScadenze = 23;
+            p.Periodicità = 2;
+            p.Rate = 2;
+            p.Sconto = 0.1;
+            p.PeriodoPrimaRata = (int)Enums.Pagamenti.PeriodoPrimaRata.FineMese;
+            p.TipoPrimaRata = (int)Enums.Pagamenti.PrimaRata.ConSpese;
+            //p.IdBanca = b.Id;
+            p.IdModalitàPagamento = mp.Id;
+            ds.Pagamenti.AddPagamentiRow(p);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(p, "payments");
+
+            var adam = new EveClient(Service) { ResourceName = "payments" };
+            var payments = await adam.GetAsync<Payment>();
+            Assert.That(payments.Count, Is.EqualTo(1));
+            var payment  = payments[0];
+            Assert.That(p.Nome, Is.EqualTo(payment.Name));
+            Assert.That(p.FineMese, Is.EqualTo(payment.ForceEndOfMonth));
+            Assert.That(p.GiorniEsatti, Is.EqualTo(payment.ExactDays));
+            Assert.That(p.GiorniExtra, Is.EqualTo(payment.ExtraDays));
+            Assert.That(p.InizioScadenze, Is.EqualTo(payment.FirstPaymentDateAdditionalDays));
+            Assert.That(p.PeriodoPrimaRata, Is.EqualTo(payment.FirstPaymentDate.Code));
+            Assert.That(p.TipoPrimaRata, Is.EqualTo(payment.FirstPaymentOption.Code));
+            Assert.That(p.Periodicità, Is.EqualTo(payment.InstallmentsEveryNumberOfDays));
+            Assert.That(p.Rate, Is.EqualTo(payment.Installments));
+            Assert.That(p.Sconto, Is.EqualTo(payment.Discount));
+            Assert.That(p.ModalitàPagamentoRow.Nome, Is.EqualTo(payment.PaymentMethod.Name));
+            Assert.That(p.ModalitàPagamentoRow.IsRiBa, Is.EqualTo(payment.PaymentMethod.IsBankReceipt));
+
+            ds.AcceptChanges();
+
+            // test that changing a row locally will sync fine upstream
+            p.Nome = "payment2";
+            p.FineMese = false;
+            p.GiorniExtra = 6;
+
+            await _httpDataProvider.UpdateAsync(ds);
+            payment = await adam.GetAsync<Payment>(payment);
+            Assert.That(p.Nome, Is.EqualTo(payment.Name));
+            Assert.That(p.FineMese, Is.EqualTo(payment.ForceEndOfMonth));
+            Assert.That(p.GiorniExtra, Is.EqualTo(payment.ExtraDays));
+
+            ds.AcceptChanges();
+
+            // test that deleting a ModalitàPagamento locally will also delete it upstream
+            p.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            payment = await adam.GetAsync<Payment>(payment);
+            Assert.That(payment, Is.Null);
             Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 

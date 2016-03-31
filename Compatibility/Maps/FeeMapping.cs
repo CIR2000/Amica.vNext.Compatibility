@@ -15,8 +15,8 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
 					ParentColumn = "Codice",
-                    PropertyName = "Vat",
 					ChildProperty = "Code",
+                    PropertyName = "Vat",
 					ChildType = typeof(Vat),
 					RelationName = "FK_CausaliIVA_Spese"
                 });

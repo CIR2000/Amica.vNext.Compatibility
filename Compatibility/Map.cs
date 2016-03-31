@@ -26,8 +26,9 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Currency), new CurrencyMapping());
             Topology.Add(typeof(AddressExWithName), new AddressExWithNameMapping());
             Topology.Add(typeof(Vat), new VatMapping());
-            Topology.Add(typeof(PaymentMethod), new PaymentOptionMapping());
+            Topology.Add(typeof(PaymentMethod), new PaymentMethodMapping());
             Topology.Add(typeof(Fee), new FeeMapping());
+            Topology.Add(typeof(Payment), new PaymentMapping());
         }
 
 #region TO
@@ -58,6 +59,8 @@ namespace Amica.vNext.Compatibility
 
         internal static void DataRowToObject(DataRow row, object target)
         {
+            if (!Topology.ContainsKey(target.GetType())) return;
+
             var mapping = Topology[target.GetType()];
 
             ProcessDataRowFields(row, target, mapping);
@@ -82,39 +85,65 @@ namespace Amica.vNext.Compatibility
                 object realTarget, value;
 				var prop = GetProperty(target, parentMapping.Value.PropertyName, out realTarget);
 
-				if (parentMapping.Value.TargetCollection != null)
+                var dataRelation = parentMapping.Value;
+
+				value = GetMatchingCollectionItem(row, dataRelation);
+				if (value == null)
                 {
-                    value = GetMatchingCollectionItem(row, parentMapping.Value);
-                }
-                else
-                {
-					var parentRow = row.GetParentRow(parentMapping.Value.RelationName);
+					var parentRow = row.GetParentRow(dataRelation.RelationName);
 
 					if (parentMapping.Value.ChildType == null)
 					{
-						value = GetAdjustedColumnValue(parentRow, parentMapping.Value.ParentColumn, parentMapping.Value.Transform, prop);
+						value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, dataRelation.Transform, prop);
 					}
 					else
 					{
-						value = Activator.CreateInstance(parentMapping.Value.ChildType);
 						if (parentRow != null)
+                        {
+							value = Activator.CreateInstance(dataRelation.ChildType);
 							DataRowToObject(parentRow, value);
+                        }
 					}
 
                 }
-
 				prop.SetValue(realTarget, value, null);
-
             }
         }
-		internal static object GetMatchingCollectionItem(DataRow row, DataRelationMapping mapping)
+		internal static object GetMatchingCollectionItem(DataRow row, DataRelationMapping dataRelation)
         {
-            var sourceValue = mapping.Transform(row[mapping.ParentColumn]);
+            var relationType = dataRelation.GetType();
+            if (!relationType.IsGenericType)
+                return null;
 
-            object obj;
-            mapping.TargetCollection.TryGetValue(sourceValue.ToString(), out obj);
+            var sourceValue = dataRelation.Transform(row[dataRelation.ParentColumn]);
 
-            return obj;
+
+            var keyType = relationType.GetGenericArguments()[0];
+            var valueType = relationType.GetGenericArguments()[1];
+            var targetCollection = relationType.GetProperty("TargetCollection").GetValue(dataRelation, null);
+
+            if (keyType == typeof(string))
+            {
+                object obj;
+                var success = ((ReadOnlyDictionary<string, object>)targetCollection)
+                    .TryGetValue(sourceValue.ToString(), out obj);
+				return (success) ? obj : null;
+            }
+            if (keyType == typeof(int) && valueType == typeof(FirstPaymentDate))
+            {
+                FirstPaymentDate obj;
+                var success = ((ReadOnlyDictionary<int, FirstPaymentDate>)targetCollection)
+                    .TryGetValue((int)sourceValue, out obj);
+				return (success) ? obj : null;
+            }
+            if (keyType == typeof(int) && valueType == typeof(FirstPaymentOption))
+            {
+                FirstPaymentOption obj;
+                var success = ((ReadOnlyDictionary<int, FirstPaymentOption>)targetCollection)
+                    .TryGetValue((int)sourceValue, out obj);
+				return (success) ? obj : null;
+            }
+            return null;
         }
 		internal static void ProcessDataRowChildren(DataRow row, object target, IMapping mapping)
         {
@@ -194,45 +223,52 @@ namespace Amica.vNext.Compatibility
             {
                 object realSource, value;
 
-                var keyField = (parentMapping.Value.ChildProperty != null) ?
-                    parentMapping.Value.PropertyName + "." + parentMapping.Value.ChildProperty :
-                    parentMapping.Value.PropertyName;
+                var dataRelation = parentMapping.Value;
 
-                var prop = GetProperty(source, keyField, out realSource);
+                var keyField = (dataRelation.ChildProperty != null) ?
+                    dataRelation.PropertyName + "." + dataRelation.ChildProperty :
+                    dataRelation.PropertyName;
 
-				if (parentMapping.Value.TargetCollection != null)
+				try
                 {
-                    value = prop.GetValue(realSource, null);
-                }
-                else
-                {
-					if (parentMapping.Value.ParentColumn != "Id")
+					var prop = GetProperty(source, keyField, out realSource);
+					if (dataRelation.GetType().GetProperty("TargetCollection") != null)
 					{
-						var parentTable = row.Table.ParentRelations[parentMapping.Value.RelationName].ParentTable;
-						var parentColumn = parentTable.Columns[parentMapping.Value.ParentColumn];
-						var parentValue = prop.GetValue(realSource, null);
-
-						if (parentValue == null) continue;
-
-						var parents = parentTable.Select($"{parentColumn} = '{parentValue}'");
-
-						var targetRow = (parents.Length>0) ? parents[0] : parentTable.NewRow();
-
-						if (parentMapping.Value.ChildType != null)
-							ProcessSimpleProperties(realSource, targetRow, Topology[parentMapping.Value.ChildType]);
-						else
-							targetRow[parentColumn] = parentValue;
-
-						if (targetRow.RowState == DataRowState.Detached)
-							parentTable.Rows.Add(targetRow);
-
-						value = targetRow["Id"];
+						value = prop.GetValue(realSource, null);
 					}
 					else
 					{
-						var parentObject = prop.GetValue(realSource, null);
-						value = HttpDataProvider.GetLocalRowId((IUniqueId)parentObject);
+						if (dataRelation.ParentColumn != "Id")
+						{
+							var parentTable = row.Table.ParentRelations[dataRelation.RelationName].ParentTable;
+							var parentColumn = parentTable.Columns[dataRelation.ParentColumn];
+							var parentValue = prop.GetValue(realSource, null);
+
+							if (parentValue == null) continue;
+
+							var parents = parentTable.Select($"{parentColumn} = '{parentValue}'");
+
+							var targetRow = (parents.Length>0) ? parents[0] : parentTable.NewRow();
+
+							if (dataRelation.ChildType != null)
+								ProcessSimpleProperties(realSource, targetRow, Topology[dataRelation.ChildType]);
+							else
+								targetRow[parentColumn] = parentValue;
+
+							if (targetRow.RowState == DataRowState.Detached)
+								parentTable.Rows.Add(targetRow);
+
+							value = targetRow["Id"];
+						}
+						else
+						{
+							var parentObject = prop.GetValue(realSource, null);
+							value = (parentObject != null) ? HttpDataProvider.GetLocalRowId((IUniqueId)parentObject) : DBNull.Value;
+						}
 					}
+                }
+				catch (Exception ex) {
+                    value = DBNull.Value;
                 }
                 row[parentMapping.Key] = value;
             }

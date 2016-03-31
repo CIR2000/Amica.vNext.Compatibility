@@ -2,9 +2,9 @@
 
 namespace Amica.vNext.Compatibility.Maps
 {
-    internal class PaymentOptionMapping : Mapping
+    internal class PaymentMethodMapping : Mapping
     {
-        internal PaymentOptionMapping()
+        internal PaymentMethodMapping()
         {
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("Nome", new FieldMapping { PropertyName = "Name"});
@@ -12,7 +12,7 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "CodicePagamentoPA",
-                new DataRelationMapping
+                new DataRelationMapping<string, object>()
                 {
                     PropertyName = "ModalitaPagamentoPA",
 					ParentColumn = "CodicePagamentoPA",

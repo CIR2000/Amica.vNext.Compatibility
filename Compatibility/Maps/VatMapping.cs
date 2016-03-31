@@ -16,7 +16,7 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "Natura",
-                new DataRelationMapping
+                new DataRelationMapping<string, object>
                 {
                     PropertyName = "NaturaPA",
 					ParentColumn = "Natura",
