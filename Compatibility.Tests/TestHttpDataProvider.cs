@@ -206,14 +206,14 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(p.ModalitàPagamentoRow.IsRiBa, Is.EqualTo(payment.PaymentMethod.IsBankReceipt));
             Assert.That(p.ModalitàPagamentoRow.CodicePagamentoPA, Is.EqualTo(payment.PaymentMethod.ModalitaPagamentoPA.Code));
 
-            //await adam.DeleteAsync(method);
-            //Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            await adam.DeleteAsync(payment);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
-            //System.Threading.Thread.Sleep(SleepLength);
+            System.Threading.Thread.Sleep(SleepLength);
 
-            //await _httpDataProvider.GetAsync(companyDs);
-            //Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
-            //Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(0));
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Pagamenti.Count, Is.EqualTo(0));
         }
 
 
@@ -1048,12 +1048,14 @@ namespace Amica.vNext.Compatibility.Tests
             p.Nome = "payment2";
             p.FineMese = false;
             p.GiorniExtra = 6;
+            p.SetIdModalitàPagamentoNull();
 
             await _httpDataProvider.UpdateAsync(ds);
             payment = await adam.GetAsync<Payment>(payment);
             Assert.That(p.Nome, Is.EqualTo(payment.Name));
             Assert.That(p.FineMese, Is.EqualTo(payment.ForceEndOfMonth));
             Assert.That(p.GiorniExtra, Is.EqualTo(payment.ExtraDays));
+            Assert.That(payment.PaymentMethod, Is.Null);
 
             ds.AcceptChanges();
 
