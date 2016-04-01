@@ -1,4 +1,5 @@
-﻿using Amica.vNext.Models.ItalianPA;
+﻿using Amica.vNext.Models;
+using Amica.vNext.Models.ItalianPA;
 
 namespace Amica.vNext.Compatibility.Maps
 {
@@ -12,7 +13,7 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "CodicePagamentoPA",
-                new DataRelationMapping<string, object>()
+                new DataRelationMapping<string, CollectionItemOfString>()
                 {
                     PropertyName = "ModalitaPagamentoPA",
 					ParentColumn = "CodicePagamentoPA",

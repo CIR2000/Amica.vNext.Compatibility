@@ -52,7 +52,7 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "PeriodoPrimaRata",
-                new DataRelationMapping<int, FirstPaymentDate>
+                new DataRelationMapping<int, CollectionItemOfInt>
                 {
                     PropertyName = "FirstPaymentDate",
 					ParentColumn = "PeriodoPrimaRata",
@@ -62,7 +62,7 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "TipoPrimaRata",
-                new DataRelationMapping<int, FirstPaymentOption>
+                new DataRelationMapping<int, CollectionItemOfInt>
                 {
                     PropertyName = "FirstPaymentOption",
 					ParentColumn = "TipoPrimaRata",

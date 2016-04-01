@@ -124,22 +124,15 @@ namespace Amica.vNext.Compatibility
 
             if (keyType == typeof(string))
             {
-                object obj;
-                var success = ((ReadOnlyDictionary<string, object>)targetCollection)
-                    .TryGetValue(sourceValue.ToString(), out obj);
+                CollectionItemOfString obj;
+                var success = ((IDictionary<string, CollectionItemOfString>)targetCollection)
+					.TryGetValue(sourceValue.ToString(), out obj);
 				return (success) ? obj : null;
             }
-            if (keyType == typeof(int) && valueType == typeof(FirstPaymentDate))
+            if (keyType == typeof(int))
             {
-                FirstPaymentDate obj;
-                var success = ((ReadOnlyDictionary<int, FirstPaymentDate>)targetCollection)
-                    .TryGetValue((int)sourceValue, out obj);
-				return (success) ? obj : null;
-            }
-            if (keyType == typeof(int) && valueType == typeof(FirstPaymentOption))
-            {
-                FirstPaymentOption obj;
-                var success = ((ReadOnlyDictionary<int, FirstPaymentOption>)targetCollection)
+                CollectionItemOfInt obj;
+                var success = ((IDictionary<int, CollectionItemOfInt>)targetCollection)
                     .TryGetValue((int)sourceValue, out obj);
 				return (success) ? obj : null;
             }

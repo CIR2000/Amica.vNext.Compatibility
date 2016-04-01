@@ -151,8 +151,8 @@ namespace Amica.vNext.Compatibility.Tests
 				Fee = fee,
 				//Bank
 				Discount = 0.11,
-				FirstPaymentDate = PaymentOptions.FirstPaymentDates[2],
-				FirstPaymentOption = PaymentOptions.FirstPaymentOptions[2],
+				FirstPaymentDate = (FirstPaymentDate)PaymentOptions.FirstPaymentDates[2],
+				FirstPaymentOption = (FirstPaymentOption)PaymentOptions.FirstPaymentOptions[2],
 				ForceEndOfMonth = false,
 				FirstPaymentDateAdditionalDays = 13,
 				Installments = 2,
