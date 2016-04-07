@@ -130,7 +130,7 @@ namespace Amica.vNext.Compatibility.Tests
                 CompanyId = company.UniqueId,
                 Name = "pm1",
                 IsBankReceipt = true,
-                ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP01"]
+                ModalitaPagamentoPA = (ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA["MP01"]
             };
             payMethod = await adam.PostAsync<PaymentMethod>("payment-methods", payMethod);
 
@@ -151,8 +151,8 @@ namespace Amica.vNext.Compatibility.Tests
 				Fee = fee,
 				//Bank
 				Discount = 0.11,
-				FirstPaymentDate = (FirstPaymentDate)PaymentOptions.FirstPaymentDates[2],
-				FirstPaymentOption = (FirstPaymentOption)PaymentOptions.FirstPaymentOptions[2],
+				FirstPaymentDate = (FirstPaymentDate)PaymentHelpers.FirstPaymentDates[PaymentDate.EndOfMonth],
+				FirstPaymentOption = (FirstPaymentOption)PaymentHelpers.FirstPaymentOptions[PaymentOption.VatIncluded],
 				ForceEndOfMonth = false,
 				FirstPaymentDateAdditionalDays = 13,
 				Installments = 2,
@@ -178,8 +178,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(p.FineMese, Is.EqualTo(payment.ForceEndOfMonth));
             Assert.That(p.Rate, Is.EqualTo(payment.Installments));
             Assert.That(p.Periodicità, Is.EqualTo(payment.InstallmentsEveryNumberOfDays));
-            Assert.That(p.PeriodoPrimaRata, Is.EqualTo(payment.FirstPaymentDate.Code));
-            Assert.That(p.TipoPrimaRata, Is.EqualTo(payment.FirstPaymentOption.Code));
+            Assert.That(p.PeriodoPrimaRata, Is.EqualTo((int)payment.FirstPaymentDate.Code));
+            Assert.That(p.TipoPrimaRata, Is.EqualTo((int)payment.FirstPaymentOption.Code));
             Assert.That(p.Sconto, Is.EqualTo(payment.Discount));
             Assert.That(p.InizioScadenze, Is.EqualTo(payment.FirstPaymentDateAdditionalDays));
             Assert.That(p.ModalitàPagamentoRow.Nome, Is.EqualTo(payment.PaymentMethod.Name));
@@ -189,7 +189,7 @@ namespace Amica.vNext.Compatibility.Tests
             // test that remotely changed vat syncs fine with Amica classic
             payment.Name = "payment2";
             payment.Discount = 0.22;
-            payment.PaymentMethod.ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP01"];
+            payment.PaymentMethod.ModalitaPagamentoPA = (ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA["MP01"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "payments";
@@ -363,7 +363,7 @@ namespace Amica.vNext.Compatibility.Tests
             // test that remotely changed vat syncs fine with Amica classic
             method.Name = "option2";
             method.IsBankReceipt	 = false;
-            method.ModalitaPagamentoPA = (ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA["MP05"];
+            method.ModalitaPagamentoPA = (ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA["MP05"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "payment-methods";
@@ -452,7 +452,7 @@ namespace Amica.vNext.Compatibility.Tests
             vat.NonDeductible = 0.98;
             vat.IsIntraCommunity = false;
             vat.IsSplitPayment = false;
-            vat.NaturaPA = (NaturaPA)PACollections.NaturaPA["N1"];
+            vat.NaturaPA = (NaturaPA)PAHelpers.NaturaPA["N1"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "vat";
@@ -774,7 +774,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
-            Assert.That(d1.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+            Assert.That(d1.IdTipoDocumento, Is.EqualTo(doc.Category.Code));
 
             Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
             Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
@@ -818,7 +818,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
-            Assert.That(d1.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+            Assert.That(d1.IdTipoDocumento, Is.EqualTo(doc.Category.Code));
 
             Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
             Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
@@ -872,7 +872,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
-            Assert.That(d1.IdTipoDocumento, Is.EqualTo((int)doc.Type));
+            Assert.That(d1.IdTipoDocumento, Is.EqualTo(doc.Category.Code));
 
             Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
             Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
@@ -1036,8 +1036,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(p.GiorniEsatti, Is.EqualTo(payment.ExactDays));
             Assert.That(p.GiorniExtra, Is.EqualTo(payment.ExtraDays));
             Assert.That(p.InizioScadenze, Is.EqualTo(payment.FirstPaymentDateAdditionalDays));
-            Assert.That(p.PeriodoPrimaRata, Is.EqualTo(payment.FirstPaymentDate.Code));
-            Assert.That(p.TipoPrimaRata, Is.EqualTo(payment.FirstPaymentOption.Code));
+            Assert.That(p.PeriodoPrimaRata, Is.EqualTo((int)payment.FirstPaymentDate.Code));
+            Assert.That(p.TipoPrimaRata, Is.EqualTo((int)payment.FirstPaymentOption.Code));
             Assert.That(p.Periodicità, Is.EqualTo(payment.InstallmentsEveryNumberOfDays));
             Assert.That(p.Rate, Is.EqualTo(payment.Installments));
             Assert.That(p.Sconto, Is.EqualTo(payment.Discount));
@@ -1113,7 +1113,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(m.IsRiBa, Is.EqualTo(method.IsBankReceipt));
             Assert.That(m.CodicePagamentoPA, Is.EqualTo(method.ModalitaPagamentoPA.Code));
             Assert.That(method.ModalitaPagamentoPA.Description, 
-				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[m.CodicePagamentoPA]).Description));
+				Is.EqualTo(((ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA[m.CodicePagamentoPA]).Description));
 
             ds.AcceptChanges();
 
@@ -1128,7 +1128,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(m.IsRiBa, Is.EqualTo(method.IsBankReceipt));
             Assert.That(m.CodicePagamentoPA, Is.EqualTo(method.ModalitaPagamentoPA.Code));
             Assert.That(method.ModalitaPagamentoPA.Description, 
-				Is.EqualTo(((ModalitaPagamentoPA)PACollections.ModalitaPagamentoPA[m.CodicePagamentoPA]).Description));
+				Is.EqualTo(((ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA[m.CodicePagamentoPA]).Description));
 
             ds.AcceptChanges();
 
@@ -1423,7 +1423,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
-            d.IdTipoDocumento = (int)DocumentType.Invoice;
+            d.IdTipoDocumento = (int)DocumentHelpers.Categories[DocumentCategory.Invoice].Code;
             d.TotaleFattura = 99;
             d.Data = DateTime.Now;
             ds.Documenti.AddDocumentiRow(d);

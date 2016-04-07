@@ -13,11 +13,11 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "CodicePagamentoPA",
-                new DataRelationMapping<string, CollectionItemOfString>()
+                new DataRelationMapping
                 {
                     PropertyName = "ModalitaPagamentoPA",
-					ParentColumn = "CodicePagamentoPA",
-                    TargetCollection = PACollections.ModalitaPagamentoPA,
+                    ParentColumn = "CodicePagamentoPA",
+                    Transform = (x) => PAHelpers.ModalitaPagamentoPA[(string)x],
 					ChildProperty = "Code"
                 });
         }

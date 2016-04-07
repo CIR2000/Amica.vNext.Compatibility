@@ -13,4 +13,5 @@ namespace Amica.vNext.Compatibility.Maps
         public string ParentColumn { get; set; }
         public Func<object, object> Transform { get; set; }
     }
+
 }

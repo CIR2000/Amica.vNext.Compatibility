@@ -13,9 +13,4 @@ namespace Amica.vNext.Compatibility.Maps
 		public Type ChildType { get; set; }
 		public string RelationName { get; set; }
     }
-
-    public class DataRelationMapping<TKey, TValue> : DataRelationMapping
-    {
-		public IDictionary<TKey, TValue> TargetCollection { get; set; }
-    }
 }

@@ -52,22 +52,22 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "PeriodoPrimaRata",
-                new DataRelationMapping<int, CollectionItemOfInt>
+                new DataRelationMapping
                 {
                     PropertyName = "FirstPaymentDate",
 					ParentColumn = "PeriodoPrimaRata",
-                    TargetCollection = PaymentOptions.FirstPaymentDates,
-					ChildProperty = "Code"
+					ChildProperty = "Code",
+                    Transform = (x) => PaymentHelpers.FirstPaymentDates[(PaymentDate)x],
                 });
 
             Parents.Add(
                 "TipoPrimaRata",
-                new DataRelationMapping<int, CollectionItemOfInt>
+                new DataRelationMapping
                 {
                     PropertyName = "FirstPaymentOption",
-					ParentColumn = "TipoPrimaRata",
-                    TargetCollection = PaymentOptions.FirstPaymentOptions,
-					ChildProperty = "Code"
+                    ParentColumn = "TipoPrimaRata",
+                    ChildProperty = "Code",
+                    Transform = (x) => PaymentHelpers.FirstPaymentOptions[(PaymentOption)x]
                 });
         }
     }

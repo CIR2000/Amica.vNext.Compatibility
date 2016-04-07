@@ -1,5 +1,4 @@
-﻿using Amica.vNext.Models;
-using Amica.vNext.Models.ItalianPA;
+﻿using Amica.vNext.Models.ItalianPA;
 
 namespace Amica.vNext.Compatibility.Maps
 {
@@ -17,12 +16,12 @@ namespace Amica.vNext.Compatibility.Maps
 
             Parents.Add(
                 "Natura",
-                new DataRelationMapping<string, CollectionItemOfString>
+                new DataRelationMapping
                 {
                     PropertyName = "NaturaPA",
 					ParentColumn = "Natura",
-                    TargetCollection = PACollections.NaturaPA,
-					ChildProperty = "Code"
+					ChildProperty = "Code",
+					Transform = (x) => PAHelpers.NaturaPA[(string)x],
                 });
         }
     }

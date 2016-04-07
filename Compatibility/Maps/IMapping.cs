@@ -8,8 +8,4 @@ namespace Amica.vNext.Compatibility.Maps
 		Dictionary<string, DataRelationMapping> Parents { get; }
 		List<DataRelationMapping> Children { get; }
     }
-    internal interface IMapping<TKey, TValue> : IMapping
-    {
-		new Dictionary<string, DataRelationMapping<TKey, TValue>> Parents { get; }
-    }
 }

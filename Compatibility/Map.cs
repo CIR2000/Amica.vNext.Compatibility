@@ -87,8 +87,12 @@ namespace Amica.vNext.Compatibility
 
                 var dataRelation = parentMapping.Value;
 
-				value = GetMatchingCollectionItem(row, dataRelation);
-				if (value == null)
+
+                if (dataRelation.RelationName == null)
+                {
+                    value = dataRelation.Transform(row[dataRelation.ParentColumn]);
+                }
+                else
                 {
 					var parentRow = row.GetParentRow(dataRelation.RelationName);
 
@@ -98,46 +102,18 @@ namespace Amica.vNext.Compatibility
 					}
 					else
 					{
-						if (parentRow != null)
+                        if (parentRow != null)
                         {
-							value = Activator.CreateInstance(dataRelation.ChildType);
-							DataRowToObject(parentRow, value);
+                            value = Activator.CreateInstance(dataRelation.ChildType);
+                            DataRowToObject(parentRow, value);
                         }
+                        else value = null;
 					}
-
                 }
 				prop.SetValue(realTarget, value, null);
             }
         }
-		internal static object GetMatchingCollectionItem(DataRow row, DataRelationMapping dataRelation)
-        {
-            var relationType = dataRelation.GetType();
-            if (!relationType.IsGenericType)
-                return null;
 
-            var sourceValue = dataRelation.Transform(row[dataRelation.ParentColumn]);
-
-
-            var keyType = relationType.GetGenericArguments()[0];
-            var valueType = relationType.GetGenericArguments()[1];
-            var targetCollection = relationType.GetProperty("TargetCollection").GetValue(dataRelation, null);
-
-            if (keyType == typeof(string))
-            {
-                CollectionItemOfString obj;
-                var success = ((IDictionary<string, CollectionItemOfString>)targetCollection)
-					.TryGetValue(sourceValue.ToString(), out obj);
-				return (success) ? obj : null;
-            }
-            if (keyType == typeof(int))
-            {
-                CollectionItemOfInt obj;
-                var success = ((IDictionary<int, CollectionItemOfInt>)targetCollection)
-                    .TryGetValue((int)sourceValue, out obj);
-				return (success) ? obj : null;
-            }
-            return null;
-        }
 		internal static void ProcessDataRowChildren(DataRow row, object target, IMapping mapping)
         {
 			foreach (var childMapping in mapping.Children)
@@ -225,7 +201,7 @@ namespace Amica.vNext.Compatibility
 				try
                 {
 					var prop = GetProperty(source, keyField, out realSource);
-					if (dataRelation.GetType().GetProperty("TargetCollection") != null)
+					if (dataRelation.RelationName == null)
 					{
 						value = prop.GetValue(realSource, null);
 					}
