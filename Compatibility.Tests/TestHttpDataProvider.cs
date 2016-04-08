@@ -537,9 +537,9 @@ namespace Amica.vNext.Compatibility.Tests
                     IbanCode = "IT88T1927501600CC0010110180",
                     BicSwiftCode = "ABCOITMM"
                 },
-                OtherAddresses = new List<AddressExWithName> {
-                    new AddressExWithName { Name="addr1"},
-                    new AddressExWithName { Name="addr2" }
+                OtherAddresses = new List<DeliveryAddress> {
+                    new DeliveryAddress { Name="addr1"},
+                    new DeliveryAddress { Name="addr2" }
                 }
             };
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
@@ -718,7 +718,7 @@ namespace Amica.vNext.Compatibility.Tests
 		    {
 		        CompanyId = company.UniqueId,
 		        Total = 100,
-		        Contact = new ContactMinimal(contact)
+		        Contact = new BillingAddress(contact)
 		    };
 
 		    var item = new DocumentItem
@@ -844,7 +844,7 @@ namespace Amica.vNext.Compatibility.Tests
                 }
 		    };
 		    newContact = await adam.PostAsync<Contact>("contacts", newContact);
-            doc.Contact = new ContactMinimal(newContact);
+            doc.Contact = new BillingAddress(newContact);
             doc = await adam.PutAsync<Invoice>(doc);
 
 			System.Threading.Thread.Sleep(SleepLength);
@@ -1631,7 +1631,7 @@ namespace Amica.vNext.Compatibility.Tests
             var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", VatIdentificationNumber = "Vat", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            var doc = rc.PostAsync<Document>("documents", new Invoice() { Contact = new ContactMinimal(contact), CompanyId = company.UniqueId }).Result;
+            var doc = rc.PostAsync<Document>("documents", new Invoice() { Contact = new BillingAddress(contact), CompanyId = company.UniqueId }).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
 			// test that we can download and sync with a new company being posted on the remote

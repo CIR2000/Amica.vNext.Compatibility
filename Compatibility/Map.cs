@@ -22,9 +22,9 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Document), new DocumentMapping());
             Topology.Add(typeof(Contact), new ContactMapping());
             Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
-            Topology.Add(typeof(ContactMinimal), new ContactMinimalMapping());
+            Topology.Add(typeof(BillingAddress), new ContactMinimalMapping());
             Topology.Add(typeof(Currency), new CurrencyMapping());
-            Topology.Add(typeof(AddressExWithName), new AddressExWithNameMapping());
+            Topology.Add(typeof(DeliveryAddress), new AddressExWithNameMapping());
             Topology.Add(typeof(Vat), new VatMapping());
             Topology.Add(typeof(PaymentMethod), new PaymentMethodMapping());
             Topology.Add(typeof(Fee), new FeeMapping());
