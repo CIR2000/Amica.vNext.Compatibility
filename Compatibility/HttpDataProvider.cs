@@ -55,7 +55,7 @@ namespace Amica.vNext.Compatibility
 
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
-                //{"Documenti", "documents"},
+                {"Documenti", "documents"},
                 {"Anagrafiche", "contacts"},
                 {"CausaliIVA", "vat"},
                 {"ModalitàPagamento", "payment-methods"},

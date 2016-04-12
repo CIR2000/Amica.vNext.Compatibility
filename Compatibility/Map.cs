@@ -24,7 +24,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
             Topology.Add(typeof(BillingAddress), new ContactMinimalMapping());
             Topology.Add(typeof(Currency), new CurrencyMapping());
-            Topology.Add(typeof(DeliveryAddress), new AddressExWithNameMapping());
+            Topology.Add(typeof(ShippingAddress), new AddressExWithNameMapping());
             Topology.Add(typeof(Vat), new VatMapping());
             Topology.Add(typeof(PaymentMethod), new PaymentMethodMapping());
             Topology.Add(typeof(Fee), new FeeMapping());
@@ -72,6 +72,9 @@ namespace Amica.vNext.Compatibility
 			foreach (var fieldMapping in mapping.Fields)
             {
                 object activeTarget;
+                var transformedSourceValue = GetTransformedColumnValue(row, fieldMapping.Key, fieldMapping.Value.Transform);
+                if (transformedSourceValue == DBNull.Value) continue;
+
                 var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget);
                 var value = GetAdjustedColumnValue(row, fieldMapping.Key, fieldMapping.Value.Transform, prop);
 
@@ -133,6 +136,14 @@ namespace Amica.vNext.Compatibility
                 }
 			    destProp.SetValue(target, list, null);
             }
+        }
+
+        private static object GetTransformedColumnValue(DataRow row, string columnName, Func<object, object> transform)
+        {
+            if (row == null) return null;
+
+            var column = row.Table.Columns[columnName];
+            return transform(row[column]);
         }
 
 		private static object GetAdjustedColumnValue(DataRow row, string columnName, Func<object, object> transform, PropertyInfo prop)
@@ -288,6 +299,8 @@ namespace Amica.vNext.Compatibility
 				{
 					prop = target.GetType().GetProperty(part);
                     if (part == lastPart) continue;
+					if (prop.GetValue(target, null) == null)
+                        prop.SetValue(target, Activator.CreateInstance(prop.PropertyType), null);
 					target = prop.GetValue(target, null);
 				}
 

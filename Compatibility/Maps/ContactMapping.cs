@@ -60,7 +60,7 @@ namespace Amica.vNext.Compatibility.Maps
                 new DataRelationMapping
                 {
                     PropertyName = "OtherAddresses",
-                    ChildType = typeof(DeliveryAddress),
+                    ChildType = typeof(ShippingAddress),
                     RelationName = "FK_Anagrafiche_Indirizzi",
                 }
 			);
