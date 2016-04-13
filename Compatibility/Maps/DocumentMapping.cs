@@ -8,7 +8,13 @@ namespace Amica.vNext.Compatibility.Maps
         internal DocumentMapping()
         {
             Fields.Add("Data", new FieldMapping {PropertyName = "Date"});
-			//Fields.Add("TotaleFattura", new FieldMapping {PropertyName = "Total"});
+            Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WitholdingTax.Rate"});
+            Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WitholdingTax.TaxableShare"});
+            Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WitholdingTax.Amount"});
+            Fields.Add("IsRitenutaIncludeCassaPrevidenziale", new FieldMapping {PropertyName = "WitholdingTax.IsSocialSecurityIncluded"});
+            //Fields.Add("CassaPrevidenziale", new FieldMapping {PropertyName = "SocialSecurity.Rate"});
+            //Fields.Add("CassaPrevidenzialeImporto", new FieldMapping {PropertyName = "SocialSecurity.Amount"});
+            //Fields.Add("CassaPrevidenzialeNome", new FieldMapping {PropertyName = "SocialSecurity.Name"});
 
             Parents.Add(
                 "IdTipoDocumento", 
@@ -45,6 +51,17 @@ namespace Amica.vNext.Compatibility.Maps
                     ParentColumn = "Nome",
                     RelationName = "FK_CausaliDocumenti_Documenti",
                 });
+
+     //       Parents.Add(
+     //           "IdIVACassaPrevidenziale",
+     //           new DataRelationMapping
+     //           {
+					//ParentColumn = "Nome",
+					//ChildProperty = "Code",
+     //               PropertyName = "SocialSecurity.Vat",
+					//ChildType = typeof(Vat),
+					//RelationName = "FK_CausaliIVA_IVACassaPrevidenziale"
+     //           });
    //         Parents.Add(
    //             "IdAnagrafica", 
 			//	new DataRelationMapping {

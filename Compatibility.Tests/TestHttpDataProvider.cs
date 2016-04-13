@@ -721,6 +721,13 @@ namespace Amica.vNext.Compatibility.Tests
                 Status = DocumentHelpers.Statuses[DocumentStatus.Issued],
 				Currency = new Currency { Name = "US Dollars", Code ="USD"},
 				Reason = "Vendita",
+				WitholdingTax = new WithholdingTax
+                {
+					Rate = 99,
+					IsSocialSecurityIncluded = true,
+					Amount = 9,
+					TaxableShare = 10.1
+                }
 				
                 //Total = 100,
                 //BillTo = new BillingAddress(contact)
@@ -772,6 +779,11 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.Stato, Is.EqualTo((int)doc.Status.Code));
             Assert.That(d.ValuteRow.Sigla, Is.EqualTo(doc.Currency.Code));
             Assert.That(d.CausaliDocumentiRow.Nome, Is.EqualTo(doc.Reason));
+
+            Assert.That(d.RitenutaAcconto, Is.EqualTo(doc.WitholdingTax.Rate));
+            Assert.That(d.RitenutaAccontoImporto, Is.EqualTo(doc.WitholdingTax.Amount));
+            Assert.That(d.RitenutaAccontoSuImponibile, Is.EqualTo(doc.WitholdingTax.TaxableShare));
+            Assert.That(d.IsRitenutaIncludeCassaPrevidenziale, Is.EqualTo(doc.WitholdingTax.IsSocialSecurityIncluded));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
@@ -1387,6 +1399,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -1424,6 +1437,13 @@ namespace Amica.vNext.Compatibility.Tests
             cd.Nome = "Vendita";
             ds.CausaliDocumenti.AddCausaliDocumentiRow(cd);
 
+            var ci = ds.CausaliIVA.NewCausaliIVARow();
+            ci.Aliquota = 0.22;
+            ci.Nome = "Vat1";
+            ci.Natura = "N1";
+            ci.Codice = "VAT1";
+            ds.CausaliIVA.AddCausaliIVARow(ci);
+
             var c = ds.Anagrafiche.NewAnagraficheRow();
             c.RagioneSociale1 = "rs1";
             c.PartitaIVA = "01180680397";
@@ -1443,6 +1463,16 @@ namespace Amica.vNext.Compatibility.Tests
             d.IdCausaleDocumento = cd.Id;
             d.TotaleFattura = 99;
             d.Data = DateTime.Now;
+
+			d.RitenutaAcconto = 99;
+			d.RitenutaAccontoSuImponibile = 10.1;
+			d.IsRitenutaIncludeCassaPrevidenziale = true;
+            d.RitenutaAccontoImporto = 999;
+
+            d.CassaPrevidenziale = 10.2;
+            d.CassaPrevidenzialeImporto = 999;
+            d.CassaPrevidenzialeNome = "cassa prev nome";
+            d.IdIVACassaPrevidenziale = ci.Id;
             ds.Documenti.AddDocumentiRow(d);
 
             var ri = ds.Righe.NewRigheRow();
@@ -1467,6 +1497,17 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
             Assert.That(doc.Currency.Code, Is.EqualTo(d.ValuteRow.Sigla));
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
+            Assert.That(doc.WitholdingTax.Amount, Is.EqualTo(d.RitenutaAccontoImporto));
+            Assert.That(doc.WitholdingTax.Rate, Is.EqualTo(d.RitenutaAcconto));
+            Assert.That(doc.WitholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
+            Assert.That(doc.WitholdingTax.IsSocialSecurityIncluded, Is.EqualTo(d.IsRitenutaIncludeCassaPrevidenziale));
+            //Assert.That(doc.SocialSecurity.Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
+            //Assert.That(doc.SocialSecurity.Name, Is.EqualTo(d.CassaPrevidenzialeNome));
+            //Assert.That(doc.SocialSecurity.Rate, Is.EqualTo(d.CassaPrevidenziale));
+            //Assert.That(doc.SocialSecurity.Vat.Name, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Nome));
+            //Assert.That(doc.SocialSecurity.Vat.Rate, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Aliquota));
+            //Assert.That(doc.SocialSecurity.Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
+            //Assert.That(doc.SocialSecurity.Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
 
 		 //   cds.AcceptChanges();
 		 //   ds.AcceptChanges();
