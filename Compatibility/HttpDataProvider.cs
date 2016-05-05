@@ -94,7 +94,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="batch">Wether this update is part of a batch operation or not.</param>
         /// <returns>T instance updated with API metadata, Or null if the operation was a delete.</returns>
         /// <remarks>The type of operation to be performed is inferred by DataRow's RowState property value.</remarks>
-        private async Task<T> UpdateAsync<T>(DataRow row, bool batch) where T: BaseModel, new()
+        private async Task<T> UpdateAsync<T>(DataRow row, bool batch) where T: BaseModel
         {
 
             ActionPerformed = ActionPerformed.NoAction;
@@ -170,6 +170,26 @@ namespace Amica.vNext.Compatibility
                 
             return retObj;
         }
+		internal string GetResourceNameFromDataRow(DataRow row)
+        {
+            if (!_resourcesMapping.ContainsKey(row.Table.TableName)) return null;
+            return _resourcesMapping[row.Table.TableName];
+        }
+		internal HttpMapping GetModifiedMapping( int localId, string resource, bool shouldRetrieveRemoteCompanyId)
+        {
+
+			return _db.Table<HttpMapping>()
+				.Where(v =>
+					v.LocalId.Equals(localId) &&
+					v.Resource.Equals(resource) &&
+					(shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId) || true) 
+					)
+					.FirstOrDefault() ?? new HttpMapping {
+						LocalId = localId,
+						Resource = resource,
+						LocalCompanyId = LocalCompanyId
+					};
+        }
 
         /// <summary>
         /// Retrieves the HttpMapping which maps to a specific DataRow.
@@ -177,10 +197,12 @@ namespace Amica.vNext.Compatibility
         /// <param name="row">DataRow for which an HttpMapping is needed.</param>
         /// <param name="shouldRetrieveRemoteCompanyId">Wether the remote company id should be retrieved or not.</param>
         /// <returns>An HttpMapping object relative to the provided DataRow.</returns>
-        private HttpMapping GetMapping(DataRow row, bool shouldRetrieveRemoteCompanyId)
+        internal HttpMapping GetMapping(DataRow row, bool shouldRetrieveRemoteCompanyId)
         {
             var localId = (int)row["id"];
-            var resource = _resourcesMapping[row.Table.TableName];
+
+            var resource = GetResourceNameFromDataRow(row);
+            if (resource == null) return null;
 
             HttpMapping entry;
             switch (row.RowState) {
@@ -202,18 +224,7 @@ namespace Amica.vNext.Compatibility
                     };
                     break;
                 case DataRowState.Modified:
-                    // ReSharper disable once ReplaceWithSingleCallToFirstOrDefault
-                    entry = _db.Table<HttpMapping>()
-                        .Where(v =>
-                            v.LocalId.Equals(localId) &&
-                            v.Resource.Equals(resource) &&
-                            (shouldRetrieveRemoteCompanyId && v.LocalCompanyId.Equals(LocalCompanyId) || true) 
-                            )
-                            .FirstOrDefault() ?? new HttpMapping {
-                                LocalId = localId,
-                                Resource = resource,
-                                LocalCompanyId = LocalCompanyId
-                            };
+                    entry = GetModifiedMapping(localId, resource, shouldRetrieveRemoteCompanyId);
                     break;
                 case DataRowState.Detached:
                     // if the row is Deleted, it will come in in Detached state
@@ -363,7 +374,7 @@ namespace Amica.vNext.Compatibility
         /// <param name="row">DataRow to be sent to the server.</param>
         /// <param name="batch">Wether this update is part of a batch operation or not.</param>
         /// <returns></returns>
-        private async Task UpdateRowAsync<T>(DataRow row, bool batch) where T: BaseModel, new()
+        private async Task UpdateRowAsync<T>(DataRow row, bool batch) where T: BaseModel
         {
             if (!batch) UpdatesPerformed.Clear();
             await UpdateAsync<T>(row, batch);
@@ -498,7 +509,7 @@ namespace Amica.vNext.Compatibility
 
 			return changes.ToList();
         }
-        internal string GetRemoteRowId(DataRow row)
+		internal HttpMapping GetHttpMappingByRow(DataRow row)
         {
             _db.CreateTable<HttpMapping>();
 
@@ -509,7 +520,11 @@ namespace Amica.vNext.Compatibility
                 .Table<HttpMapping>()
                 .FirstOrDefault(
                     m => m.Resource.Equals(resource) && m.LocalCompanyId.Equals(LocalCompanyId) && m.LocalId.Equals(localId));
-            return mapping?.RemoteId;
+            return mapping;
+        }
+        internal string GetRemoteRowId(DataRow row)
+        {
+            return GetHttpMappingByRow(row)?.RemoteId;
         }
         internal object GetLocalRowId(IUniqueId obj)
         {
@@ -618,6 +633,7 @@ namespace Amica.vNext.Compatibility
         }
 
 		private List<string> ProcessedTables { get; }
+        private bool _readOnce;
 
         /// <summary>
         /// Downloads all changes from the server and merges them to a local DataSet instance.
@@ -649,37 +665,35 @@ namespace Amica.vNext.Compatibility
 
         private async Task GetAndSyncTableIncludingParents(DataTable table)
         {
-			await GetAndSyncParentTables(table);
-            var parentsActionPerformed = ActionPerformed;
+            _readOnce = false;
 
+			await GetAndSyncParentTables(table);
 			await GetAndSyncTable(table);
 
-            if (parentsActionPerformed == ActionPerformed.Read)
-                ActionPerformed = ActionPerformed.Read;
+            if (_readOnce) ActionPerformed = ActionPerformed.Read;
         }
 		private async Task GetAndSyncParentTables(DataTable table)
         {
-            var readOnce = false;
-
-			foreach (var parentTable in table.ParentRelations.Cast<DataRelation>().Select(
-				parentRelation => parentRelation.ParentTable).Where(
-				parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !ProcessedTables.Contains(parentTable.TableName) && parentTable != table))
+			foreach (var parentTable in table.ParentRelations.Cast<DataRelation>()
+				.Select(parentRelation => parentRelation.ParentTable)
+				.Where(parentTable => _resourcesMapping.ContainsKey(parentTable.TableName) && !ProcessedTables.Contains(parentTable.TableName) && parentTable != table))
 			{
-				await GetAndSyncTable(parentTable);
-			    if (!readOnce) readOnce = ActionPerformed == ActionPerformed.Read;
+				await GetAndSyncParentTables(parentTable);
+                await GetAndSyncTable(parentTable);
+
+			    if (!_readOnce) _readOnce = ActionPerformed == ActionPerformed.Read;
 
 				ProcessedTables.Add(parentTable.TableName);
 			}
 
-            if (readOnce) ActionPerformed = ActionPerformed.Read;
         }
 
         private async Task GetAndSyncTable(DataTable table)
         {
-			await (Task)GetType().GetMethod($"GetAndSync{table.TableName}Async", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
+            if (ProcessedTables.Contains(table.TableName)) return;
 
-            if (!ProcessedTables.Contains(table.TableName))
-                ProcessedTables.Add(table.TableName);
+			await (Task)GetType().GetMethod($"GetAndSync{table.TableName}Async", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new object[] { table.DataSet});
+			ProcessedTables.Add(table.TableName);
         }
 
         /// <summary>

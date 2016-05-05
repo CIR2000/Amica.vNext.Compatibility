@@ -43,6 +43,8 @@ namespace Amica.vNext.Compatibility.Tests
                 Username = Environment.GetEnvironmentVariable("SentinelUsername"),
                 Password = Environment.GetEnvironmentVariable("SentinelPassword"),
             };
+
+            DefaultFactories.Bootstrap();
         }
 
         [TearDown]
@@ -125,41 +127,35 @@ namespace Amica.vNext.Compatibility.Tests
 		    var companies = await adam.GetAsync<Company>("companies");
             var company = companies[0];
 
-            var payMethod = new PaymentMethod
-            {
-                CompanyId = company.UniqueId,
-                Name = "pm1",
-                IsBankReceipt = true,
-                ModalitaPagamentoPA = (ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA["MP01"]
-            };
+            var payMethod = Factory<PaymentMethod>.Create();
+			payMethod.CompanyId = company.UniqueId;
+			payMethod.Name = "pm1";
+			payMethod.IsBankReceipt = true;
+            payMethod.ModalitaPagamentoPA = PAHelpers.ModalitaPagamentoPA["MP01"];
             payMethod = await adam.PostAsync<PaymentMethod>("payment-methods", payMethod);
 
-			var fee = new Fee
-            {
-				Name ="fee1",
-				CompanyId = company.UniqueId,
-				Amount=1
-			};
+            var fee = Factory<Fee>.Create();
+			fee.Name ="fee1";
+			fee.CompanyId = company.UniqueId;
+			fee.Amount = 1;
             fee = await adam.PostAsync<Fee>("fees", fee);
 
-            var payment = new Payment
-            {
-                CompanyId = company.UniqueId,
-                Name = "payment1",
-				ExtraDays = 30,
-				ExactDays = true,
-				Fee = fee,
-				//Bank
-				Discount = 0.11,
-				FirstPaymentDate = (FirstPaymentDate)PaymentHelpers.FirstPaymentDates[PaymentDate.EndOfMonth],
-				FirstPaymentOption = (FirstPaymentOption)PaymentHelpers.FirstPaymentOptions[PaymentOption.VatIncluded],
-				ForceEndOfMonth = false,
-				FirstPaymentDateAdditionalDays = 13,
-				Installments = 2,
-				InstallmentsEveryNumberOfDays = 4,
-				PaymentMethod = payMethod,
-            };
-		    payment = await adam.PostAsync<Payment>("payments", payment);
+            var payment = Factory<Payment>.Create();
+			payment.CompanyId = company.UniqueId;
+			payment.Name = "payment1";
+			payment.ExtraDays = 30;
+			payment.ExactDays = true;
+            payment.Fee = fee;
+            //Bank
+            payment.Discount = 0.11;
+			payment.FirstPaymentDate = PaymentHelpers.FirstPaymentDates[PaymentDate.EndOfMonth];
+			payment.FirstPaymentOption = PaymentHelpers.FirstPaymentOptions[PaymentOption.VatIncluded];
+			payment.ForceEndOfMonth = false;
+			payment.FirstPaymentDateAdditionalDays = 13;
+			payment.Installments = 2;
+			payment.InstallmentsEveryNumberOfDays = 4;
+            payment.PaymentMethod = payMethod;
+            payment = await adam.PostAsync<Payment>("payments", payment);
 
 			// try downloading the new contact into Amica companyDataSet
 			var companyDs = new companyDataSet();
@@ -189,7 +185,7 @@ namespace Amica.vNext.Compatibility.Tests
             // test that remotely changed vat syncs fine with Amica classic
             payment.Name = "payment2";
             payment.Discount = 0.22;
-            payment.PaymentMethod.ModalitaPagamentoPA = (ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA["MP01"];
+            payment.PaymentMethod.ModalitaPagamentoPA = PAHelpers.ModalitaPagamentoPA["MP01"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "payments";
@@ -415,17 +411,16 @@ namespace Amica.vNext.Compatibility.Tests
             var company = companies[0];
 
             // create vnext contact and post it
-            var vat = new Vat
-            {
-                CompanyId = company.UniqueId,
-                Name = "name",
-				Code = "123456",
-				Rate = 0.1,
-				NonDeductible = 0.2,
-				IsIntraCommunity = true,
-				IsSplitPayment = true,
-				NaturaPA = new NaturaPA { Code = "N1", Description = "description" }
-            };
+            //var vat = ObjectFactory.CreateVat();
+            var vat = Factory<Vat>.Create();
+            vat.CompanyId = company.UniqueId;
+			vat.Name = "name";
+			vat.Code = "123456";
+			vat.Rate = 0.1;
+			vat.NonDeductible = 0.2;
+			vat.IsIntraCommunity = true;
+			vat.IsSplitPayment = true;
+            vat.NaturaPA = new NaturaPA { Code = "N1", Description = "description" };
 		    vat = await adam.PostAsync<Vat>("vat", vat);
 
 			// try downloading the new contact into Amica companyDataSet
@@ -714,24 +709,26 @@ namespace Amica.vNext.Compatibility.Tests
             //contact = await adam.PostAsync<Contact>("contacts", contact);
 
             // new vnext invoice, complete with contact and items, and post it
-            var doc = new Invoice
+
+            //var doc = ObjectFactory.CreateDocument(DocumentCategory.Invoice);
+            var doc = Factory<Document>.Create(typeof(Invoice));
+
+            //var i = new Invoice();
+            doc.CompanyId = company.UniqueId;
+			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
+            doc.Status = DocumentHelpers.Statuses[DocumentStatus.Issued];
+			doc.Currency = new Currency { Name = "US Dollars", Code ="USD"};
+			doc.Reason = "Vendita";
+			doc.WitholdingTax = new WithholdingTax
             {
-                CompanyId = company.UniqueId,
-                Category = DocumentHelpers.Categories[DocumentCategory.Invoice],
-                Status = DocumentHelpers.Statuses[DocumentStatus.Issued],
-				Currency = new Currency { Name = "US Dollars", Code ="USD"},
-				Reason = "Vendita",
-				WitholdingTax = new WithholdingTax
-                {
-					Rate = 99,
-					IsSocialSecurityIncluded = true,
-					Amount = 9,
-					TaxableShare = 10.1
-                }
+                Rate = 99,
+                IsSocialSecurityIncluded = true,
+                Amount = 9,
+                TaxableShare = 10.1
+            };
 				
                 //Total = 100,
                 //BillTo = new BillingAddress(contact)
-            };
 
             //   var item = new DocumentItem
             //   {

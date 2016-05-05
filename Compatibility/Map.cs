@@ -50,9 +50,9 @@ namespace Amica.vNext.Compatibility
         /// <typeparam name="T">The type of the object to be returned</typeparam>
         /// <param name="row">A supprted Amica10 DataRow</param>
         /// <returns></returns>
-        public static T To<T>(DataRow row) where T : new()
+        public static T To<T>(DataRow row)
         {
-            var instance = new T();
+            var instance = Factory<T>.Create();
             DataRowToObject(row, instance);
             return instance;
         }
@@ -107,7 +107,20 @@ namespace Amica.vNext.Compatibility
 					{
                         if (parentRow != null)
                         {
-                            value = Activator.CreateInstance(dataRelation.ChildType);
+							value = Activator.CreateInstance(dataRelation.ChildType);
+
+                            var cachedMeta = HttpDataProvider.GetHttpMappingByRow(parentRow);
+							if (cachedMeta != null)
+							{
+								((BaseModel)value).UniqueId = cachedMeta.RemoteId;
+								((BaseModel)value).ETag = cachedMeta.ETag;
+								//((BaseModel)value).Updated = cacheMapping.LastUpdated;
+								if (dataRelation.ChildType == typeof(BaseModelWithCompanyId)) {
+									((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
+								}
+
+                            }
+
                             DataRowToObject(parentRow, value);
                         }
                         else value = null;
