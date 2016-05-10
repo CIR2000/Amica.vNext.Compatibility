@@ -239,25 +239,20 @@ namespace Amica.vNext.Compatibility.Tests
 		    var companies = await adam.GetAsync<Company>("companies");
             var company = companies[0];
 
-            // create vnext fee and post it
-            var fee = new Fee
-            {
-                CompanyId = company.UniqueId,
-                Name = "fee1",
-                Amount = 99,
-				Vat = new Vat
-                {
-					CompanyId = company.UniqueId,
-					Code = "NEW",
-					Name = "NEW VAT",
-					Rate = 0.22,
-					NaturaPA = new NaturaPA
-                    {
-						Code = "N2",
-						Description = "desc",
-                    }
-                }
-            };
+            var vat = Factory<Vat>.Create();
+			vat.CompanyId = company.UniqueId;
+			vat.Code = "NEW";
+			vat.Name = "NEW VAT";
+			vat.Rate = 0.22;
+            vat.NaturaPA = Factory<NaturaPA>.Create();
+            vat.NaturaPA.Code = "N2";
+            vat.NaturaPA.Description = "desc";
+
+            var fee = Factory<Fee>.Create();
+			fee.CompanyId = company.UniqueId;
+			fee.Name = "fee1";
+			fee.Amount = 99;
+            fee.Vat = vat;
 
 		    fee = await adam.PostAsync<Fee>("fees", fee);
 
@@ -334,13 +329,13 @@ namespace Amica.vNext.Compatibility.Tests
             var company = companies[0];
 
             // create vnext contact and post it
-            var method = new PaymentMethod
-            {
-                CompanyId = company.UniqueId,
-                Name = "method1",
-				IsBankReceipt = true,
-				ModalitaPagamentoPA = new ModalitaPagamentoPA { Code = "code", Description = "desc" }
-            };
+            var method = Factory<PaymentMethod>.Create();
+			method.CompanyId = company.UniqueId;
+			method.Name = "method1";
+			method.IsBankReceipt = true;
+            method.ModalitaPagamentoPA = Factory<ModalitaPagamentoPA>.Create();
+            method.ModalitaPagamentoPA.Code = "code";
+            method.ModalitaPagamentoPA.Description = "desc" ;
 		    method = await adam.PostAsync<PaymentMethod>("payment-methods", method);
 
 			// try downloading the new contact into Amica companyDataSet
@@ -359,7 +354,7 @@ namespace Amica.vNext.Compatibility.Tests
             // test that remotely changed vat syncs fine with Amica classic
             method.Name = "option2";
             method.IsBankReceipt	 = false;
-            method.ModalitaPagamentoPA = (ModalitaPagamentoPA)PAHelpers.ModalitaPagamentoPA["MP05"];
+            method.ModalitaPagamentoPA = PAHelpers.ModalitaPagamentoPA["MP05"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "payment-methods";
@@ -420,7 +415,9 @@ namespace Amica.vNext.Compatibility.Tests
 			vat.NonDeductible = 0.2;
 			vat.IsIntraCommunity = true;
 			vat.IsSplitPayment = true;
-            vat.NaturaPA = new NaturaPA { Code = "N1", Description = "description" };
+            vat.NaturaPA = Factory<NaturaPA>.Create();
+            vat.NaturaPA.Code = "N1";
+            vat.NaturaPA.Description = "description" ;
 		    vat = await adam.PostAsync<Vat>("vat", vat);
 
 			// try downloading the new contact into Amica companyDataSet
@@ -447,7 +444,7 @@ namespace Amica.vNext.Compatibility.Tests
             vat.NonDeductible = 0.98;
             vat.IsIntraCommunity = false;
             vat.IsSplitPayment = false;
-            vat.NaturaPA = (NaturaPA)PAHelpers.NaturaPA["N1"];
+            vat.NaturaPA = PAHelpers.NaturaPA["N1"];
 
             System.Threading.Thread.Sleep(SleepLength);
             adam.ResourceName = "vat";
@@ -479,7 +476,6 @@ namespace Amica.vNext.Compatibility.Tests
         }
 
 
-
         [Test]
         public async void DownloadContact()
         {
@@ -505,38 +501,31 @@ namespace Amica.vNext.Compatibility.Tests
             var company = companies[0];
 
             // create vnext contact and post it
-            var contact = new Contact
-            {
-                CompanyId = company.UniqueId,
-                Name = "Name",
-                VatIdentificationNumber = "IT01180680397",
-                IdCode = "id_code",
-                TaxIdentificationNumber = "RCCNCL70M27B519E",
-                MarketArea = "Lombardia",
-                PublicAdministrationIndex = "123456",
-                Currency = new Currency
-                {
-                    Name = "Euro",
-                    Code = "EUR",
-                    Symbol = "€"
-                },
-                Address = new AddressEx
-                {
-                    Street = "Street",
-                    Country = "Italia",
-					WebSite = "website"
-                },
-                Bank = new Bank
-                {
-                    Name = "Bank",
-                    IbanCode = "IT88T1927501600CC0010110180",
-                    BicSwiftCode = "ABCOITMM"
-                },
-                OtherAddresses = new List<ShippingAddress> {
-                    new ShippingAddress { Name="addr1"},
-                    new ShippingAddress { Name="addr2" }
-                }
-            };
+            var contact = Factory<Contact>.Create();
+			contact.CompanyId = company.UniqueId;
+			contact.Name = "Name";
+			contact.VatIdentificationNumber = "IT01180680397";
+			contact.IdCode = "id_code";
+			contact.TaxIdentificationNumber = "RCCNCL70M27B519E";
+			contact.MarketArea = "Lombardia";
+			contact.PublicAdministrationIndex = "123456";
+            contact.Currency = Factory<Currency>.Create();
+			contact.Currency.Name = "Euro";
+			contact.Currency.Code = "EUR";
+            contact.Currency.Symbol = "€";
+            contact.Address = Factory<AddressEx>.Create();
+			contact.Address.Street = "Street";
+			contact.Address.Country = "Italia";
+            contact.Address.WebSite = "website";
+            contact.Bank = Factory<Bank>.Create();
+			contact.Bank.Name = "Bank";
+			contact.Bank.IbanCode = "IT88T1927501600CC0010110180";
+            contact.Bank.BicSwiftCode = "ABCOITMM";
+            contact.OtherAddresses = new List<ShippingAddress>();
+            contact.OtherAddresses.Add(Factory<ShippingAddress>.Create());
+            contact.OtherAddresses.Add(Factory<ShippingAddress>.Create());
+            contact.OtherAddresses[0].Name = "addr1";
+            contact.OtherAddresses[1].Name = "addr2";
 		    contact = await adam.PostAsync<Contact>("contacts", contact);
 
 			// try downloading the new contact into Amica companyDataSet
@@ -717,15 +706,15 @@ namespace Amica.vNext.Compatibility.Tests
             doc.CompanyId = company.UniqueId;
 			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
             doc.Status = DocumentHelpers.Statuses[DocumentStatus.Issued];
-			doc.Currency = new Currency { Name = "US Dollars", Code ="USD"};
+            doc.Currency = Factory<Currency>.Create();
+            doc.Currency.Name = "US Dollars";
+            doc.Currency.Code ="USD";
 			doc.Reason = "Vendita";
-			doc.WitholdingTax = new WithholdingTax
-            {
-                Rate = 99,
-                IsSocialSecurityIncluded = true,
-                Amount = 9,
-                TaxableShare = 10.1
-            };
+            doc.WitholdingTax = Factory<WithholdingTax>.Create();
+            doc.WitholdingTax.Rate = 99;
+			doc.WitholdingTax.IsSocialSecurityIncluded = true;
+            doc.WitholdingTax.Amount = 9;
+            doc.WitholdingTax.TaxableShare = 10.0;
 				
                 //Total = 100,
                 //BillTo = new BillingAddress(contact)
