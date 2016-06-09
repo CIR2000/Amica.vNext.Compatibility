@@ -512,6 +512,8 @@ namespace Amica.vNext.Compatibility
         }
 		internal HttpMapping GetHttpMappingByRow(DataRow row)
         {
+            if (!_resourcesMapping.ContainsKey(row.Table.TableName)) return null;
+
             _db.CreateTable<HttpMapping>();
 
             var resource = _resourcesMapping[row.Table.TableName];
