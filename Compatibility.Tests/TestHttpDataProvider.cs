@@ -1681,7 +1681,7 @@ namespace Amica.vNext.Compatibility.Tests
             var company = rc.PostAsync<Company>("companies", new Company() {Name = "Company"}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
-            var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", VatIdentificationNumber = "Vat", CompanyId = company.UniqueId}).Result;
+            var contact = rc.PostAsync<Contact>("contacts", new Contact() {Name = "Contact1", VatIdentificationNumber = "IT01180680397", CompanyId = company.UniqueId}).Result;
             Assert.AreEqual(HttpStatusCode.Created, rc.HttpResponse.StatusCode);
 
             //var doc = rc.PostAsync<Document>("documents", new Invoice() { BillTo = new BillingAddress(contact), CompanyId = company.UniqueId }).Result;

@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Amica.vNext.Models.Documents;
+using SimpleCache;
 
 // TODO
 // Allow 'batch' uploads of data that has not changed? When an account joins the first time, what/if/how do we upload data?
