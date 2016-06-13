@@ -8,10 +8,10 @@ namespace Amica.vNext.Compatibility.Maps
         internal DocumentMapping()
         {
             Fields.Add("Data", new FieldMapping {PropertyName = "Date"});
-            Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WitholdingTax.Rate"});
-            Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WitholdingTax.TaxableShare"});
-            Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WitholdingTax.Amount"});
-            Fields.Add("IsRitenutaIncludeCassaPrevidenziale", new FieldMapping {PropertyName = "WitholdingTax.IsSocialSecurityIncluded"});
+            Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WithholdingTax.Rate"});
+            Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WithholdingTax.TaxableShare"});
+            Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WithholdingTax.Amount"});
+            Fields.Add("IsRitenutaIncludeCassaPrevidenziale", new FieldMapping {PropertyName = "WithholdingTax.IsSocialSecurityIncluded"});
             //Fields.Add("CassaPrevidenziale", new FieldMapping {PropertyName = "SocialSecurity.Rate"});
             //Fields.Add("CassaPrevidenzialeImporto", new FieldMapping {PropertyName = "SocialSecurity.Amount"});
             //Fields.Add("CassaPrevidenzialeNome", new FieldMapping {PropertyName = "SocialSecurity.Name"});

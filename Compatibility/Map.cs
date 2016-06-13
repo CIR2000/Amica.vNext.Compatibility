@@ -311,6 +311,7 @@ namespace Amica.vNext.Compatibility
 				foreach (var part in nameParts)
 				{
 					prop = target.GetType().GetProperty(part);
+                    if (prop == null) break;
                     if (part == lastPart) continue;
 					if (prop.GetValue(target, null) == null)
                         prop.SetValue(target, Activator.CreateInstance(prop.PropertyType), null);
@@ -319,7 +320,7 @@ namespace Amica.vNext.Compatibility
 
             }
 			if (prop == null)
-				throw new ArgumentException("Unknown property.", name);
+					throw new ArgumentException(string.Format("Invalid property name: {0}", name), name);
 
             return prop;
         }

@@ -701,7 +701,6 @@ namespace Amica.vNext.Compatibility.Tests
 
             //var doc = ObjectFactory.CreateDocument(DocumentCategory.Invoice);
             var doc = Factory<Document>.Create(typeof(Invoice));
-
             //var i = new Invoice();
             doc.CompanyId = company.UniqueId;
 			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
@@ -710,11 +709,11 @@ namespace Amica.vNext.Compatibility.Tests
             doc.Currency.Name = "US Dollars";
             doc.Currency.Code ="USD";
 			doc.Reason = "Vendita";
-            doc.WitholdingTax = Factory<WithholdingTax>.Create();
-            doc.WitholdingTax.Rate = 99;
-			doc.WitholdingTax.IsSocialSecurityIncluded = true;
-            doc.WitholdingTax.Amount = 9;
-            doc.WitholdingTax.TaxableShare = 10.0;
+            doc.WithholdingTax = Factory<WithholdingTax>.Create();
+            doc.WithholdingTax.Rate = 99;
+			doc.WithholdingTax.IsSocialSecurityIncluded = true;
+            doc.WithholdingTax.Amount = 9;
+            doc.WithholdingTax.TaxableShare = 10.0;
 				
                 //Total = 100,
                 //BillTo = new BillingAddress(contact)
@@ -766,10 +765,10 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.ValuteRow.Sigla, Is.EqualTo(doc.Currency.Code));
             Assert.That(d.CausaliDocumentiRow.Nome, Is.EqualTo(doc.Reason));
 
-            Assert.That(d.RitenutaAcconto, Is.EqualTo(doc.WitholdingTax.Rate));
-            Assert.That(d.RitenutaAccontoImporto, Is.EqualTo(doc.WitholdingTax.Amount));
-            Assert.That(d.RitenutaAccontoSuImponibile, Is.EqualTo(doc.WitholdingTax.TaxableShare));
-            Assert.That(d.IsRitenutaIncludeCassaPrevidenziale, Is.EqualTo(doc.WitholdingTax.IsSocialSecurityIncluded));
+            Assert.That(d.RitenutaAcconto, Is.EqualTo(doc.WithholdingTax.Rate));
+            Assert.That(d.RitenutaAccontoImporto, Is.EqualTo(doc.WithholdingTax.Amount));
+            Assert.That(d.RitenutaAccontoSuImponibile, Is.EqualTo(doc.WithholdingTax.TaxableShare));
+            Assert.That(d.IsRitenutaIncludeCassaPrevidenziale, Is.EqualTo(doc.WithholdingTax.IsSocialSecurityIncluded));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
@@ -1483,10 +1482,10 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
             Assert.That(doc.Currency.Code, Is.EqualTo(d.ValuteRow.Sigla));
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
-            Assert.That(doc.WitholdingTax.Amount, Is.EqualTo(d.RitenutaAccontoImporto));
-            Assert.That(doc.WitholdingTax.Rate, Is.EqualTo(d.RitenutaAcconto));
-            Assert.That(doc.WitholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
-            Assert.That(doc.WitholdingTax.IsSocialSecurityIncluded, Is.EqualTo(d.IsRitenutaIncludeCassaPrevidenziale));
+            Assert.That(doc.WithholdingTax.Amount, Is.EqualTo(d.RitenutaAccontoImporto));
+            Assert.That(doc.WithholdingTax.Rate, Is.EqualTo(d.RitenutaAcconto));
+            Assert.That(doc.WithholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
+            Assert.That(doc.WithholdingTax.IsSocialSecurityIncluded, Is.EqualTo(d.IsRitenutaIncludeCassaPrevidenziale));
             //Assert.That(doc.SocialSecurity.Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
             //Assert.That(doc.SocialSecurity.Name, Is.EqualTo(d.CassaPrevidenzialeNome));
             //Assert.That(doc.SocialSecurity.Rate, Is.EqualTo(d.CassaPrevidenziale));
