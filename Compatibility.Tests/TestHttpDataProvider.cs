@@ -10,6 +10,7 @@ using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
 using Amica.vNext.Models.ItalianPA;
 using System.Collections.Generic;
+using Amica.vNext.Compatibility.Helpers;
 
 namespace Amica.vNext.Compatibility.Tests
 {
@@ -701,6 +702,20 @@ namespace Amica.vNext.Compatibility.Tests
 
             //var doc = ObjectFactory.CreateDocument(DocumentCategory.Invoice);
             var doc = Factory<Document>.Create(typeof(Invoice));
+            var vat = Factory<Vat>.Create();
+            vat.Code = "code";
+            vat.Name = "name";
+            vat.Rate = 0.1;
+
+            var ss = Factory<SocialSecurity>.Create();
+            ss.Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC01];
+            ss.Amount = 99;
+            ss.Rate = 0.1;
+            ss.Taxable = 9;
+            ss.Withholding = true;
+            ss.Vat = vat;
+
+
             //var i = new Invoice();
             doc.CompanyId = company.UniqueId;
 			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
@@ -714,8 +729,8 @@ namespace Amica.vNext.Compatibility.Tests
 			doc.WithholdingTax.IsSocialSecurityIncluded = true;
             doc.WithholdingTax.Amount = 9;
             doc.WithholdingTax.TaxableShare = 10.0;
-				
-                //Total = 100,
+            doc.SocialSecurity.Add(ss);
+            //Total = 100,
                 //BillTo = new BillingAddress(contact)
 
             //   var item = new DocumentItem
@@ -769,6 +784,10 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.RitenutaAccontoImporto, Is.EqualTo(doc.WithholdingTax.Amount));
             Assert.That(d.RitenutaAccontoSuImponibile, Is.EqualTo(doc.WithholdingTax.TaxableShare));
             Assert.That(d.IsRitenutaIncludeCassaPrevidenziale, Is.EqualTo(doc.WithholdingTax.IsSocialSecurityIncluded));
+
+            Assert.That(d.CassaPrevidenzialeNome, Is.EqualTo(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category)));
+            Assert.That(d.CassaPrevidenzialeImporto, Is.EqualTo(doc.SocialSecurity[0].Amount));
+            Assert.That(d.CassaPrevidenziale, Is.EqualTo(doc.SocialSecurity[0].Rate));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
@@ -1456,7 +1475,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             d.CassaPrevidenziale = 10.2;
             d.CassaPrevidenzialeImporto = 999;
-            d.CassaPrevidenzialeNome = "cassa prev nome";
+            d.CassaPrevidenzialeNome = "Cass geometri";
             d.IdIVACassaPrevidenziale = ci.Id;
             ds.Documenti.AddDocumentiRow(d);
 
@@ -1486,7 +1505,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.WithholdingTax.Rate, Is.EqualTo(d.RitenutaAcconto));
             Assert.That(doc.WithholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
             Assert.That(doc.WithholdingTax.IsSocialSecurityIncluded, Is.EqualTo(d.IsRitenutaIncludeCassaPrevidenziale));
-            //Assert.That(doc.SocialSecurity.Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
+            //Assert.That(doc.SocialSecurity.Count, Is.EqualTo(1));
+            //Assert.That(doc.SocialSecurity[0].Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
             //Assert.That(doc.SocialSecurity.Name, Is.EqualTo(d.CassaPrevidenzialeNome));
             //Assert.That(doc.SocialSecurity.Rate, Is.EqualTo(d.CassaPrevidenziale));
             //Assert.That(doc.SocialSecurity.Vat.Name, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Nome));
@@ -1494,56 +1514,56 @@ namespace Amica.vNext.Compatibility.Tests
             //Assert.That(doc.SocialSecurity.Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
             //Assert.That(doc.SocialSecurity.Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
 
-		 //   cds.AcceptChanges();
-		 //   ds.AcceptChanges();
+            //   cds.AcceptChanges();
+            //   ds.AcceptChanges();
 
-			//// Changing a Contact should not affect the ContatMinimal in the Document.
-   //         ds.Anagrafiche.Rows[0]["PartitaIVA"] = "IT02182030391";
-   //         ds.Nazioni.Rows[0]["Nome"] = "Russia";
-   //         await _httpDataProvider.UpdateAsync(ds);
-			//Assert.AreEqual(ActionPerformed.Modified, _httpDataProvider.ActionPerformed);
-			//Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
-   //         ValidateSyncDb(d, "documents");
-   //         ValidateSyncDb(ds.Anagrafiche.Rows[0], "contacts");
+            //// Changing a Contact should not affect the ContatMinimal in the Document.
+            //         ds.Anagrafiche.Rows[0]["PartitaIVA"] = "IT02182030391";
+            //         ds.Nazioni.Rows[0]["Nome"] = "Russia";
+            //         await _httpDataProvider.UpdateAsync(ds);
+            //Assert.AreEqual(ActionPerformed.Modified, _httpDataProvider.ActionPerformed);
+            //Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
+            //         ValidateSyncDb(d, "documents");
+            //         ValidateSyncDb(ds.Anagrafiche.Rows[0], "contacts");
 
-   //         var adam = new EveClient (Service);
-		 //   var contacts = await adam.GetAsync<Contact>("contacts");
-		 //   var contact = contacts[0];
-		 //   Assert.AreEqual("IT02182030391", contact.VatIdentificationNumber);
-		 //   Assert.AreEqual(c.CodiceFiscale, contact.TaxIdentificationNumber);
-		 //   Assert.AreEqual("Russia", contact.Address.Country);
-		 //   Assert.AreEqual(ag.Nome, contact.MarketArea);
-		 //   Assert.AreEqual(v.Nome, contact.Currency.Name);
+            //         var adam = new EveClient (Service);
+            //   var contacts = await adam.GetAsync<Contact>("contacts");
+            //   var contact = contacts[0];
+            //   Assert.AreEqual("IT02182030391", contact.VatIdentificationNumber);
+            //   Assert.AreEqual(c.CodiceFiscale, contact.TaxIdentificationNumber);
+            //   Assert.AreEqual("Russia", contact.Address.Country);
+            //   Assert.AreEqual(ag.Nome, contact.MarketArea);
+            //   Assert.AreEqual(v.Nome, contact.Currency.Name);
 
-		 //   var docs = await adam.GetAsync<Document>("documents");
-		 //   var doc = docs[0];
-		 //   Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
-		 //   Assert.AreEqual("IT01180680397", doc.Contact.VatIdentificationNumber);
-		 //   Assert.AreEqual("Italia", doc.Contact.Country);
+            //   var docs = await adam.GetAsync<Document>("documents");
+            //   var doc = docs[0];
+            //   Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
+            //   Assert.AreEqual("IT01180680397", doc.Contact.VatIdentificationNumber);
+            //   Assert.AreEqual("Italia", doc.Contact.Country);
 
-		 //   Assert.That(doc.Items.Count, Is.EqualTo(1));
-		 //   var docItem = doc.Items[0];
-		 //   Assert.That(docItem.Sku, Is.EqualTo("Sku"));
-		 //   Assert.That(docItem.Description, Is.EqualTo("Description"));
+            //   Assert.That(doc.Items.Count, Is.EqualTo(1));
+            //   var docItem = doc.Items[0];
+            //   Assert.That(docItem.Sku, Is.EqualTo("Sku"));
+            //   Assert.That(docItem.Description, Is.EqualTo("Description"));
 
 
-   //         doc.Contact.VatIdentificationNumber = "IT92078790398";
-   //         doc.Contact.Country = "USA";
-   //         await adam.PutAsync("documents", doc);
-   //         Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
-   //         await _httpDataProvider.GetAsync(ds);
-   //         Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
-   //         // Anagrafiche field and document reference have not changed
-   //         Assert.AreEqual("IT02182030391", ds.Anagrafiche.Rows[0]["PartitaIva"]);
-   //         Assert.AreEqual("Russia", ds.Nazioni.Rows[0]["Nome"]);
-   //         Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
+            //         doc.Contact.VatIdentificationNumber = "IT92078790398";
+            //         doc.Contact.Country = "USA";
+            //         await adam.PutAsync("documents", doc);
+            //         Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
+            //         await _httpDataProvider.GetAsync(ds);
+            //         Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
+            //         // Anagrafiche field and document reference have not changed
+            //         Assert.AreEqual("IT02182030391", ds.Anagrafiche.Rows[0]["PartitaIva"]);
+            //         Assert.AreEqual("Russia", ds.Nazioni.Rows[0]["Nome"]);
+            //         Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
 
-   //         // test that a locally deleted object is deleted fine also remotely
-   //         ds.Documenti[0].Delete();
-   //         await _httpDataProvider.UpdateAsync(ds);
-   //         doc = await adam.GetAsync<Invoice>("documents", doc);
-   //         Assert.That(doc, Is.Null);
-   //         Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            //         // test that a locally deleted object is deleted fine also remotely
+            //         ds.Documenti[0].Delete();
+            //         await _httpDataProvider.UpdateAsync(ds);
+            //         doc = await adam.GetAsync<Invoice>("documents", doc);
+            //         Assert.That(doc, Is.Null);
+            //         Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
         /// <summary>
         /// Test that a new datarow is properly processed

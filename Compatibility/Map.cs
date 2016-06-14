@@ -72,11 +72,12 @@ namespace Amica.vNext.Compatibility
 			foreach (var fieldMapping in mapping.Fields)
             {
                 object activeTarget;
-                var transformedSourceValue = GetTransformedColumnValue(row, fieldMapping.Key, fieldMapping.Value.Transform);
+                var transformedSourceValue = GetTransformedColumnValue(row, fieldMapping.Key, fieldMapping.Value.UpstreamTransform);
                 if (transformedSourceValue == DBNull.Value) continue;
 
-                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget);
-                var value = GetAdjustedColumnValue(row, fieldMapping.Key, fieldMapping.Value.Transform, prop);
+                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget, true);
+                if (activeTarget == null) continue;
+                var value = GetAdjustedColumnValue(row, fieldMapping.Key, fieldMapping.Value.UpstreamTransform, prop);
 
                 prop.SetValue(activeTarget, value, null);
             }
@@ -93,7 +94,7 @@ namespace Amica.vNext.Compatibility
 
                 if (dataRelation.RelationName == null)
                 {
-                    value = dataRelation.Transform(row[dataRelation.ParentColumn]);
+                    value = dataRelation.UpstreamTransform(row[dataRelation.ParentColumn]);
                 }
                 else
                 {
@@ -101,7 +102,7 @@ namespace Amica.vNext.Compatibility
 
 					if (parentMapping.Value.ChildType == null)
 					{
-						value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, dataRelation.Transform, prop);
+						value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, dataRelation.UpstreamTransform, prop);
 					}
 					else
 					{
@@ -198,15 +199,16 @@ namespace Amica.vNext.Compatibility
 
                 object target;
                 var prop = GetProperty(source, fieldMapping.Value.PropertyName, out target);
-
+                if (target == null) continue;
                 var val = prop.GetValue(target, null);
                 var maxLength = row.Table.Columns[fieldMapping.Key].MaxLength;
 
+				var transformed = fieldMapping.Value.DownstreamTransform(val);
                 // Since one cant set a DataColumn's MaxLength unless it is of string type, we rely on
                 // MaxLength and choose not to test the DataColumn type.
-                row[fieldMapping.Key] = (maxLength > 0 && val != null && ((string)val).Length > maxLength)
-                    ? ((string)val).Substring(0, maxLength)
-                    : val;
+                row[fieldMapping.Key] = (maxLength > 0 && transformed != null && ((string)transformed).Length > maxLength)
+                    ? ((string)transformed).Substring(0, maxLength)
+                    : transformed;
             }
         }
 
@@ -295,7 +297,7 @@ namespace Amica.vNext.Compatibility
                 }
             }
         }
-        private static PropertyInfo GetProperty(object source, string name, out object target)
+        private static PropertyInfo GetProperty(object source, string name, out object target, bool appendToEmptyList = false)
         {
 			PropertyInfo prop = null;
 			var nameParts = name.Split('.');
@@ -310,7 +312,26 @@ namespace Amica.vNext.Compatibility
 				var lastPart = nameParts.Last();
 				foreach (var part in nameParts)
 				{
-					prop = target.GetType().GetProperty(part);
+					if (IsList(target))
+                    { 
+                        if (((IList)target).Count > 0)
+                        {
+							// assume first list item is mapped to DataColumn
+                            target = ((IList)target)[0];
+                        }
+                        else
+                        {
+							if (!appendToEmptyList)
+                            {
+								target = null;
+								return null;
+                            }
+                            ((IList)target).Add(Activator.CreateInstance(prop.PropertyType.GetGenericArguments()[0]));
+                            target = ((IList)target)[0];
+                        }
+					}
+					prop = target.GetType().GetProperty(
+						(part.EndsWith("]")) ? part.Substring(0, part.Length - 3) : part);
                     if (prop == null) break;
                     if (part == lastPart) continue;
 					if (prop.GetValue(target, null) == null)
@@ -324,6 +345,13 @@ namespace Amica.vNext.Compatibility
 
             return prop;
         }
+		private static bool IsList(object o)
+			{
+				if(o == null) return false;
+				return o is IList &&
+					   o.GetType().IsGenericType &&
+					   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+			}
 
 		internal static HttpDataProvider HttpDataProvider { get; set; }
     }

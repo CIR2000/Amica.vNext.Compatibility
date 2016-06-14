@@ -57,7 +57,7 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "FirstPaymentDate",
 					ParentColumn = "PeriodoPrimaRata",
 					ChildProperty = "Code",
-                    Transform = (x) => PaymentHelpers.FirstPaymentDates[(PaymentDate)x],
+                    UpstreamTransform = (x) => PaymentHelpers.FirstPaymentDates[(PaymentDate)x],
                 });
 
             Parents.Add(
@@ -67,7 +67,7 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "FirstPaymentOption",
                     ParentColumn = "TipoPrimaRata",
                     ChildProperty = "Code",
-                    Transform = (x) => PaymentHelpers.FirstPaymentOptions[(PaymentOption)x]
+                    UpstreamTransform = (x) => PaymentHelpers.FirstPaymentOptions[(PaymentOption)x]
                 });
         }
     }

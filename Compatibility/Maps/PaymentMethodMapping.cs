@@ -17,7 +17,7 @@ namespace Amica.vNext.Compatibility.Maps
                 {
                     PropertyName = "ModalitaPagamentoPA",
                     ParentColumn = "CodicePagamentoPA",
-                    Transform = (x) => PAHelpers.ModalitaPagamentoPA[(string)x],
+                    UpstreamTransform = (x) => PAHelpers.ModalitaPagamentoPA[(string)x],
 					ChildProperty = "Code"
                 });
         }

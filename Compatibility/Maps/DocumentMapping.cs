@@ -1,4 +1,5 @@
-﻿using Amica.vNext.Models;
+﻿using Amica.vNext.Compatibility.Helpers;
+using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
 
 namespace Amica.vNext.Compatibility.Maps
@@ -12,9 +13,14 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WithholdingTax.TaxableShare"});
             Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WithholdingTax.Amount"});
             Fields.Add("IsRitenutaIncludeCassaPrevidenziale", new FieldMapping {PropertyName = "WithholdingTax.IsSocialSecurityIncluded"});
-            //Fields.Add("CassaPrevidenziale", new FieldMapping {PropertyName = "SocialSecurity.Rate"});
-            //Fields.Add("CassaPrevidenzialeImporto", new FieldMapping {PropertyName = "SocialSecurity.Amount"});
-            //Fields.Add("CassaPrevidenzialeNome", new FieldMapping {PropertyName = "SocialSecurity.Name"});
+            Fields.Add("CassaPrevidenziale", new FieldMapping { PropertyName = "SocialSecurity[0].Rate" });
+            Fields.Add("CassaPrevidenzialeImporto", new FieldMapping { PropertyName = "SocialSecurity[0].Amount" });
+            Fields.Add("CassaPrevidenzialeNome", new FieldMapping
+            {
+                PropertyName = "SocialSecurity[0].Category",
+                DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
+                UpstreamTransform = (x) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
+            });
 
             Parents.Add(
                 "IdTipoDocumento", 
@@ -22,7 +28,7 @@ namespace Amica.vNext.Compatibility.Maps
 					PropertyName="Category",
 					ParentColumn = "IdTipoDocumento",
 					ChildProperty = "Code",
-                    Transform = (x) => DocumentHelpers.Categories[(DocumentCategory)x],
+                    UpstreamTransform = (x) => DocumentHelpers.Categories[(DocumentCategory)x],
                 });
 
             Parents.Add(
@@ -31,7 +37,7 @@ namespace Amica.vNext.Compatibility.Maps
 					PropertyName="Status",
 					ParentColumn = "Stato",
 					ChildProperty = "Code",
-                    Transform = (x) => DocumentHelpers.Statuses[(DocumentStatus)x],
+                    UpstreamTransform = (x) => DocumentHelpers.Statuses[(DocumentStatus)x],
                 });
 
             Parents.Add(

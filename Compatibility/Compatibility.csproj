@@ -96,6 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionPerformed.cs" />
+    <Compile Include="CassaPrevidenzialeSocialSecurity.cs" />
     <Compile Include="Maps\AddressExWithNameMapping.cs" />
     <Compile Include="Maps\PaymentMapping.cs" />
     <Compile Include="Maps\FeeMapping.cs" />
