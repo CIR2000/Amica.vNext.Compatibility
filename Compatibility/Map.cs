@@ -75,7 +75,7 @@ namespace Amica.vNext.Compatibility
                 var transformedSourceValue = GetTransformedColumnValue(row, fieldMapping.Key, fieldMapping.Value.UpstreamTransform);
                 if (transformedSourceValue == DBNull.Value) continue;
 
-                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget, true);
+                var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget, appendToEmptyList: true);
                 if (activeTarget == null) continue;
                 var value = GetAdjustedColumnValue(row, fieldMapping.Key, fieldMapping.Value.UpstreamTransform, prop);
 
@@ -314,12 +314,7 @@ namespace Amica.vNext.Compatibility
 				{
 					if (IsList(target))
                     { 
-                        if (((IList)target).Count > 0)
-                        {
-							// assume first list item is mapped to DataColumn
-                            target = ((IList)target)[0];
-                        }
-                        else
+						if (((IList)target).Count == 0)
                         {
 							if (!appendToEmptyList)
                             {
@@ -327,8 +322,9 @@ namespace Amica.vNext.Compatibility
 								return null;
                             }
                             ((IList)target).Add(Activator.CreateInstance(prop.PropertyType.GetGenericArguments()[0]));
-                            target = ((IList)target)[0];
                         }
+						// assume first list item is mapped to DataColumn
+						target = ((IList)target)[0];
 					}
 					prop = target.GetType().GetProperty(
 						(part.EndsWith("]")) ? part.Substring(0, part.Length - 3) : part);

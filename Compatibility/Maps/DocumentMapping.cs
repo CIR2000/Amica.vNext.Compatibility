@@ -58,33 +58,33 @@ namespace Amica.vNext.Compatibility.Maps
                     RelationName = "FK_CausaliDocumenti_Documenti",
                 });
 
-     //       Parents.Add(
-     //           "IdIVACassaPrevidenziale",
-     //           new DataRelationMapping
-     //           {
-					//ParentColumn = "Nome",
-					//ChildProperty = "Code",
-     //               PropertyName = "SocialSecurity.Vat",
-					//ChildType = typeof(Vat),
-					//RelationName = "FK_CausaliIVA_IVACassaPrevidenziale"
-     //           });
-   //         Parents.Add(
-   //             "IdAnagrafica", 
-			//	new DataRelationMapping {
-   //                 PropertyName = "Contact",
-   //                 RelationName = "FK_Anagrafiche_Documenti",
-   //                     ChildType = typeof(BillingAddress)
-   //             }
-   //             );
+            Parents.Add(
+                "IdIVACassaPrevidenziale",
+                new DataRelationMapping
+                {
+                    ParentColumn = "Nome",
+                    ChildProperty = "Code",
+                    PropertyName = "SocialSecurity[0].Vat",
+                    ChildType = typeof(Vat),
+                    RelationName = "FK_CausaliIVA_IVACassaPrevidenziale"
+                });
+            //         Parents.Add(
+            //             "IdAnagrafica", 
+            //	new DataRelationMapping {
+            //                 PropertyName = "Contact",
+            //                 RelationName = "FK_Anagrafiche_Documenti",
+            //                     ChildType = typeof(BillingAddress)
+            //             }
+            //             );
 
-   //         Children.Add(
-   //             new DataRelationMapping
-   //             {
-   //                 PropertyName = "Items",
-   //                 ChildType = typeof(DocumentItem),
-   //                 RelationName = "FK_Documenti_Righe",
-   //             }
-			//);
+            //         Children.Add(
+            //             new DataRelationMapping
+            //             {
+            //                 PropertyName = "Items",
+            //                 ChildType = typeof(DocumentItem),
+            //                 RelationName = "FK_Documenti_Righe",
+            //             }
+            //);
         }
     }
 }
