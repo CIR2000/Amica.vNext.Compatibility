@@ -113,12 +113,22 @@ namespace Amica.vNext.Compatibility
                             var cachedMeta = HttpDataProvider.GetHttpMappingByRow(parentRow);
 							if (cachedMeta != null)
 							{
-								((BaseModel)value).UniqueId = cachedMeta.RemoteId;
-								((BaseModel)value).ETag = cachedMeta.ETag;
-								//((BaseModel)value).Updated = cacheMapping.LastUpdated;
-								if (dataRelation.ChildType == typeof(BaseModelWithCompanyId)) {
-									((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
-								}
+								if (value is BaseModel)
+                                {
+									((BaseModel)value).UniqueId = cachedMeta.RemoteId;
+									((BaseModel)value).ETag = cachedMeta.ETag;
+									if (dataRelation.ChildType == typeof(BaseModelWithCompanyId)) {
+										((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
+									}
+                                }
+                                else
+                                {
+									// maybe the object still wants to map to to a related object
+									// (e.g. Document.BillTo still refers to a Contact.
+									var p = value.GetType().GetProperty("UniqueId");
+                                    if (p != null)
+                                        p.SetValue(value, cachedMeta.RemoteId, null);
+                                }
 
                             }
 
