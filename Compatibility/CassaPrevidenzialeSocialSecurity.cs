@@ -19,8 +19,7 @@ namespace Amica.vNext.Compatibility.Helpers
         {
             amica = new List<CassaPrevidenziale>();
             amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC01], Descrizione = "Cassa avvocati e procuratori legali" });
-            amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC02], Descrizione = "Cassa avvocati e procuratori legali" });
-            amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC03], Descrizione = "Cassa dottori commercialisti" });
+            amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC02], Descrizione = "Cassa dottori commercialisti" });
             amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC03], Descrizione = "Cass geometri"});
             amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC04], Descrizione = "Cassa ingegneri e architetti"});
             amica.Add(new CassaPrevidenziale { Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC05], Descrizione = "Cassa notariato"});

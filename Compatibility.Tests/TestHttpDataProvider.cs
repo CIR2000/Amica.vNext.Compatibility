@@ -780,6 +780,7 @@ namespace Amica.vNext.Compatibility.Tests
 			doc.WithholdingTax.IsSocialSecurityIncluded = true;
             doc.WithholdingTax.Amount = 9;
             doc.WithholdingTax.TaxableShare = 10.0;
+
             doc.SocialSecurity.Add(ss);
 
             //doc.Shipping = shipping;
@@ -1607,14 +1608,15 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.WithholdingTax.Rate, Is.EqualTo(d.RitenutaAcconto));
             Assert.That(doc.WithholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
             Assert.That(doc.WithholdingTax.IsSocialSecurityIncluded, Is.EqualTo(d.IsRitenutaIncludeCassaPrevidenziale));
-            //Assert.That(doc.SocialSecurity.Count, Is.EqualTo(1));
-            //Assert.That(doc.SocialSecurity[0].Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
-            //Assert.That(doc.SocialSecurity.Name, Is.EqualTo(d.CassaPrevidenzialeNome));
-            //Assert.That(doc.SocialSecurity.Rate, Is.EqualTo(d.CassaPrevidenziale));
-            //Assert.That(doc.SocialSecurity.Vat.Name, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Nome));
-            //Assert.That(doc.SocialSecurity.Vat.Rate, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Aliquota));
-            //Assert.That(doc.SocialSecurity.Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
-            //Assert.That(doc.SocialSecurity.Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
+
+            Assert.That(doc.SocialSecurity.Count, Is.EqualTo(1));
+            Assert.That(doc.SocialSecurity[0].Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
+            Assert.That(doc.SocialSecurity[0].Rate, Is.EqualTo(d.CassaPrevidenziale));
+            Assert.That(doc.SocialSecurity[0].Vat.Name, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Nome));
+            Assert.That(doc.SocialSecurity[0].Vat.Rate, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Aliquota));
+            Assert.That(doc.SocialSecurity[0].Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
+            Assert.That(doc.SocialSecurity[0].Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
+            Assert.That(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category), Is.EqualTo(d.CassaPrevidenzialeNome));
 
             Assert.That(doc.Payment.Name, Is.EqualTo(d.PagamentiRow.Nome));
             Assert.That(doc.Payment.PaymentMethod.Name, Is.EqualTo(d.PagamentiRow.ModalitàPagamentoRow.Nome));
