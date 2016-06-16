@@ -9,6 +9,8 @@ namespace Amica.vNext.Compatibility.Maps
         internal DocumentMapping()
         {
             Fields.Add("Data", new FieldMapping {PropertyName = "Date"});
+            Fields.Add("NumeroParteNumerica", new FieldMapping {PropertyName = "Number.Numeric"});
+            Fields.Add("NumeroParteTesto", new FieldMapping {PropertyName = "Number.String"});
             Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WithholdingTax.Rate"});
             Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WithholdingTax.TaxableShare"});
             Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WithholdingTax.Amount"});
@@ -65,17 +67,18 @@ namespace Amica.vNext.Compatibility.Maps
                     ParentColumn = "Nome",
                     ChildProperty = "Code",
                     PropertyName = "SocialSecurity[0].Vat",
+                    RelationName = "FK_CausaliIVA_IVACassaPrevidenziale",
                     ChildType = typeof(Vat),
-                    RelationName = "FK_CausaliIVA_IVACassaPrevidenziale"
                 });
-            //         Parents.Add(
-            //             "IdAnagrafica", 
-            //	new DataRelationMapping {
-            //                 PropertyName = "Contact",
-            //                 RelationName = "FK_Anagrafiche_Documenti",
-            //                     ChildType = typeof(BillingAddress)
-            //             }
-            //             );
+
+            Parents.Add(
+                "IdAnagrafica", new DataRelationMapping
+                {
+                    PropertyName = "BillTo",
+                    RelationName = "FK_Anagrafiche_Documenti",
+                    ChildType = typeof(BillingAddress)
+                }
+                );
 
             //         Children.Add(
             //             new DataRelationMapping

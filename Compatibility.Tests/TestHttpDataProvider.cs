@@ -677,31 +677,29 @@ namespace Amica.vNext.Compatibility.Tests
             var company = companies[0];
 
             // create vnext contact and post it
-            //var contact = new Contact
-            //{
-            //    CompanyId = company.UniqueId,
-            //    Name = "Name",
-            //    VatIdentificationNumber = "IT01180680397",
-            //    TaxIdentificationNumber = "RCCNCL70M27B519E",
-            //    MarketArea = "Lombardia",
-            //    Currency = new Currency
-            //    {
-            //        Name = "Euro",
-            //        Code = "EUR",
-            //        Symbol = "€"
-            //    },
-            //    Address = new AddressEx
-            //    {
-            //        Street = "Street",
-            //        Country = "Italia"
-            //    }
-            //};
-            //contact = await adam.PostAsync<Contact>("contacts", contact);
+            var contact = Factory<Contact>.Create();
+			contact.CompanyId = company.UniqueId;
+			contact.Name = "Name";
+			contact.VatIdentificationNumber = "IT01180680397";
+			contact.TaxIdentificationNumber = "RCCNCL70M27B519E";
+			contact.MarketArea = "Lombardia";
+			contact.Currency = new Currency
+			{
+				Name = "Euro",
+				Code = "EUR",
+				Symbol = "€"
+			};
+            contact.Address = new AddressEx
+            {
+                Street = "Street",
+                Country = "Italia"
+            };
+            contact = await adam.PostAsync<Contact>("contacts", contact);
 
             // new vnext invoice, complete with contact and items, and post it
 
-            //var doc = ObjectFactory.CreateDocument(DocumentCategory.Invoice);
             var doc = Factory<Document>.Create(typeof(Invoice));
+
             var vat = Factory<Vat>.Create();
             vat.Code = "code";
             vat.Name = "name";
@@ -715,23 +713,45 @@ namespace Amica.vNext.Compatibility.Tests
             ss.Withholding = true;
             ss.Vat = vat;
 
+            //         var shipping = Factory<Shipping>.Create();
+            //         shipping.Driver = new Driver { Name = "nicola", LicenseID = "license id", PlateID = "plate id" };
+            //         shipping.Appearance = "appearance";
+            //shipping.Terms = DocumentHelpers.TransportTerms[DocumentShippingTerm.DeliveredDutyPaid];
+            //         shipping.Courier = new ContactDetailsEx
+            //         {
+            //             Fax = "fax",
+            //             Mail = "mail",
+            //             Mobile = "mobile",
+            //             Name = "name",
+            //             PecMail = "pecmail",
+            //             Phone = "phone",
+            //             WebSite = "website",
+            //	UniqueId ="id"
+            //         };
 
             //var i = new Invoice();
+            doc.Number = new DocumentNumber { Numeric = 1, String = "hello" };
+
             doc.CompanyId = company.UniqueId;
 			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
             doc.Status = DocumentHelpers.Statuses[DocumentStatus.Issued];
+
             doc.Currency = Factory<Currency>.Create();
             doc.Currency.Name = "US Dollars";
             doc.Currency.Code ="USD";
+
 			doc.Reason = "Vendita";
+
             doc.WithholdingTax = Factory<WithholdingTax>.Create();
             doc.WithholdingTax.Rate = 99;
 			doc.WithholdingTax.IsSocialSecurityIncluded = true;
             doc.WithholdingTax.Amount = 9;
             doc.WithholdingTax.TaxableShare = 10.0;
             doc.SocialSecurity.Add(ss);
-            //Total = 100,
-                //BillTo = new BillingAddress(contact)
+
+            //doc.Shipping = shipping;
+            //doc.Total = 100;
+            doc.BillTo = new BillingAddress(contact);
 
             //   var item = new DocumentItem
             //   {
@@ -765,20 +785,27 @@ namespace Amica.vNext.Compatibility.Tests
 
             await _httpDataProvider.GetAsync(companyDs);
             Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
-            //         Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
             Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Valute.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Valute.Count, Is.EqualTo(2));
             Assert.That(companyDs.CausaliDocumenti.Count, Is.EqualTo(1));
             //         Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
-            //         Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
-            //         Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
+            Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
 
-            //         var a = companyDs.Anagrafiche[0];
             var d = companyDs.Documenti[0];
             Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Category.Code));
             Assert.That(d.Stato, Is.EqualTo((int)doc.Status.Code));
             Assert.That(d.ValuteRow.Sigla, Is.EqualTo(doc.Currency.Code));
             Assert.That(d.CausaliDocumentiRow.Nome, Is.EqualTo(doc.Reason));
+            Assert.That(d.NumeroParteNumerica, Is.EqualTo(doc.Number.Numeric));
+            Assert.That(d.NumeroParteTesto, Is.EqualTo(doc.Number.String));
+
+            Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
+            Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.Indirizzo, Is.EqualTo(doc.BillTo.Street));
+            Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.NazioniRow.Nome, Is.EqualTo(doc.BillTo.Country));
+            Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.PartitaIVA, Is.EqualTo(doc.BillTo.VatIdentificationNumber));
+            Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.CodiceFiscale, Is.EqualTo(doc.BillTo.TaxIdentificationNumber));
 
             Assert.That(d.RitenutaAcconto, Is.EqualTo(doc.WithholdingTax.Rate));
             Assert.That(d.RitenutaAccontoImporto, Is.EqualTo(doc.WithholdingTax.Amount));
@@ -788,16 +815,18 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.CassaPrevidenzialeNome, Is.EqualTo(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category)));
             Assert.That(d.CassaPrevidenzialeImporto, Is.EqualTo(doc.SocialSecurity[0].Amount));
             Assert.That(d.CassaPrevidenziale, Is.EqualTo(doc.SocialSecurity[0].Rate));
+
+            //Assert.That(d.AutistaNome, Is.EqualTo(shipping.Driver.Name));
+            //Assert.That(d.AutistaPatente, Is.EqualTo(shipping.Driver.LicenseID));
+            //Assert.That(d.AutistaTarga, Is.EqualTo(shipping.Driver.PlateID));
+            //Assert.That(d.AspettoBeni, Is.EqualTo(shipping.Appearance));
+            //Assert.That(d.Porto, Is.EqualTo(shipping.Terms.Code));
+            //Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti2.RagioneSociale1, Is.EqualTo(shipping.Courier.Name));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
             //         var n = companyDs.Nazioni[0];
             //         var ag = companyDs.AreeGeografiche[0];
-            //         Assert.That(a.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
-            //         Assert.That(a.Indirizzo, Is.EqualTo(doc.BillTo.Street));
-            //         Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.BillTo.Country));
-            //         Assert.That(a.PartitaIVA, Is.EqualTo(doc.BillTo.VatIdentificationNumber));
-            //         Assert.That(a.CodiceFiscale, Is.EqualTo(doc.BillTo.TaxIdentificationNumber));
 
             //         Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
             //         Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
@@ -1461,6 +1490,8 @@ namespace Amica.vNext.Compatibility.Tests
 
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
+            d.NumeroParteNumerica = 1;
+            d.NumeroParteTesto = "string";
             d.Stato = (int)Enums.Documenti.Stato.Emesso;
             d.IdTipoDocumento = (int)Enums.Documenti.Tipo.FatturaDifferita;
             d.IdValuta = v.Id;
