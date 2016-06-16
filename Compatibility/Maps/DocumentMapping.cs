@@ -80,6 +80,17 @@ namespace Amica.vNext.Compatibility.Maps
                 }
                 );
 
+            Parents.Add(
+                "IdPagamento", new DataRelationMapping
+                {
+                    PropertyName = "Payment",
+					ParentColumn = "Nome",
+					ChildProperty = "Name",
+                    RelationName = "FK_Pagamenti_Documenti",
+                    ChildType = typeof(Payment)
+                }
+                );
+
             //         Children.Add(
             //             new DataRelationMapping
             //             {

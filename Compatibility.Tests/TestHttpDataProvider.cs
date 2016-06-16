@@ -656,6 +656,9 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payments")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
             // add a company
@@ -675,6 +678,36 @@ namespace Amica.vNext.Compatibility.Tests
             var adam = new EveClient(Service);
             var companies = await adam.GetAsync<Company>("companies");
             var company = companies[0];
+
+            var payMethod = Factory<PaymentMethod>.Create();
+			payMethod.CompanyId = company.UniqueId;
+			payMethod.Name = "pm1";
+			payMethod.IsBankReceipt = true;
+            payMethod.ModalitaPagamentoPA = PAHelpers.ModalitaPagamentoPA["MP01"];
+            payMethod = await adam.PostAsync<PaymentMethod>("payment-methods", payMethod);
+
+            var fee = Factory<Fee>.Create();
+			fee.Name ="fee1";
+			fee.CompanyId = company.UniqueId;
+			fee.Amount = 1;
+            fee = await adam.PostAsync<Fee>("fees", fee);
+
+            var payment = Factory<Payment>.Create();
+			payment.CompanyId = company.UniqueId;
+			payment.Name = "payment1";
+			payment.ExtraDays = 30;
+			payment.ExactDays = true;
+            payment.Fee = fee;
+            //Bank
+            payment.Discount = 0.11;
+			payment.FirstPaymentDate = PaymentHelpers.FirstPaymentDates[PaymentDate.EndOfMonth];
+			payment.FirstPaymentOption = PaymentHelpers.FirstPaymentOptions[PaymentOption.VatIncluded];
+			payment.ForceEndOfMonth = false;
+			payment.FirstPaymentDateAdditionalDays = 13;
+			payment.Installments = 2;
+			payment.InstallmentsEveryNumberOfDays = 4;
+            payment.PaymentMethod = payMethod;
+            payment = await adam.PostAsync<Payment>("payments", payment);
 
             // create vnext contact and post it
             var contact = Factory<Contact>.Create();
@@ -752,6 +785,7 @@ namespace Amica.vNext.Compatibility.Tests
             //doc.Shipping = shipping;
             //doc.Total = 100;
             doc.BillTo = new BillingAddress(contact);
+            doc.Payment = payment;
 
             //   var item = new DocumentItem
             //   {
@@ -792,6 +826,9 @@ namespace Amica.vNext.Compatibility.Tests
             //         Assert.That(companyDs.Righe.Count, Is.EqualTo(2));
             Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
             Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Pagamenti.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Spese.Count, Is.EqualTo(1));
+            Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(1));
 
             var d = companyDs.Documenti[0];
             Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Category.Code));
@@ -815,6 +852,12 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.CassaPrevidenzialeNome, Is.EqualTo(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category)));
             Assert.That(d.CassaPrevidenzialeImporto, Is.EqualTo(doc.SocialSecurity[0].Amount));
             Assert.That(d.CassaPrevidenziale, Is.EqualTo(doc.SocialSecurity[0].Rate));
+
+            Assert.That(d.PagamentiRow.Nome, Is.EqualTo(doc.Payment.Name));
+            Assert.That(d.PagamentiRow.TipoPrimaRata, Is.EqualTo((int)doc.Payment.FirstPaymentOption.Code));
+            Assert.That(d.PagamentiRow.SpeseRow.Nome, Is.EqualTo(doc.Payment.Fee.Name));
+            Assert.That(d.PagamentiRow.ModalitàPagamentoRow.Nome, Is.EqualTo(doc.Payment.PaymentMethod.Name));
+
 
             //Assert.That(d.AutistaNome, Is.EqualTo(shipping.Driver.Name));
             //Assert.That(d.AutistaPatente, Is.EqualTo(shipping.Driver.LicenseID));
@@ -1433,6 +1476,9 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "documents")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "contacts")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payments")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -1488,6 +1534,30 @@ namespace Amica.vNext.Compatibility.Tests
             ds.Anagrafiche.AddAnagraficheRow(c);
 
 
+            var b = ds.Banche.NewBancheRow();
+            b.Nome = "bank1";
+            ds.Banche.AddBancheRow(b);
+
+            var mp = ds.ModalitàPagamento.NewModalitàPagamentoRow();
+            mp.Nome = "payment-method";
+            mp.CodicePagamentoPA = "MP01";
+            ds.ModalitàPagamento.AddModalitàPagamentoRow(mp);
+
+            var p = ds.Pagamenti.NewPagamentiRow();
+            p.Nome = "payment1";
+            p.FineMese = true;
+            p.GiorniEsatti = true;
+            p.GiorniExtra = 5;
+            p.InizioScadenze = 23;
+            p.Periodicità = 2;
+            p.Rate = 2;
+            p.Sconto = 0.1;
+            p.PeriodoPrimaRata = (int)Enums.Pagamenti.PeriodoPrimaRata.FineMese;
+            p.TipoPrimaRata = (int)Enums.Pagamenti.PrimaRata.ConSpese;
+            //p.IdBanca = b.Id;
+            p.IdModalitàPagamento = mp.Id;
+            ds.Pagamenti.AddPagamentiRow(p);
+
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
             d.NumeroParteNumerica = 1;
@@ -1498,6 +1568,7 @@ namespace Amica.vNext.Compatibility.Tests
             d.IdCausaleDocumento = cd.Id;
             d.TotaleFattura = 99;
             d.Data = DateTime.Now;
+            d.IdPagamento = p.Id;
 
 			d.RitenutaAcconto = 99;
 			d.RitenutaAccontoSuImponibile = 10.1;
@@ -1544,6 +1615,9 @@ namespace Amica.vNext.Compatibility.Tests
             //Assert.That(doc.SocialSecurity.Vat.Rate, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Aliquota));
             //Assert.That(doc.SocialSecurity.Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
             //Assert.That(doc.SocialSecurity.Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
+
+            Assert.That(doc.Payment.Name, Is.EqualTo(d.PagamentiRow.Nome));
+            Assert.That(doc.Payment.PaymentMethod.Name, Is.EqualTo(d.PagamentiRow.ModalitàPagamentoRow.Nome));
 
             //   cds.AcceptChanges();
             //   ds.AcceptChanges();
