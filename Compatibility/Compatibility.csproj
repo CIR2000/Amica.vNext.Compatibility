@@ -109,7 +109,7 @@
     <Compile Include="Maps\FieldMapping.cs" />
     <Compile Include="Maps\IMapping.cs" />
     <Compile Include="Maps\CompanyMapping.cs" />
-    <Compile Include="Maps\ContactMinimalMapping.cs" />
+    <Compile Include="Maps\BillingAddressMapping.cs" />
     <Compile Include="Maps\DocumentMapping.cs" />
     <Compile Include="HttpDataProvider.cs" />
     <Compile Include="Map.cs" />

@@ -1,8 +1,8 @@
 ﻿namespace Amica.vNext.Compatibility.Maps
 {
-    internal class ContactMinimalMapping : Mapping
+    internal class BillingAddressMapping : Mapping
     {
-        internal ContactMinimalMapping()
+        internal BillingAddressMapping()
         {
             Fields.Add("Id", new FieldMapping {PropertyName = "UniqueId"});
             Fields.Add("RagioneSociale1", new FieldMapping { PropertyName = "Name"});
