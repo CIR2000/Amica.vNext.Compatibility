@@ -23,6 +23,7 @@ namespace Amica.vNext.Compatibility.Maps
                 DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
                 UpstreamTransform = (x) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
             });
+            Fields.Add("AutistaNome", new FieldMapping { PropertyName = "Shipping.Driver.Name" });
 
             Parents.Add(
                 "IdTipoDocumento", 
@@ -79,6 +80,16 @@ namespace Amica.vNext.Compatibility.Maps
                     ChildType = typeof(BillingAddress)
                 }
                 );
+
+            Parents.Add(
+                "IdAgente", new DataRelationMapping
+                {
+                    PropertyName = "Agent",
+                    RelationName = "FK_Anagrafiche_Documenti1",
+                    ChildType = typeof(ContactDetailsEx)
+                }
+                );
+
 
             Parents.Add(
                 "IdPagamento", new DataRelationMapping

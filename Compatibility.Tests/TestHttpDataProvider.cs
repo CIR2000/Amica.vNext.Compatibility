@@ -746,21 +746,21 @@ namespace Amica.vNext.Compatibility.Tests
             ss.Withholding = true;
             ss.Vat = vat;
 
-            //         var shipping = Factory<Shipping>.Create();
-            //         shipping.Driver = new Driver { Name = "nicola", LicenseID = "license id", PlateID = "plate id" };
-            //         shipping.Appearance = "appearance";
+            //var shipping = Factory<Shipping>.Create();
+            //shipping.Driver = new Driver { Name = "nicola", LicenseID = "license id", PlateID = "plate id" };
+            //shipping.Appearance = "appearance";
             //shipping.Terms = DocumentHelpers.TransportTerms[DocumentShippingTerm.DeliveredDutyPaid];
-            //         shipping.Courier = new ContactDetailsEx
-            //         {
-            //             Fax = "fax",
-            //             Mail = "mail",
-            //             Mobile = "mobile",
-            //             Name = "name",
-            //             PecMail = "pecmail",
-            //             Phone = "phone",
-            //             WebSite = "website",
-            //	UniqueId ="id"
-            //         };
+            //shipping.Courier = new ContactDetailsEx
+            //{
+            //    Fax = "fax",
+            //    Mail = "mail",
+            //    Mobile = "mobile",
+            //    Name = "name",
+            //    PecMail = "pecmail",
+            //    Phone = "phone",
+            //    WebSite = "website",
+            //    UniqueId = "id"
+            //};
 
             //var i = new Invoice();
             doc.Number = new DocumentNumber { Numeric = 1, String = "hello" };
@@ -784,6 +784,17 @@ namespace Amica.vNext.Compatibility.Tests
             doc.SocialSecurity.Add(ss);
 
             //doc.Shipping = shipping;
+            doc.Agent = new ContactDetailsEx
+            {
+				 Fax = "fax",
+				 Mail = "mail",
+				 Mobile = "mobile",
+				 Name ="agent",
+				 PecMail ="pecmail",
+				 Phone ="phone",
+				 UniqueId = contact.UniqueId,
+				 WebSite = "website"
+            };
             //doc.Total = 100;
             doc.BillTo = new BillingAddress(contact);
             doc.Payment = payment;
@@ -859,6 +870,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.PagamentiRow.SpeseRow.Nome, Is.EqualTo(doc.Payment.Fee.Name));
             Assert.That(d.PagamentiRow.ModalitàPagamentoRow.Nome, Is.EqualTo(doc.Payment.PaymentMethod.Name));
 
+            Assert.That(d.IdAgente, Is.EqualTo(d.IdAnagrafica));
 
             //Assert.That(d.AutistaNome, Is.EqualTo(shipping.Driver.Name));
             //Assert.That(d.AutistaPatente, Is.EqualTo(shipping.Driver.LicenseID));
@@ -1532,6 +1544,11 @@ namespace Amica.vNext.Compatibility.Tests
 		    c.IdNazione = n.Id;
             c.IdAreaGeografica = ag.Id;
             c.IdValuta = v.Id;
+            c.Email = "email";
+            c.http = "website";
+            c.Fax = "fax";
+            c.Telefono1 = "tel1";
+            c.Telefono2 = "tel2";
             ds.Anagrafiche.AddAnagraficheRow(c);
 
 
@@ -1561,6 +1578,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
+            d.IdAgente = c.Id;
             d.NumeroParteNumerica = 1;
             d.NumeroParteTesto = "string";
             d.Stato = (int)Enums.Documenti.Stato.Emesso;
@@ -1604,6 +1622,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
             Assert.That(doc.Currency.Code, Is.EqualTo(d.ValuteRow.Sigla));
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
+
             Assert.That(doc.WithholdingTax.Amount, Is.EqualTo(d.RitenutaAccontoImporto));
             Assert.That(doc.WithholdingTax.Rate, Is.EqualTo(d.RitenutaAcconto));
             Assert.That(doc.WithholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
@@ -1620,6 +1639,13 @@ namespace Amica.vNext.Compatibility.Tests
 
             Assert.That(doc.Payment.Name, Is.EqualTo(d.PagamentiRow.Nome));
             Assert.That(doc.Payment.PaymentMethod.Name, Is.EqualTo(d.PagamentiRow.ModalitàPagamentoRow.Nome));
+
+            Assert.That(doc.Agent.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.RagioneSociale1));
+            Assert.That(doc.Agent.Mail, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Email));
+            Assert.That(doc.Agent.Phone, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Telefono1));
+            Assert.That(doc.Agent.Mobile, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Telefono2));
+            Assert.That(doc.Agent.Fax, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Fax));
+            Assert.That(doc.Agent.WebSite, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.http));
 
             //   cds.AcceptChanges();
             //   ds.AcceptChanges();

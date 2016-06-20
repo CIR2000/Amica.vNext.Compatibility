@@ -29,6 +29,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(PaymentMethod), new PaymentMethodMapping());
             Topology.Add(typeof(Fee), new FeeMapping());
             Topology.Add(typeof(Payment), new PaymentMapping());
+            Topology.Add(typeof(ContactDetailsEx), new ContactDetailsExMapping());
         }
 
 #region TO

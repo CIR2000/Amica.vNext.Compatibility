@@ -98,6 +98,7 @@
     <Compile Include="ActionPerformed.cs" />
     <Compile Include="CassaPrevidenzialeSocialSecurity.cs" />
     <Compile Include="Maps\AddressExWithNameMapping.cs" />
+    <Compile Include="Maps\ContactDetailsExMapping.cs" />
     <Compile Include="Maps\PaymentMapping.cs" />
     <Compile Include="Maps\FeeMapping.cs" />
     <Compile Include="Maps\PaymentMethodMapping.cs" />
