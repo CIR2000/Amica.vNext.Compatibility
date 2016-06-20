@@ -9,6 +9,9 @@
 			Fields.Add("Indirizzo", new FieldMapping {PropertyName = "Street"});
             Fields.Add("CodiceFiscale", new FieldMapping { PropertyName = "TaxIdentificationNumber" });
             Fields.Add("PartitaIVA", new VatIdNumberFieldMapping());
+            Fields.Add("Località", new FieldMapping { PropertyName = "Town" });
+            Fields.Add("CAP", new FieldMapping { PropertyName = "PostalCode" });
+            Fields.Add("Provincia", new FieldMapping { PropertyName = "StateOrProvince" });
 
             Parents.Add(
                 "IdNazione",

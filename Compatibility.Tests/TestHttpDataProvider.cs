@@ -799,25 +799,8 @@ namespace Amica.vNext.Compatibility.Tests
             doc.BillTo = new BillingAddress(contact);
             doc.Payment = payment;
 
-            //   var item = new DocumentItem
-            //   {
-            //       Description = "descriptrion1",
-            //       Sku = "sku1"
-            //   };
-            //   doc.Items.Add(item);
-
             adam.ResourceName = "documents";
             doc = await adam.PostAsync<Invoice>(doc);
-
-            //         var doc2 = new Invoice
-            //         {
-            //             CompanyId = company.UniqueId,
-            //             Total = 99,
-            //             BillTo = doc.BillTo,
-            //         };
-            //doc2.Items.Add(new DocumentItem { Description = "description3", Sku = "sku3" });
-
-            //         doc2 = await adam.PostAsync<Invoice>(doc2);
 
             // now try downloading the new document into Amica companyDataSet
             var companyDs = new companyDataSet();
@@ -1549,6 +1532,9 @@ namespace Amica.vNext.Compatibility.Tests
             c.Fax = "fax";
             c.Telefono1 = "tel1";
             c.Telefono2 = "tel2";
+            c.Località = "loc";
+            c.CAP = "cap";
+            c.Provincia = "pr";
             ds.Anagrafiche.AddAnagraficheRow(c);
 
 
@@ -1620,6 +1606,16 @@ namespace Amica.vNext.Compatibility.Tests
             var doc  = docs[0];
             Assert.That((int)doc.Category.Code, Is.EqualTo(d.IdTipoDocumento));
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
+
+            Assert.That(doc.BillTo.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1));
+            Assert.That(doc.BillTo.Country, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.NazioniRow.Nome));
+            Assert.That(doc.BillTo.TaxIdentificationNumber, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.CodiceFiscale));
+            Assert.That(doc.BillTo.VatIdentificationNumber, Is.EqualTo("IT" + d.AnagraficheRowByFK_Anagrafiche_Documenti.PartitaIVA));
+            Assert.That(doc.BillTo.Street, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.Indirizzo));
+            Assert.That(doc.BillTo.Town, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.Località));
+            Assert.That(doc.BillTo.PostalCode, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.CAP));
+            Assert.That(doc.BillTo.StateOrProvince, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.Provincia));
+
             Assert.That(doc.Currency.Code, Is.EqualTo(d.ValuteRow.Sigla));
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
 
