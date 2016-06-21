@@ -768,6 +768,7 @@ namespace Amica.vNext.Compatibility.Tests
             doc.CompanyId = company.UniqueId;
 			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
             doc.Status = DocumentHelpers.Statuses[DocumentStatus.Issued];
+            doc.ExpirationDate = DateTime.Now.AddDays(1);
 
             doc.Currency = Factory<Currency>.Create();
             doc.Currency.Name = "US Dollars";
@@ -847,6 +848,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.CausaliDocumentiRow.Nome, Is.EqualTo(doc.Reason));
             Assert.That(d.NumeroParteNumerica, Is.EqualTo(doc.Number.Numeric));
             Assert.That(d.NumeroParteTesto, Is.EqualTo(doc.Number.String));
+            Assert.That(d.DataValidità, Is.EqualTo(doc.ExpirationDate));
 
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.Indirizzo, Is.EqualTo(doc.BillTo.Street));
@@ -1613,6 +1615,7 @@ namespace Amica.vNext.Compatibility.Tests
             d.TotaleFattura = 99;
             d.Data = DateTime.Now;
             d.IdPagamento = p.Id;
+            d.DataValidità = DateTime.Now.AddDays(1);
 
 			d.RitenutaAcconto = 99;
 			d.RitenutaAccontoSuImponibile = 10.1;
@@ -1645,6 +1648,7 @@ namespace Amica.vNext.Compatibility.Tests
             var doc  = docs[0];
             Assert.That(doc.Number.Numeric, Is.EqualTo(1));
             Assert.That(doc.Number.String, Is.EqualTo("string"));
+            Assert.That(doc.ExpirationDate.ToString(), Is.EqualTo(d.DataValidità.ToString()));
             Assert.That((int)doc.Category.Code, Is.EqualTo(d.IdTipoDocumento));
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
 

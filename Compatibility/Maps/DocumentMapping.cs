@@ -15,6 +15,7 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("Data", new FieldMapping {PropertyName = "Date"});
             Fields.Add("NumeroParteNumerica", new FieldMapping {PropertyName = "Number.Numeric"});
             Fields.Add("NumeroParteTesto", new FieldMapping {PropertyName = "Number.String"});
+            Fields.Add("DataValidità", new FieldMapping {PropertyName = "ExpirationDate"});
             Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WithholdingTax.Rate"});
             Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WithholdingTax.TaxableShare"});
             Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WithholdingTax.Amount"});
