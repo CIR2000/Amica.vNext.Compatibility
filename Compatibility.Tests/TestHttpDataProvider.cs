@@ -1643,6 +1643,8 @@ namespace Amica.vNext.Compatibility.Tests
             var docs = await adam.GetAsync<Document>();
             Assert.That(docs.Count, Is.EqualTo(1));
             var doc  = docs[0];
+            Assert.That(doc.Number.Numeric, Is.EqualTo(1));
+            Assert.That(doc.Number.String, Is.EqualTo("string"));
             Assert.That((int)doc.Category.Code, Is.EqualTo(d.IdTipoDocumento));
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
 
