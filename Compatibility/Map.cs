@@ -23,8 +23,8 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Contact), new ContactMapping());
             Topology.Add(typeof(DocumentItem), new DocumentItemMapping());
             Topology.Add(typeof(BillingAddress), new BillingAddressMapping());
+            Topology.Add(typeof(ShippingAddress), new ShippingAddressMapping());
             Topology.Add(typeof(Currency), new CurrencyMapping());
-            Topology.Add(typeof(ShippingAddress), new AddressExWithNameMapping());
             Topology.Add(typeof(Vat), new VatMapping());
             Topology.Add(typeof(PaymentMethod), new PaymentMethodMapping());
             Topology.Add(typeof(Fee), new FeeMapping());
@@ -268,8 +268,15 @@ namespace Amica.vNext.Compatibility
 						}
 						else
 						{
-							var parentObject = prop.GetValue(realSource, null);
-							value = (parentObject != null) ? HttpDataProvider.GetLocalRowId((IUniqueId)parentObject) : DBNull.Value;
+							if (dataRelation.DownstreamTransform != null)
+                            {
+                                value = dataRelation.DownstreamTransform(source, row);
+                            }
+							else
+                            {
+								var parentObject = prop.GetValue(realSource, null);
+								value = (parentObject != null) ? HttpDataProvider.GetLocalRowId((IUniqueId)parentObject) : DBNull.Value;
+                            }
 						}
 					}
                 }

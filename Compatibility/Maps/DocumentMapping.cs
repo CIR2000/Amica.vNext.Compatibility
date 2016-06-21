@@ -1,6 +1,10 @@
-﻿using Amica.vNext.Compatibility.Helpers;
+﻿using System;
+using System.Data;
+using Amica.Data;
+using Amica.vNext.Compatibility.Helpers;
 using Amica.vNext.Models;
 using Amica.vNext.Models.Documents;
+using static Amica.Data.companyDataSet;
 
 namespace Amica.vNext.Compatibility.Maps
 {
@@ -23,7 +27,7 @@ namespace Amica.vNext.Compatibility.Maps
                 DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
                 UpstreamTransform = (x) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
             });
-            Fields.Add("AutistaNome", new FieldMapping { PropertyName = "Shipping.Driver.Name" });
+            //Fields.Add("AutistaNome", new FieldMapping { PropertyName = "Shipping.Driver.Name" });
 
             Parents.Add(
                 "IdTipoDocumento", 
@@ -78,8 +82,16 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "BillTo",
                     RelationName = "FK_Anagrafiche_Documenti",
                     ChildType = typeof(BillingAddress)
-                }
-                );
+                });
+
+            Parents.Add(
+                "IdDestinazione", new DataRelationMapping
+                {
+                    PropertyName = "ShipTo",
+                    RelationName = "FK_Indirizzi_Documenti",
+                    ChildType = typeof(ShippingAddress),
+                    DownstreamTransform = (doc, row) => GetIndirizziId(doc, row)
+                });
 
             Parents.Add(
                 "IdAgente", new DataRelationMapping
@@ -87,9 +99,7 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "Agent",
                     RelationName = "FK_Anagrafiche_Documenti1",
                     ChildType = typeof(ContactDetailsEx)
-                }
-                );
-
+                }); 
 
             Parents.Add(
                 "IdPagamento", new DataRelationMapping
@@ -99,8 +109,7 @@ namespace Amica.vNext.Compatibility.Maps
 					ChildProperty = "Name",
                     RelationName = "FK_Pagamenti_Documenti",
                     ChildType = typeof(Payment)
-                }
-                );
+                });
 
             //         Children.Add(
             //             new DataRelationMapping
@@ -110,6 +119,40 @@ namespace Amica.vNext.Compatibility.Maps
             //                 RelationName = "FK_Documenti_Righe",
             //             }
             //);
+        }
+		internal static object GetIndirizziId(object d, object row)
+        {
+            var document = (Document)d;
+            if (document.ShipTo == null) return DBNull.Value;
+
+            var documentiRow = ((DocumentiRow)row);
+
+            var target = document.ShipTo.Street;
+            if (target == null) return DBNull.Value;
+
+            var indirizziRows = documentiRow.AnagraficheRowByFK_Anagrafiche_Documenti.GetIndirizziRows();
+
+			foreach (var i in indirizziRows)
+            {
+                if (i.Indirizzo == document.ShipTo.Street && i.Località == document.ShipTo.Town)
+                    return i.Id;
+            }
+
+            var indirizzi = ((companyDataSet)documentiRow.Table.DataSet).Indirizzi;
+            var indir = indirizzi.NewIndirizziRow();
+            indir.IdAnagrafica = documentiRow.IdAnagrafica;
+            indir.Indirizzo = document.ShipTo.Street;
+            indir.Località = document.ShipTo.Town;
+            indir.Telefono1 = document.ShipTo.Phone;
+            indir.Telefono2 = document.ShipTo.Mobile;
+            indir.Fax = document.ShipTo.Fax;
+            indir.Email = document.ShipTo.Mail;
+            indir.CAP = document.ShipTo.PostalCode;
+            indir.IsAttivo = true;
+            indir.Provincia = document.ShipTo.StateOrProvince;
+            indir.RagioneSociale1 = document.ShipTo.Name;
+            indirizzi.AddIndirizziRow(indir);
+            return indir.Id;
         }
     }
 }

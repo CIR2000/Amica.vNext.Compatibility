@@ -773,6 +773,21 @@ namespace Amica.vNext.Compatibility.Tests
             doc.Currency.Name = "US Dollars";
             doc.Currency.Code ="USD";
 
+            doc.ShipTo = new ShippingAddress()
+            {
+				Country = "country",
+				Fax = "fax",
+				Mail = "mail",
+				Mobile = "mobile",
+				Name = "name",
+				Phone = "phone",
+				PostalCode = "pc",
+				StateOrProvince = "sp",
+				Street = "street",
+				Town = "town",
+				WebSite = "website"
+            };
+
 			doc.Reason = "Vendita";
 
             doc.WithholdingTax = Factory<WithholdingTax>.Create();
@@ -854,6 +869,17 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.PagamentiRow.ModalitàPagamentoRow.Nome, Is.EqualTo(doc.Payment.PaymentMethod.Name));
 
             Assert.That(d.IdAgente, Is.EqualTo(d.IdAnagrafica));
+
+            Assert.That(d.IndirizziRow.Indirizzo, Is.EqualTo(doc.ShipTo.Street));
+            Assert.That(d.IndirizziRow.Località, Is.EqualTo(doc.ShipTo.Town));
+            Assert.That(d.IndirizziRow.Provincia, Is.EqualTo(doc.ShipTo.StateOrProvince));
+            Assert.That(d.IndirizziRow.CAP, Is.EqualTo(doc.ShipTo.PostalCode));
+            Assert.That(d.IndirizziRow.Telefono1, Is.EqualTo(doc.ShipTo.Phone));
+            Assert.That(d.IndirizziRow.Telefono2, Is.EqualTo(doc.ShipTo.Mobile));
+            Assert.That(d.IndirizziRow.Fax, Is.EqualTo(doc.ShipTo.Fax));
+            Assert.That(d.IndirizziRow.RagioneSociale1, Is.EqualTo(doc.ShipTo.Name));
+            Assert.That(d.IndirizziRow.Email, Is.EqualTo(doc.ShipTo.Mail));
+            Assert.That(d.IndirizziRow.IsAttivo, Is.True);
 
             //Assert.That(d.AutistaNome, Is.EqualTo(shipping.Driver.Name));
             //Assert.That(d.AutistaPatente, Is.EqualTo(shipping.Driver.LicenseID));
@@ -1537,6 +1563,18 @@ namespace Amica.vNext.Compatibility.Tests
             c.Provincia = "pr";
             ds.Anagrafiche.AddAnagraficheRow(c);
 
+            var i = ds.Indirizzi.NewIndirizziRow();
+            i.IdAnagrafica = c.Id;
+            i.Indirizzo = "indirizzo";
+            i.Località = "loc";
+            i.CAP = "cap";
+            i.Fax = "fax";
+            i.Telefono1 = "tel1";
+            i.Telefono2 = "tel2";
+            i.Email = "mail";
+            i.RagioneSociale1 = "Cantiere";
+            i.Provincia = "pr";
+            ds.Indirizzi.AddIndirizziRow(i);
 
             var b = ds.Banche.NewBancheRow();
             b.Nome = "bank1";
@@ -1565,6 +1603,7 @@ namespace Amica.vNext.Compatibility.Tests
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
             d.IdAgente = c.Id;
+            d.IdDestinazione = i.Id;
             d.NumeroParteNumerica = 1;
             d.NumeroParteTesto = "string";
             d.Stato = (int)Enums.Documenti.Stato.Emesso;
@@ -1616,6 +1655,16 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.BillTo.PostalCode, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.CAP));
             Assert.That(doc.BillTo.StateOrProvince, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.Provincia));
 
+            Assert.That(doc.ShipTo.Name, Is.EqualTo(d.IndirizziRow.RagioneSociale1));
+            Assert.That(doc.ShipTo.Phone, Is.EqualTo(d.IndirizziRow.Telefono1));
+            Assert.That(doc.ShipTo.Mobile, Is.EqualTo(d.IndirizziRow.Telefono2));
+            Assert.That(doc.ShipTo.Fax, Is.EqualTo(d.IndirizziRow.Fax));
+            Assert.That(doc.ShipTo.Mail, Is.EqualTo(d.IndirizziRow.Email));
+            Assert.That(doc.ShipTo.Street, Is.EqualTo(d.IndirizziRow.Indirizzo));
+            Assert.That(doc.ShipTo.Town, Is.EqualTo(d.IndirizziRow.Località));
+            Assert.That(doc.ShipTo.PostalCode, Is.EqualTo(d.IndirizziRow.CAP));
+            Assert.That(doc.ShipTo.StateOrProvince, Is.EqualTo(d.IndirizziRow.Provincia));
+
             Assert.That(doc.Currency.Code, Is.EqualTo(d.ValuteRow.Sigla));
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
 
@@ -1642,6 +1691,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.Agent.Mobile, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Telefono2));
             Assert.That(doc.Agent.Fax, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Fax));
             Assert.That(doc.Agent.WebSite, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.http));
+
 
             //   cds.AcceptChanges();
             //   ds.AcceptChanges();
