@@ -771,6 +771,8 @@ namespace Amica.vNext.Compatibility.Tests
             doc.ExpirationDate = DateTime.Now.AddDays(1);
             doc.BaseDateForPayments = DateTime.Now;
 
+            doc.Rebate = 10.5M;
+
             doc.Bank = Factory<Bank>.Create();
             doc.Bank.Name = "bank";
             doc.Bank.IbanCode = "IT40S0542811101000000123456";
@@ -858,6 +860,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.DataInizioScadenze, Is.EqualTo(doc.BaseDateForPayments));
             Assert.That(d.BancaNome, Is.EqualTo(doc.Bank.Name));
             Assert.That(d.BancaIBAN, Is.EqualTo(doc.Bank.IbanCode));
+            Assert.That(d.Abbuono, Is.EqualTo(doc.Rebate));
 
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.Indirizzo, Is.EqualTo(doc.BillTo.Street));
@@ -1628,6 +1631,7 @@ namespace Amica.vNext.Compatibility.Tests
             d.DataInizioScadenze = DateTime.Now;
             d.BancaNome = "bank";
             d.BancaIBAN = "IT40S0542811101000000123456";
+            d.Abbuono = 10;
 
 			d.RitenutaAcconto = 99;
 			d.RitenutaAccontoSuImponibile = 10.1;
@@ -1666,6 +1670,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.BaseDateForPayments.ToString(), Is.EqualTo(d.DataInizioScadenze.ToString()));
             Assert.That(doc.Bank.Name, Is.EqualTo(d.BancaNome));
             Assert.That(doc.Bank.IbanCode, Is.EqualTo(d.BancaIBAN));
+            Assert.That(doc.Rebate, Is.EqualTo(d.Abbuono));
 
             Assert.That(doc.BillTo.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1));
             Assert.That(doc.BillTo.Country, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.NazioniRow.Nome));

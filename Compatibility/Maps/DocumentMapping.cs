@@ -31,6 +31,8 @@ namespace Amica.vNext.Compatibility.Maps
                 DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
                 UpstreamTransform = (x) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
             });
+
+            Fields.Add("Abbuono", new FieldMapping {PropertyName = "Rebate"});
             //Fields.Add("AutistaNome", new FieldMapping { PropertyName = "Shipping.Driver.Name" });
 
             Parents.Add(
