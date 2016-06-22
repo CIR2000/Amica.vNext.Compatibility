@@ -17,6 +17,8 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("NumeroParteTesto", new FieldMapping {PropertyName = "Number.String"});
             Fields.Add("DataValidità", new FieldMapping {PropertyName = "ExpirationDate"});
             Fields.Add("DataInizioScadenze", new FieldMapping {PropertyName = "BaseDateForPayments"});
+            Fields.Add("BancaNome", new FieldMapping {PropertyName = "Bank.Name"});
+            Fields.Add("BancaIBAN", new FieldMapping {PropertyName = "Bank.IbanCode"});
             Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WithholdingTax.Rate"});
             Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WithholdingTax.TaxableShare"});
             Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WithholdingTax.Amount"});
