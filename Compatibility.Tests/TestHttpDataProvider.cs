@@ -746,21 +746,26 @@ namespace Amica.vNext.Compatibility.Tests
             ss.Withholding = true;
             ss.Vat = vat;
 
-            //var shipping = Factory<Shipping>.Create();
-            //shipping.Driver = new Driver { Name = "nicola", LicenseID = "license id", PlateID = "plate id" };
-            //shipping.Appearance = "appearance";
-            //shipping.Terms = DocumentHelpers.TransportTerms[DocumentShippingTerm.DeliveredDutyPaid];
-            //shipping.Courier = new ContactDetailsEx
-            //{
-            //    Fax = "fax",
-            //    Mail = "mail",
-            //    Mobile = "mobile",
-            //    Name = "name",
-            //    PecMail = "pecmail",
-            //    Phone = "phone",
-            //    WebSite = "website",
-            //    UniqueId = "id"
-            //};
+            doc.Shipping = Factory<Shipping>.Create();
+            doc.Shipping.Driver = new Driver { Name = "nicola", LicenseID = "license id", PlateID = "plate id" };
+            doc.Shipping.Appearance = "appearance";
+            doc.Shipping.Terms = DocumentHelpers.TransportTerms[DocumentShippingTerm.DeliveredDutyPaid];
+            doc.Shipping.TransportMode = DocumentHelpers.TransportModes[DocumentTransportMode.Courier];
+            doc.Shipping.Volume = 10;
+            doc.Shipping.UnitOfMeasure = "KG";
+            doc.Shipping.Weight = 100;
+            doc.Shipping.Date = DateTime.Now;
+            doc.Shipping.Courier = new ContactDetailsEx()
+            {
+                Fax = contact.Address.Fax,
+                Mail = contact.Address.Mail,
+                Mobile = contact.Address.Mobile,
+                Name = contact.Name,
+                PecMail = contact.Address.PecMail,
+                Phone = contact.Address.Phone,
+                WebSite = contact.Address.WebSite,
+                UniqueId = contact.UniqueId,
+            };
 
             //var i = new Invoice();
             doc.Number = new DocumentNumber { Numeric = 1, String = "hello" };
@@ -807,7 +812,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             doc.SocialSecurity.Add(ss);
 
-            //doc.Shipping = shipping;
+
             doc.Agent = new ContactDetailsEx
             {
 				 Fax = "fax",
@@ -895,12 +900,19 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.IndirizziRow.Email, Is.EqualTo(doc.ShipTo.Mail));
             Assert.That(d.IndirizziRow.IsAttivo, Is.True);
 
-            //Assert.That(d.AutistaNome, Is.EqualTo(shipping.Driver.Name));
-            //Assert.That(d.AutistaPatente, Is.EqualTo(shipping.Driver.LicenseID));
-            //Assert.That(d.AutistaTarga, Is.EqualTo(shipping.Driver.PlateID));
-            //Assert.That(d.AspettoBeni, Is.EqualTo(shipping.Appearance));
-            //Assert.That(d.Porto, Is.EqualTo(shipping.Terms.Code));
-            //Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti2.RagioneSociale1, Is.EqualTo(shipping.Courier.Name));
+            Assert.That(d.AutistaNome, Is.EqualTo(doc.Shipping.Driver.Name));
+            Assert.That(d.AutistaPatente, Is.EqualTo(doc.Shipping.Driver.LicenseID));
+            Assert.That(d.AutistaTarga, Is.EqualTo(doc.Shipping.Driver.PlateID));
+            Assert.That(d.AspettoBeni, Is.EqualTo(doc.Shipping.Appearance));
+            Assert.That(d.Porto, Is.EqualTo((int)doc.Shipping.Terms.Code));
+            Assert.That(d.MezzoTrasporto, Is.EqualTo((int)doc.Shipping.TransportMode.Code));
+            Assert.That(d.Peso, Is.EqualTo(doc.Shipping.Weight));
+            Assert.That(d.Colli, Is.EqualTo(doc.Shipping.Volume));
+            Assert.That(d.PesoUM, Is.EqualTo(doc.Shipping.UnitOfMeasure));
+            Assert.That(d.DataTrasporto.ToShortDateString(), Is.EqualTo(doc.Shipping.Date.ToShortDateString()));
+            Assert.That(d.OraTrasporto.ToShortTimeString(), Is.EqualTo(doc.Shipping.Date.ToShortTimeString()));
+            Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti2.RagioneSociale1, 
+				Is.EqualTo(doc.Shipping.Courier.Name));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
@@ -1633,6 +1645,18 @@ namespace Amica.vNext.Compatibility.Tests
             d.BancaIBAN = "IT40S0542811101000000123456";
             d.Abbuono = 10;
 
+            d.AutistaNome = "autista";
+            d.AutistaPatente = "patente";
+            d.AutistaTarga = "targa";
+			d.Porto = 1;
+            d.MezzoTrasporto = 2;
+            d.DataTrasporto = DateTime.Now;
+            d.OraTrasporto = DateTime.Now.AddDays(-1).AddHours(1);
+			d.AspettoBeni = "aspetto";
+			d.Peso = 10;
+            d.PesoUM = "KG";
+            d.Colli = 2;
+            d.IdVettore = c.Id;
 			d.RitenutaAcconto = 99;
 			d.RitenutaAccontoSuImponibile = 10.1;
 			d.IsRitenutaIncludeCassaPrevidenziale = true;
@@ -1718,6 +1742,19 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.Agent.Fax, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Fax));
             Assert.That(doc.Agent.WebSite, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.http));
 
+            Assert.That(doc.Shipping.Appearance, Is.EqualTo(d.AspettoBeni));
+            Assert.That(doc.Shipping.Weight, Is.EqualTo(d.Peso));
+            Assert.That(doc.Shipping.UnitOfMeasure, Is.EqualTo(d.PesoUM));
+            Assert.That(doc.Shipping.Volume, Is.EqualTo(d.Colli));
+            Assert.That(doc.Shipping.Courier.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti2.RagioneSociale1));
+            Assert.That(doc.Shipping.Driver.Name, Is.EqualTo(d.AutistaNome));
+            Assert.That(doc.Shipping.Driver.LicenseID, Is.EqualTo(d.AutistaPatente));
+            Assert.That(doc.Shipping.Driver.PlateID, Is.EqualTo(d.AutistaTarga));
+            Assert.That((int)doc.Shipping.TransportMode.Code, Is.EqualTo(d.MezzoTrasporto));
+            Assert.That((int)doc.Shipping.Terms.Code, Is.EqualTo(d.Porto));
+            Assert.That(doc.Shipping.Date.ToShortTimeString(), Is.EqualTo(d.OraTrasporto.ToShortTimeString()));
+            Assert.That(doc.Shipping.Date.ToShortDateString(), Is.EqualTo(d.DataTrasporto.ToShortDateString()));
+            //Assert.That(doc.Shipping.Date.TimeOfDay, Is.EqualTo(d.OraTrasporto));
 
             //   cds.AcceptChanges();
             //   ds.AcceptChanges();

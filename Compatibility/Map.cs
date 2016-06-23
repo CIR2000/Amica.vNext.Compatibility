@@ -70,15 +70,16 @@ namespace Amica.vNext.Compatibility
         }
 		internal static void ProcessDataRowFields(DataRow row, object target, IMapping mapping)
         {
-			foreach (var fieldMapping in mapping.Fields)
+            foreach (var fieldMapping in mapping.Fields)
             {
                 object activeTarget;
-                var transformedSourceValue = GetTransformedColumnValue(row, fieldMapping.Key, fieldMapping.Value.UpstreamTransform);
+                var transformedSourceValue = fieldMapping.Value.UpstreamTransform(
+                    row[row.Table.Columns[fieldMapping.Key]], target);
                 if (transformedSourceValue == DBNull.Value) continue;
 
                 var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget, appendToEmptyList: true);
                 if (activeTarget == null) continue;
-                var value = GetAdjustedColumnValue(row, fieldMapping.Key, fieldMapping.Value.UpstreamTransform, prop);
+                var value = GetAdjustedColumnValue(row, fieldMapping.Key, transformedSourceValue, prop);
 
                 prop.SetValue(activeTarget, value, null);
             }
@@ -95,48 +96,56 @@ namespace Amica.vNext.Compatibility
 
                 if (dataRelation.RelationName == null)
                 {
-                    value = dataRelation.UpstreamTransform(row[dataRelation.ParentColumn]);
+                    value = dataRelation.UpstreamTransform(row[dataRelation.ParentColumn], target);
                 }
                 else
                 {
 					var parentRow = row.GetParentRow(dataRelation.RelationName);
-
-					if (parentMapping.Value.ChildType == null)
-					{
-						value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, dataRelation.UpstreamTransform, prop);
-					}
+                    if (parentRow == null)
+                    {
+                        value = null;
+                    }
 					else
-					{
-                        if (parentRow != null)
-                        {
-							value = Activator.CreateInstance(dataRelation.ChildType);
-
-                            var cachedMeta = HttpDataProvider.GetHttpMappingByRow(parentRow);
-							if (cachedMeta != null)
+                    {
+						if (parentMapping.Value.ChildType == null)
+						{
+							value = dataRelation.UpstreamTransform(parentRow[dataRelation.ParentColumn], target);
+							value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, value, prop);
+						}
+						else
+						{
+							if (parentRow != null)
 							{
-								if (value is BaseModel)
-                                {
-									((BaseModel)value).UniqueId = cachedMeta.RemoteId;
-									((BaseModel)value).ETag = cachedMeta.ETag;
-									if (dataRelation.ChildType == typeof(BaseModelWithCompanyId)) {
-										((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
+								value = Activator.CreateInstance(dataRelation.ChildType);
+
+								var cachedMeta = HttpDataProvider.GetHttpMappingByRow(parentRow);
+								if (cachedMeta != null)
+								{
+									if (value is BaseModel)
+									{
+										((BaseModel)value).UniqueId = cachedMeta.RemoteId;
+										((BaseModel)value).ETag = cachedMeta.ETag;
+										if (dataRelation.ChildType == typeof(BaseModelWithCompanyId)) {
+											((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
+										}
 									}
-                                }
-                                else
-                                {
-									// maybe the object still wants to map to to a related object
-									// (e.g. Document.BillTo still refers to a Contact.
-									var p = value.GetType().GetProperty("UniqueId");
-                                    if (p != null)
-                                        p.SetValue(value, cachedMeta.RemoteId, null);
-                                }
+									else
+									{
+										// maybe the object still wants to map to to a related object
+										// (e.g. Document.BillTo still refers to a Contact.
+										var p = value.GetType().GetProperty("UniqueId");
+										if (p != null)
+											p.SetValue(value, cachedMeta.RemoteId, null);
+									}
 
-                            }
+								}
 
-                            DataRowToObject(parentRow, value);
-                        }
-                        else value = null;
-					}
+								DataRowToObject(parentRow, value);
+							}
+							else value = null;
+						}
+
+                    }
                 }
 				prop.SetValue(realTarget, value, null);
             }
@@ -163,30 +172,23 @@ namespace Amica.vNext.Compatibility
             }
         }
 
-        private static object GetTransformedColumnValue(DataRow row, string columnName, Func<object, object> transform)
+
+		//private static object GetAdjustedColumnValue(DataRow row, string columnName, Func<object, object> transform, PropertyInfo prop)
+		private static object GetAdjustedColumnValue(DataRow row, string columnName, object value, PropertyInfo prop)
         {
             if (row == null) return null;
 
             var column = row.Table.Columns[columnName];
-            return transform(row[column]);
-        }
-
-		private static object GetAdjustedColumnValue(DataRow row, string columnName, Func<object, object> transform, PropertyInfo prop)
-        {
-            if (row == null) return null;
-
-            var column = row.Table.Columns[columnName];
-            var transformed = transform(row[column]);
 
 			object val;
 			if (prop.PropertyType.IsEnum)
-				val = (int)Enum.Parse(prop.PropertyType, transformed.ToString());
+				val = (int)Enum.Parse(prop.PropertyType, value.ToString());
 			else if (column.ColumnName == "Id")
 				val = HttpDataProvider.GetRemoteRowId(row);
 			else
-				val = (string.IsNullOrEmpty(transformed.ToString())) 
+				val = (string.IsNullOrEmpty(value.ToString())) 
 					? null 
-					: Convert.ChangeType(transformed, prop.PropertyType);
+					: Convert.ChangeType(value, prop.PropertyType);
             return val;
         }
 

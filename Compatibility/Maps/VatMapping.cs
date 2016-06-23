@@ -21,7 +21,7 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "NaturaPA",
 					ParentColumn = "Natura",
 					ChildProperty = "Code",
-					UpstreamTransform = (x) => PAHelpers.NaturaPA[(string)x],
+					UpstreamTransform = (x, obj) => PAHelpers.NaturaPA[(string)x],
                 });
         }
     }

@@ -29,11 +29,81 @@ namespace Amica.vNext.Compatibility.Maps
             {
                 PropertyName = "SocialSecurity[0].Category",
                 DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
-                UpstreamTransform = (x) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
+                UpstreamTransform = (x, obj) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
             });
 
             Fields.Add("Abbuono", new FieldMapping {PropertyName = "Rebate"});
-            //Fields.Add("AutistaNome", new FieldMapping { PropertyName = "Shipping.Driver.Name" });
+
+
+            Fields.Add("Colli", new FieldMapping { PropertyName = "Shipping.Volume" });
+            Fields.Add("Peso", new FieldMapping { PropertyName = "Shipping.Weight" });
+            Fields.Add("PesoUM", new FieldMapping { PropertyName = "Shipping.UnitOfMeasure" });
+            Fields.Add("AspettoBeni", new FieldMapping { PropertyName = "Shipping.Appearance" });
+            Fields.Add("AutistaNome", new FieldMapping { PropertyName = "Shipping.Driver.Name" });
+            Fields.Add("AutistaPatente", new FieldMapping { PropertyName = "Shipping.Driver.LicenseID" });
+            Fields.Add("AutistaTarga", new FieldMapping { PropertyName = "Shipping.Driver.PlateID" });
+
+            Fields.Add("DataTrasporto", new FieldMapping { PropertyName = "Shipping.Date" });
+            Fields.Add("OraTrasporto", new FieldMapping
+            {
+                PropertyName = "Shipping.Date",
+                UpstreamTransform = (x, o) => SetOraTrasportoUpstream(x, o),
+            });
+
+            Parents.Add(
+                "Porto",
+                new DataRelationMapping
+                {
+                    PropertyName = "Shipping.Terms",
+                    ParentColumn = "Porto",
+                    ChildProperty = "Code",
+                    UpstreamTransform = (x, obj) => DocumentHelpers.TransportTerms[(DocumentShippingTerm)x]
+                });
+
+            Parents.Add(
+                "MezzoTrasporto",
+                new DataRelationMapping
+                {
+                    PropertyName = "Shipping.TransportMode",
+                    ParentColumn = "MezzoTrasporto",
+                    ChildProperty = "Code",
+                    UpstreamTransform = (x, obj) => DocumentHelpers.TransportModes[(DocumentTransportMode)x]
+                });
+
+            //Parents.Add(
+            //    "DataTrasporto", new DataRelationMapping
+            //    {
+            //        PropertyName = "Shipping.Date",
+            //        ParentColumn = "DataTrasporto",
+            //        //DownstreamTransform = (doc, row) => GetDataTrasporto(doc, row),
+            //    });
+            //Parents.Add(
+            //    "OraTrasporto", new DataRelationMapping
+            //    {
+            //        PropertyName = "Shipping.Date",
+            //        ParentColumn = "OraTrasporto",
+            //        DownstreamTransform = (doc, row) => GetOraTrasporto(doc, row),
+            //        //UpstreamTransform = (x) => GetOraTrasporto(x),
+            //    });
+
+     //       Parents.Add(
+     //           "OraTrasporto", new DataRelationMapping
+     //           {
+     //               PropertyName = "Shipping",
+					//ParentColumn = "OraTrasporto",
+     //               ChildProperty = "Date",
+     //               DownstreamTransform = (doc, row) => GetOraTrasporto(doc, row)
+     //           });
+
+
+            Parents.Add(
+                "IdVettore",
+                new DataRelationMapping
+                {
+                    PropertyName = "Shipping.Courier",
+                    RelationName = "FK_Anagrafiche_Documenti2",
+                    ChildType = typeof(ContactDetailsEx)
+                });
 
             Parents.Add(
                 "IdTipoDocumento", 
@@ -41,7 +111,7 @@ namespace Amica.vNext.Compatibility.Maps
 					PropertyName="Category",
 					ParentColumn = "IdTipoDocumento",
 					ChildProperty = "Code",
-                    UpstreamTransform = (x) => DocumentHelpers.Categories[(DocumentCategory)x],
+                    UpstreamTransform = (x, obj) => DocumentHelpers.Categories[(DocumentCategory)x],
                 });
 
             Parents.Add(
@@ -50,7 +120,7 @@ namespace Amica.vNext.Compatibility.Maps
 					PropertyName="Status",
 					ParentColumn = "Stato",
 					ChildProperty = "Code",
-                    UpstreamTransform = (x) => DocumentHelpers.Statuses[(DocumentStatus)x],
+                    UpstreamTransform = (x, obj) => DocumentHelpers.Statuses[(DocumentStatus)x],
                 });
 
             Parents.Add(
@@ -125,6 +195,31 @@ namespace Amica.vNext.Compatibility.Maps
             //                 RelationName = "FK_Documenti_Righe",
             //             }
             //);
+        }
+		//internal static object GetDataTrasporto(object d, object row)
+  //      {
+  //          var document = (Document)d;
+  //          if (document.Shipping == null) return DBNull.Value;
+
+  //          var documentiRow = ((DocumentiRow)row);
+
+  //          var target = document.Shipping.Date;
+  //          if (target == null) return DBNull.Value;
+
+  //          return target.Date;
+  //      }
+		internal static object SetOraTrasportoUpstream(object value, object obj)
+        {
+            var document = (Document)obj;
+            if (document.Shipping == null) return DBNull.Value;
+
+            var date = document.Shipping.Date;
+            if (date == null) return DBNull.Value;
+            var zeroTimeDate = date.Subtract(new TimeSpan(date.Hour, date.Minute, date.Second));
+
+            var time = (DateTime)value;
+
+            return zeroTimeDate.Add(new TimeSpan(time.Hour, time.Minute, time.Second));
         }
 		internal static object GetIndirizziId(object d, object row)
         {
