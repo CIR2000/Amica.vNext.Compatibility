@@ -767,6 +767,32 @@ namespace Amica.vNext.Compatibility.Tests
                 UniqueId = contact.UniqueId,
             };
 
+			var sconto = new Variation {
+                Amount = 0,
+                Rate = 1.0,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            };
+			var scontoInc =new Variation {
+                Amount = 10,
+                Rate = 0,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            };
+            var scontoPag = new Variation {
+                Amount = 0,
+                Rate = 0.2,
+                Category = DocumentHelpers.Variations[DocumentVariation.PaymentDiscount]
+            };
+			// not supported in Amica
+            var aumento = new Variation {
+                Amount = 10,
+                Rate = 0.2,
+                Category = DocumentHelpers.Variations[DocumentVariation.Raise]
+            };
+            doc.Variation.Add(sconto);
+            doc.Variation.Add(scontoInc);
+            doc.Variation.Add(scontoPag);
+            doc.Variation.Add(aumento);
+
             //var i = new Invoice();
             doc.Number = new DocumentNumber { Numeric = 1, String = "hello" };
 
@@ -913,6 +939,11 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.OraTrasporto.ToShortTimeString(), Is.EqualTo(doc.Shipping.Date.ToShortTimeString()));
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti2.RagioneSociale1, 
 				Is.EqualTo(doc.Shipping.Courier.Name));
+
+
+            Assert.That(d.Sconto, Is.EqualTo(sconto.Rate));
+            Assert.That(d.ScontoIncondizionato, Is.EqualTo(scontoInc.Amount));
+            Assert.That(d.ScontoPagamento, Is.EqualTo(scontoPag.Rate));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
@@ -1644,6 +1675,9 @@ namespace Amica.vNext.Compatibility.Tests
             d.BancaNome = "bank";
             d.BancaIBAN = "IT40S0542811101000000123456";
             d.Abbuono = 10;
+            d.Sconto = 1.0;
+            d.ScontoIncondizionato = 99;
+            d.ScontoPagamento = 2.0;
 
             d.AutistaNome = "autista";
             d.AutistaPatente = "patente";
@@ -1695,6 +1729,12 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.Bank.Name, Is.EqualTo(d.BancaNome));
             Assert.That(doc.Bank.IbanCode, Is.EqualTo(d.BancaIBAN));
             Assert.That(doc.Rebate, Is.EqualTo(d.Abbuono));
+            Assert.That(doc.Variation[0].Rate, Is.EqualTo(d.Sconto));
+            Assert.That(doc.Variation[0].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
+            Assert.That(doc.Variation[1].Amount, Is.EqualTo(d.ScontoIncondizionato));
+            Assert.That(doc.Variation[1].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
+            Assert.That(doc.Variation[2].Rate, Is.EqualTo(d.ScontoPagamento));
+            Assert.That(doc.Variation[2].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.PaymentDiscount].Category));
 
             Assert.That(doc.BillTo.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1));
             Assert.That(doc.BillTo.Country, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.NazioniRow.Nome));

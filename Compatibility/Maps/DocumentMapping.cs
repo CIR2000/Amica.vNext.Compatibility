@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using Amica.Data;
 using Amica.vNext.Compatibility.Helpers;
@@ -50,6 +51,25 @@ namespace Amica.vNext.Compatibility.Maps
                 UpstreamTransform = (x, o) => SetOraTrasportoUpstream(x, o),
             });
 
+            Fields.Add("Sconto", new FieldMapping
+            {
+                PropertyName = "Variation",
+                DownstreamTransform = (x) => SetSconto(x),
+				UpstreamTransform = (x, o) => SetScontoVariation(x, o)
+            });
+            Fields.Add("ScontoIncondizionato", new FieldMapping
+            {
+                PropertyName = "Variation",
+                DownstreamTransform = (x) => SetScontoIncondizionato(x),
+				UpstreamTransform = (x, o) => SetScontoIncondizionatoVariation(x, o)
+            });
+            Fields.Add("ScontoPagamento", new FieldMapping
+            {
+                PropertyName = "Variation",
+                DownstreamTransform = (x) => SetScontoPagamento(x),
+				UpstreamTransform = (x, o) => SetScontoPagamentoVariation(x, o)
+            });
+
             Parents.Add(
                 "Porto",
                 new DataRelationMapping
@@ -69,32 +89,6 @@ namespace Amica.vNext.Compatibility.Maps
                     ChildProperty = "Code",
                     UpstreamTransform = (x, obj) => DocumentHelpers.TransportModes[(DocumentTransportMode)x]
                 });
-
-            //Parents.Add(
-            //    "DataTrasporto", new DataRelationMapping
-            //    {
-            //        PropertyName = "Shipping.Date",
-            //        ParentColumn = "DataTrasporto",
-            //        //DownstreamTransform = (doc, row) => GetDataTrasporto(doc, row),
-            //    });
-            //Parents.Add(
-            //    "OraTrasporto", new DataRelationMapping
-            //    {
-            //        PropertyName = "Shipping.Date",
-            //        ParentColumn = "OraTrasporto",
-            //        DownstreamTransform = (doc, row) => GetOraTrasporto(doc, row),
-            //        //UpstreamTransform = (x) => GetOraTrasporto(x),
-            //    });
-
-     //       Parents.Add(
-     //           "OraTrasporto", new DataRelationMapping
-     //           {
-     //               PropertyName = "Shipping",
-					//ParentColumn = "OraTrasporto",
-     //               ChildProperty = "Date",
-     //               DownstreamTransform = (doc, row) => GetOraTrasporto(doc, row)
-     //           });
-
 
             Parents.Add(
                 "IdVettore",
@@ -196,18 +190,84 @@ namespace Amica.vNext.Compatibility.Maps
             //             }
             //);
         }
-		//internal static object GetDataTrasporto(object d, object row)
-  //      {
-  //          var document = (Document)d;
-  //          if (document.Shipping == null) return DBNull.Value;
 
-  //          var documentiRow = ((DocumentiRow)row);
+		internal static object SetScontoVariation(object value, object obj)
+        {
+            var sconto = (double)value;
+            var document = (Document)obj;
+			if (sconto != 0)
+            {
+				document.Variation.Add(
+					new Variation
+					{
+						Rate = sconto,
+						Category = new VariationCategory { Category = DocumentVariation.Discount }
+					});
+            }
+            return document.Variation;
+        }
 
-  //          var target = document.Shipping.Date;
-  //          if (target == null) return DBNull.Value;
+		internal static object SetScontoIncondizionatoVariation(object value, object obj)
+        {
+            var sconto = Convert.ToDecimal(value);
+            var document = (Document)obj;
+			if (sconto != 0)
+            {
+				document.Variation.Add(
+					new Variation
+					{
+						Amount = sconto,
+						Category = new VariationCategory { Category = DocumentVariation.Discount }
+					});
+            }
+            return document.Variation;
+        }
+		internal static object SetScontoPagamentoVariation(object value, object obj)
+        {
+            var sconto = (double)value;
+            var document = (Document)obj;
+			if (sconto != 0)
+            {
+				document.Variation.Add(
+					new Variation
+					{
+						Rate = sconto,
+						Category = new VariationCategory { Category = DocumentVariation.PaymentDiscount }
+					});
+            }
+            return document.Variation;
+        }
+		internal static object SetSconto(object c)
+        {
+            var l = (List<Variation>)c;
+			foreach (var v in l)
+            {
+                if (v.Category.Category == DocumentVariation.Discount && v.Rate > 0)
+                    return v.Rate;
+            }
+            return 0;
+        }
 
-  //          return target.Date;
-  //      }
+		internal static object SetScontoIncondizionato(object c)
+        {
+            var l = (List<Variation>)c;
+			foreach (var v in l)
+            {
+                if (v.Category.Category == DocumentVariation.Discount && v.Amount > 0)
+                    return v.Amount;
+            }
+            return 0;
+        }
+		internal static object SetScontoPagamento(object c)
+        {
+            var l = (List<Variation>)c;
+			foreach (var v in l)
+            {
+                if (v.Category.Category == DocumentVariation.PaymentDiscount)
+                    return v.Rate;
+            }
+            return 0;
+        }
 		internal static object SetOraTrasportoUpstream(object value, object obj)
         {
             var document = (Document)obj;
