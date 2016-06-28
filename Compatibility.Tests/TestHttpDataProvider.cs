@@ -659,6 +659,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payments")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
             // add a company
@@ -734,9 +735,11 @@ namespace Amica.vNext.Compatibility.Tests
             var doc = Factory<Document>.Create(typeof(Invoice));
 
             var vat = Factory<Vat>.Create();
+            vat.CompanyId = company.UniqueId;
             vat.Code = "code";
             vat.Name = "name";
             vat.Rate = 0.1;
+            vat = await adam.PostAsync<Vat>("vat", vat);
 
             var ss = Factory<SocialSecurity>.Create();
             ss.Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC01];
@@ -800,7 +803,6 @@ namespace Amica.vNext.Compatibility.Tests
 			//doc.Category = DocumentHelpers.Categories[DocumentCategory.Invoice];
             doc.Status = DocumentHelpers.Statuses[DocumentStatus.Issued];
             doc.ExpirationDate = DateTime.Now.AddDays(1);
-            doc.BaseDateForPayments = DateTime.Now;
 
             doc.Rebate = 10.5M;
 
@@ -852,7 +854,9 @@ namespace Amica.vNext.Compatibility.Tests
             };
             //doc.Total = 100;
             doc.BillTo = new BillingAddress(contact);
-            doc.Payment = payment;
+
+            doc.Payment.Current = payment;
+            doc.Payment.BaseDateForPayments = DateTime.Now;
 
             adam.ResourceName = "documents";
             doc = await adam.PostAsync<Invoice>(doc);
@@ -888,7 +892,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.NumeroParteNumerica, Is.EqualTo(doc.Number.Numeric));
             Assert.That(d.NumeroParteTesto, Is.EqualTo(doc.Number.String));
             Assert.That(d.DataValidità, Is.EqualTo(doc.ExpirationDate));
-            Assert.That(d.DataInizioScadenze, Is.EqualTo(doc.BaseDateForPayments));
+            Assert.That(d.DataInizioScadenze, Is.EqualTo(doc.Payment.BaseDateForPayments));
             Assert.That(d.BancaNome, Is.EqualTo(doc.Bank.Name));
             Assert.That(d.BancaIBAN, Is.EqualTo(doc.Bank.IbanCode));
             Assert.That(d.Abbuono, Is.EqualTo(doc.Rebate));
@@ -908,10 +912,10 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.CassaPrevidenzialeImporto, Is.EqualTo(doc.SocialSecurity[0].Amount));
             Assert.That(d.CassaPrevidenziale, Is.EqualTo(doc.SocialSecurity[0].Rate));
 
-            Assert.That(d.PagamentiRow.Nome, Is.EqualTo(doc.Payment.Name));
-            Assert.That(d.PagamentiRow.TipoPrimaRata, Is.EqualTo((int)doc.Payment.FirstPaymentOption.Code));
-            Assert.That(d.PagamentiRow.SpeseRow.Nome, Is.EqualTo(doc.Payment.Fee.Name));
-            Assert.That(d.PagamentiRow.ModalitàPagamentoRow.Nome, Is.EqualTo(doc.Payment.PaymentMethod.Name));
+            Assert.That(d.PagamentiRow.Nome, Is.EqualTo(doc.Payment.Current.Name));
+            Assert.That(d.PagamentiRow.TipoPrimaRata, Is.EqualTo((int)doc.Payment.Current.FirstPaymentOption.Code));
+            Assert.That(d.PagamentiRow.SpeseRow.Nome, Is.EqualTo(doc.Payment.Current.Fee.Name));
+            Assert.That(d.PagamentiRow.ModalitàPagamentoRow.Nome, Is.EqualTo(doc.Payment.Current.PaymentMethod.Name));
 
             Assert.That(d.IdAgente, Is.EqualTo(d.IdAnagrafica));
 
@@ -1725,7 +1729,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That((int)doc.Category.Code, Is.EqualTo(d.IdTipoDocumento));
             Assert.That((int)doc.Status.Code, Is.EqualTo(d.Stato));
             Assert.That(doc.ExpirationDate.ToString(), Is.EqualTo(d.DataValidità.ToString()));
-            Assert.That(doc.BaseDateForPayments.ToString(), Is.EqualTo(d.DataInizioScadenze.ToString()));
+            Assert.That(doc.Payment.BaseDateForPayments.ToString(), Is.EqualTo(d.DataInizioScadenze.ToString()));
             Assert.That(doc.Bank.Name, Is.EqualTo(d.BancaNome));
             Assert.That(doc.Bank.IbanCode, Is.EqualTo(d.BancaIBAN));
             Assert.That(doc.Rebate, Is.EqualTo(d.Abbuono));
@@ -1772,8 +1776,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.SocialSecurity[0].Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
             Assert.That(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category), Is.EqualTo(d.CassaPrevidenzialeNome));
 
-            Assert.That(doc.Payment.Name, Is.EqualTo(d.PagamentiRow.Nome));
-            Assert.That(doc.Payment.PaymentMethod.Name, Is.EqualTo(d.PagamentiRow.ModalitàPagamentoRow.Nome));
+            Assert.That(doc.Payment.Current.Name, Is.EqualTo(d.PagamentiRow.Nome));
+            Assert.That(doc.Payment.Current.PaymentMethod.Name, Is.EqualTo(d.PagamentiRow.ModalitàPagamentoRow.Nome));
 
             Assert.That(doc.Agent.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.RagioneSociale1));
             Assert.That(doc.Agent.Mail, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti1.Email));

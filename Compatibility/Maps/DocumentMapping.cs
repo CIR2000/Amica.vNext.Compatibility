@@ -17,7 +17,7 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("NumeroParteNumerica", new FieldMapping {PropertyName = "Number.Numeric"});
             Fields.Add("NumeroParteTesto", new FieldMapping {PropertyName = "Number.String"});
             Fields.Add("DataValidità", new FieldMapping {PropertyName = "ExpirationDate"});
-            Fields.Add("DataInizioScadenze", new FieldMapping {PropertyName = "BaseDateForPayments"});
+            Fields.Add("DataInizioScadenze", new FieldMapping {PropertyName = "Payment.BaseDateForPayments"});
             Fields.Add("BancaNome", new FieldMapping {PropertyName = "Bank.Name"});
             Fields.Add("BancaIBAN", new FieldMapping {PropertyName = "Bank.IbanCode"});
             Fields.Add("RitenutaAcconto", new FieldMapping {PropertyName = "WithholdingTax.Rate"});
@@ -174,7 +174,7 @@ namespace Amica.vNext.Compatibility.Maps
             Parents.Add(
                 "IdPagamento", new DataRelationMapping
                 {
-                    PropertyName = "Payment",
+                    PropertyName = "Payment.Current",
 					ParentColumn = "Nome",
 					ChildProperty = "Name",
                     RelationName = "FK_Pagamenti_Documenti",

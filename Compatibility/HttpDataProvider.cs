@@ -360,11 +360,6 @@ namespace Amica.vNext.Compatibility
         /// <param name="batch">Wether this is part of a batch operation or not.</param>
         public async Task UpdateAziendeAsync(DataRow row, bool batch = false)
         {
-            var ts = new TraceSource("HttpDataProvider");
-            ts.TraceInformation("test");
-            ts.TraceEvent(TraceEventType.Error, 1, "errore");
-            //ts.Flush();
-            //ts.Close();
             await UpdateRowAsync<Company>(row, batch);
         }
 
@@ -388,6 +383,9 @@ namespace Amica.vNext.Compatibility
             if (changes == null) return;
 
             UpdatesPerformed.Clear();
+
+			var cache = new Dictionary<string, int>();
+
             foreach (var tableName in _resourcesMapping.Keys)
             {
                 if (!changes.Tables.Contains(tableName)) continue;
@@ -395,17 +393,37 @@ namespace Amica.vNext.Compatibility
                 var targetTable = changes.Tables[tableName];
                 if (targetTable.Rows.Count == 0) continue;
 
-                await UpdateParentTables(targetTable);
-                await UpdateTable(targetTable);
+                UpdateParentTables(targetTable, 1, ref cache);
+                if (!cache.ContainsKey(tableName))
+                {
+                    cache.Add(tableName, 1);
+                }
+            }
+
+			var sortedCache = from entry in cache orderby entry.Value descending select entry;
+			foreach (var c in sortedCache)
+			{
+                await UpdateTable(dataSet.Tables[c.Key]);
             }
         }
 
-        private async Task UpdateParentTables(DataTable dt)
+        private void UpdateParentTables(DataTable dt, int level, ref Dictionary<string, int> cache)
         {
-            foreach (var parentTable in from DataRelation rel in dt.ParentRelations select rel.ParentTable)
-            {
-                await UpdateTable(parentTable);
-            }
+			foreach (DataRelation parentRelation in dt.ParentRelations)
+			{
+                var parentTable = parentRelation.ParentTable;
+				if (cache.ContainsKey(parentTable.TableName)) {
+					if (cache[parentTable.TableName] < level) {
+						cache[parentTable.TableName] = level;
+					}
+				}
+				else {
+					if (_resourcesMapping.ContainsKey(parentTable.TableName)) {
+						cache.Add(parentTable.TableName, level);
+						UpdateParentTables(parentTable, level + 1, ref cache);
+					}
+				}
+			}
         }
 
         private async Task UpdateTable(DataTable dt)
@@ -839,6 +857,8 @@ namespace Amica.vNext.Compatibility
         /// Returns a list of DataTables for which the latest update operation has been successful.
         /// </summary>
         public List<DataTable> UpdatesPerformed { get; }
+        public List<DataTable> UpdatesToDo { get; }
+
 
         #endregion
 

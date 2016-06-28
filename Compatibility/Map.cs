@@ -107,45 +107,46 @@ namespace Amica.vNext.Compatibility
                     }
 					else
                     {
-						if (parentMapping.Value.ChildType == null)
-						{
-							value = dataRelation.UpstreamTransform(parentRow[dataRelation.ParentColumn], target);
-							value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, value, prop);
-						}
-						else
-						{
-							if (parentRow != null)
+					if (parentMapping.Value.ChildType == null)
+					{
+						value = dataRelation.UpstreamTransform(parentRow[dataRelation.ParentColumn], target);
+						value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, value, prop);
+					}
+					else
+					{
+                        if (parentRow != null)
+                        {
+							value = Activator.CreateInstance(dataRelation.ChildType);
+
+                            var cachedMeta = HttpDataProvider.GetHttpMappingByRow(parentRow);
+							if (cachedMeta != null)
 							{
-								value = Activator.CreateInstance(dataRelation.ChildType);
-
-								var cachedMeta = HttpDataProvider.GetHttpMappingByRow(parentRow);
-								if (cachedMeta != null)
-								{
-									if (value is BaseModel)
-									{
-										((BaseModel)value).UniqueId = cachedMeta.RemoteId;
-										((BaseModel)value).ETag = cachedMeta.ETag;
-										if (dataRelation.ChildType == typeof(BaseModelWithCompanyId)) {
-											((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
-										}
+								if (value is BaseModel)
+                                {
+									((BaseModel)value).UniqueId = cachedMeta.RemoteId;
+									((BaseModel)value).ETag = cachedMeta.ETag;
+									if (value is BaseModelWithCompanyId) {
+										((BaseModelWithCompanyId) value).CompanyId = cachedMeta.RemoteCompanyId;
 									}
-									else
-									{
-										// maybe the object still wants to map to to a related object
-										// (e.g. Document.BillTo still refers to a Contact.
-										var p = value.GetType().GetProperty("UniqueId");
-										if (p != null)
-											p.SetValue(value, cachedMeta.RemoteId, null);
-									}
+                                }
+                                else
+                                {
+									// maybe the object still wants to map to to a related object
+									// (e.g. Document.BillTo still refers to a Contact.
+									var p = value.GetType().GetProperty("UniqueId");
+                                    if (p != null)
+                                        p.SetValue(value, cachedMeta.RemoteId, null);
+                                }
 
-								}
+                            }
 
-								DataRowToObject(parentRow, value);
-							}
-							else value = null;
-						}
+                            DataRowToObject(parentRow, value);
+                        }
+                        else value = null;
+					}
 
                     }
+
                 }
 				prop.SetValue(realTarget, value, null);
             }
