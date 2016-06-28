@@ -70,6 +70,7 @@ namespace Amica.vNext.Compatibility.Maps
 				UpstreamTransform = (x, o) => SetScontoPagamentoVariation(x, o)
             });
             Fields.Add("Cambio", new FieldMapping { PropertyName = "Currency.ExchangeRate" });
+            Fields.Add("Note", new FieldMapping { PropertyName = "Notes" });
 
             Parents.Add(
                 "Porto",

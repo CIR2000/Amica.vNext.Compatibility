@@ -857,6 +857,7 @@ namespace Amica.vNext.Compatibility.Tests
 
             doc.Payment.Current = payment;
             doc.Payment.BaseDateForPayments = DateTime.Now;
+            doc.Notes = "a document note";
 
             adam.ResourceName = "documents";
             doc = await adam.PostAsync<Invoice>(doc);
@@ -896,6 +897,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.BancaNome, Is.EqualTo(doc.Bank.Name));
             Assert.That(d.BancaIBAN, Is.EqualTo(doc.Bank.IbanCode));
             Assert.That(d.Abbuono, Is.EqualTo(doc.Rebate));
+            Assert.That(d.Note, Is.EqualTo(doc.Notes));
 
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
             Assert.That(d.AnagraficheRowByFK_Anagrafiche_Documenti.Indirizzo, Is.EqualTo(doc.BillTo.Street));
@@ -1682,6 +1684,7 @@ namespace Amica.vNext.Compatibility.Tests
             d.Sconto = 1.0;
             d.ScontoIncondizionato = 99;
             d.ScontoPagamento = 2.0;
+            d.Note = "note documento";
 
             d.AutistaNome = "autista";
             d.AutistaPatente = "patente";
@@ -1733,6 +1736,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.Bank.Name, Is.EqualTo(d.BancaNome));
             Assert.That(doc.Bank.IbanCode, Is.EqualTo(d.BancaIBAN));
             Assert.That(doc.Rebate, Is.EqualTo(d.Abbuono));
+            Assert.That(doc.Notes, Is.EqualTo(d.Note));
+
             Assert.That(doc.Variation[0].Rate, Is.EqualTo(d.Sconto));
             Assert.That(doc.Variation[0].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
             Assert.That(doc.Variation[1].Amount, Is.EqualTo(d.ScontoIncondizionato));
