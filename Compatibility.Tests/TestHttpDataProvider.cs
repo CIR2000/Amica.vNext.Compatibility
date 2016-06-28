@@ -741,6 +741,18 @@ namespace Amica.vNext.Compatibility.Tests
             vat.Rate = 0.1;
             vat = await adam.PostAsync<Vat>("vat", vat);
 
+            var docFee1 = Factory<DocumentFee>.Create();
+            docFee1.Name = "fee name 1";
+			docFee1.Amount = 99.8M;
+            docFee1.Vat = vat;
+            doc.FeeCollection.Add(docFee1);
+            var docFee2 = Factory<DocumentFee>.Create();
+            docFee2.Name = "fee name 2";
+			docFee2.Amount = 88.8M;
+            docFee2.Vat = vat;
+
+            doc.FeeCollection.Add(docFee2);
+
             var ss = Factory<SocialSecurity>.Create();
             ss.Category = DocumentHelpers.SocialSecurityCategories[SocialSecurityCategoryType.TC01];
             ss.Amount = 99;
@@ -791,10 +803,10 @@ namespace Amica.vNext.Compatibility.Tests
                 Rate = 0.2,
                 Category = DocumentHelpers.Variations[DocumentVariation.Raise]
             };
-            doc.Variation.Add(sconto);
-            doc.Variation.Add(scontoInc);
-            doc.Variation.Add(scontoPag);
-            doc.Variation.Add(aumento);
+            doc.VariationCollection.Add(sconto);
+            doc.VariationCollection.Add(scontoInc);
+            doc.VariationCollection.Add(scontoPag);
+            doc.VariationCollection.Add(aumento);
 
             //var i = new Invoice();
             doc.Number = new DocumentNumber { Numeric = 1, String = "hello" };
@@ -814,6 +826,7 @@ namespace Amica.vNext.Compatibility.Tests
             doc.Currency.Current = Factory<Currency>.Create();
             doc.Currency.Current.Name = "US Dollars";
             doc.Currency.Current.Code ="USD";
+            doc.Currency.ExchangeRate = 1;
 
             doc.ShipTo = new ShippingAddress()
             {
@@ -838,7 +851,7 @@ namespace Amica.vNext.Compatibility.Tests
             doc.WithholdingTax.Amount = 9;
             doc.WithholdingTax.TaxableShare = 10.0;
 
-            doc.SocialSecurity.Add(ss);
+            doc.SocialSecurityCollection.Add(ss);
 
 
             doc.Agent = new ContactDetailsEx
@@ -882,13 +895,15 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Nazioni.Count, Is.EqualTo(1));
             Assert.That(companyDs.AreeGeografiche.Count, Is.EqualTo(1));
             Assert.That(companyDs.Pagamenti.Count, Is.EqualTo(1));
-            Assert.That(companyDs.Spese.Count, Is.EqualTo(1));
+            Assert.That(companyDs.Spese.Count, Is.EqualTo(3));
             Assert.That(companyDs.ModalitàPagamento.Count, Is.EqualTo(1));
+            Assert.That(companyDs.SpeseDocumenti.Count, Is.EqualTo(2));
 
             var d = companyDs.Documenti[0];
             Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Category.Code));
             Assert.That(d.Stato, Is.EqualTo((int)doc.Status.Code));
             Assert.That(d.ValuteRow.Sigla, Is.EqualTo(doc.Currency.Current.Code));
+            Assert.That(d.Cambio, Is.EqualTo(doc.Currency.ExchangeRate));
             Assert.That(d.CausaliDocumentiRow.Nome, Is.EqualTo(doc.Reason));
             Assert.That(d.NumeroParteNumerica, Is.EqualTo(doc.Number.Numeric));
             Assert.That(d.NumeroParteTesto, Is.EqualTo(doc.Number.String));
@@ -910,9 +925,9 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.RitenutaAccontoSuImponibile, Is.EqualTo(doc.WithholdingTax.TaxableShare));
             Assert.That(d.IsRitenutaIncludeCassaPrevidenziale, Is.EqualTo(doc.WithholdingTax.IsSocialSecurityIncluded));
 
-            Assert.That(d.CassaPrevidenzialeNome, Is.EqualTo(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category)));
-            Assert.That(d.CassaPrevidenzialeImporto, Is.EqualTo(doc.SocialSecurity[0].Amount));
-            Assert.That(d.CassaPrevidenziale, Is.EqualTo(doc.SocialSecurity[0].Rate));
+            Assert.That(d.CassaPrevidenzialeNome, Is.EqualTo(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurityCollection[0].Category)));
+            Assert.That(d.CassaPrevidenzialeImporto, Is.EqualTo(doc.SocialSecurityCollection[0].Amount));
+            Assert.That(d.CassaPrevidenziale, Is.EqualTo(doc.SocialSecurityCollection[0].Rate));
 
             Assert.That(d.PagamentiRow.Nome, Is.EqualTo(doc.Payment.Current.Name));
             Assert.That(d.PagamentiRow.TipoPrimaRata, Is.EqualTo((int)doc.Payment.Current.FirstPaymentOption.Code));
@@ -950,6 +965,17 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(d.Sconto, Is.EqualTo(sconto.Rate));
             Assert.That(d.ScontoIncondizionato, Is.EqualTo(scontoInc.Amount));
             Assert.That(d.ScontoPagamento, Is.EqualTo(scontoPag.Rate));
+
+
+            var spese = d.GetSpeseDocumentiRows();
+            Assert.That(spese[0].SpeseRow.Nome, Is.EqualTo(doc.FeeCollection[0].Name));
+            Assert.That(spese[0].ImportoNetto, Is.EqualTo(doc.FeeCollection[0].Amount));
+            Assert.That(spese[0].IsPagamento, Is.EqualTo(doc.FeeCollection[0].IsFromPayment));
+            Assert.That(spese[0].CausaliIVARow.Codice, Is.EqualTo(doc.FeeCollection[0].Vat.Code));
+            Assert.That(spese[1].SpeseRow.Nome, Is.EqualTo(doc.FeeCollection[1].Name));
+            Assert.That(spese[1].ImportoNetto, Is.EqualTo(doc.FeeCollection[1].Amount));
+            Assert.That(spese[1].IsPagamento, Is.EqualTo(doc.FeeCollection[1].IsFromPayment));
+            Assert.That(spese[1].CausaliIVARow.Codice, Is.EqualTo(doc.FeeCollection[1].Vat.Code));
             //         var d2 = companyDs.Documenti[1];
             //         var ri1 = companyDs.Righe[0];
             //         var ri2 = companyDs.Righe[1];
@@ -1663,11 +1689,23 @@ namespace Amica.vNext.Compatibility.Tests
             p.IdModalitàPagamento = mp.Id;
             ds.Pagamenti.AddPagamentiRow(p);
 
+            var s1 = ds.Spese.NewSpeseRow();
+            s1.Nome = "spesa1";
+            s1.IdCausaleIVA = ci.Id;
+            s1.Importo = 10;
+            ds.Spese.AddSpeseRow(s1);
+            var s2 = ds.Spese.NewSpeseRow();
+            s2.Nome = "spesa2";
+            s2.IdCausaleIVA = ci.Id;
+            s2.Importo = 11;
+            ds.Spese.AddSpeseRow(s2);
+
             var d = ds.Documenti.NewDocumentiRow();
             d.IdAnagrafica = c.Id;
             d.IdAgente = c.Id;
             d.IdDestinazione = i.Id;
             d.NumeroParteNumerica = 1;
+            d.Cambio = 1;
             d.NumeroParteTesto = "string";
             d.Stato = (int)Enums.Documenti.Stato.Emesso;
             d.IdTipoDocumento = (int)Enums.Documenti.Tipo.FatturaDifferita;
@@ -1685,7 +1723,6 @@ namespace Amica.vNext.Compatibility.Tests
             d.ScontoIncondizionato = 99;
             d.ScontoPagamento = 2.0;
             d.Note = "note documento";
-
             d.AutistaNome = "autista";
             d.AutistaPatente = "patente";
             d.AutistaTarga = "targa";
@@ -1708,6 +1745,19 @@ namespace Amica.vNext.Compatibility.Tests
             d.CassaPrevidenzialeNome = "Cass geometri";
             d.IdIVACassaPrevidenziale = ci.Id;
             ds.Documenti.AddDocumentiRow(d);
+
+            var sd1 = ds.SpeseDocumenti.NewSpeseDocumentiRow();
+            sd1.IdDocumento = d.Id;
+            sd1.IdCausaleIVA = ci.Id;
+            sd1.IdSpesa = s1.Id;
+            sd1.ImportoNetto = s1.Importo;
+            ds.SpeseDocumenti.AddSpeseDocumentiRow(sd1);
+            var sd2 = ds.SpeseDocumenti.NewSpeseDocumentiRow();
+            sd2.IdDocumento = d.Id;
+            sd2.IdCausaleIVA = ci.Id;
+            sd2.IdSpesa = s2.Id;
+            sd2.ImportoNetto = s1.Importo;
+            ds.SpeseDocumenti.AddSpeseDocumentiRow(sd2);
 
             var ri = ds.Righe.NewRigheRow();
             ri.IdDocumento = d.Id;
@@ -1738,12 +1788,12 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.Rebate, Is.EqualTo(d.Abbuono));
             Assert.That(doc.Notes, Is.EqualTo(d.Note));
 
-            Assert.That(doc.Variation[0].Rate, Is.EqualTo(d.Sconto));
-            Assert.That(doc.Variation[0].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
-            Assert.That(doc.Variation[1].Amount, Is.EqualTo(d.ScontoIncondizionato));
-            Assert.That(doc.Variation[1].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
-            Assert.That(doc.Variation[2].Rate, Is.EqualTo(d.ScontoPagamento));
-            Assert.That(doc.Variation[2].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.PaymentDiscount].Category));
+            Assert.That(doc.VariationCollection[0].Rate, Is.EqualTo(d.Sconto));
+            Assert.That(doc.VariationCollection[0].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
+            Assert.That(doc.VariationCollection[1].Amount, Is.EqualTo(d.ScontoIncondizionato));
+            Assert.That(doc.VariationCollection[1].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.Discount].Category));
+            Assert.That(doc.VariationCollection[2].Rate, Is.EqualTo(d.ScontoPagamento));
+            Assert.That(doc.VariationCollection[2].Category.Category, Is.EqualTo(DocumentHelpers.Variations[DocumentVariation.PaymentDiscount].Category));
 
             Assert.That(doc.BillTo.Name, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.RagioneSociale1));
             Assert.That(doc.BillTo.Country, Is.EqualTo(d.AnagraficheRowByFK_Anagrafiche_Documenti.NazioniRow.Nome));
@@ -1765,6 +1815,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.ShipTo.StateOrProvince, Is.EqualTo(d.IndirizziRow.Provincia));
 
             Assert.That(doc.Currency.Current.Code, Is.EqualTo(d.ValuteRow.Sigla));
+            Assert.That(doc.Currency.ExchangeRate, Is.EqualTo(d.Cambio));
+
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
 
             Assert.That(doc.WithholdingTax.Amount, Is.EqualTo(d.RitenutaAccontoImporto));
@@ -1772,14 +1824,14 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.WithholdingTax.TaxableShare, Is.EqualTo(d.RitenutaAccontoSuImponibile));
             Assert.That(doc.WithholdingTax.IsSocialSecurityIncluded, Is.EqualTo(d.IsRitenutaIncludeCassaPrevidenziale));
 
-            Assert.That(doc.SocialSecurity.Count, Is.EqualTo(1));
-            Assert.That(doc.SocialSecurity[0].Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
-            Assert.That(doc.SocialSecurity[0].Rate, Is.EqualTo(d.CassaPrevidenziale));
-            Assert.That(doc.SocialSecurity[0].Vat.Name, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Nome));
-            Assert.That(doc.SocialSecurity[0].Vat.Rate, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Aliquota));
-            Assert.That(doc.SocialSecurity[0].Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
-            Assert.That(doc.SocialSecurity[0].Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
-            Assert.That(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurity[0].Category), Is.EqualTo(d.CassaPrevidenzialeNome));
+            Assert.That(doc.SocialSecurityCollection.Count, Is.EqualTo(1));
+            Assert.That(doc.SocialSecurityCollection[0].Amount, Is.EqualTo(d.CassaPrevidenzialeImporto));
+            Assert.That(doc.SocialSecurityCollection[0].Rate, Is.EqualTo(d.CassaPrevidenziale));
+            Assert.That(doc.SocialSecurityCollection[0].Vat.Name, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Nome));
+            Assert.That(doc.SocialSecurityCollection[0].Vat.Rate, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Aliquota));
+            Assert.That(doc.SocialSecurityCollection[0].Vat.NaturaPA.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Natura));
+            Assert.That(doc.SocialSecurityCollection[0].Vat.Code, Is.EqualTo(d.CausaliIVARowByFK_CausaliIVA_IVACassaPrevidenziale.Codice));
+            Assert.That(SocialSecurityAdapter.GetAmicaDescription(doc.SocialSecurityCollection[0].Category), Is.EqualTo(d.CassaPrevidenzialeNome));
 
             Assert.That(doc.Payment.Current.Name, Is.EqualTo(d.PagamentiRow.Nome));
             Assert.That(doc.Payment.Current.PaymentMethod.Name, Is.EqualTo(d.PagamentiRow.ModalitàPagamentoRow.Nome));
@@ -1803,6 +1855,16 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That((int)doc.Shipping.Terms.Code, Is.EqualTo(d.Porto));
             Assert.That(doc.Shipping.Date.ToShortTimeString(), Is.EqualTo(d.OraTrasporto.ToShortTimeString()));
             Assert.That(doc.Shipping.Date.ToShortDateString(), Is.EqualTo(d.DataTrasporto.ToShortDateString()));
+
+
+            Assert.That(doc.FeeCollection[0].Amount, Is.EqualTo(sd1.ImportoNetto));
+            Assert.That(doc.FeeCollection[0].IsFromPayment, Is.EqualTo(sd1.IsPagamento));
+            Assert.That(doc.FeeCollection[0].Vat.Code, Is.EqualTo(sd1.CausaliIVARow.Codice));
+            Assert.That(doc.FeeCollection[0].Name, Is.EqualTo(sd1.SpeseRow.Nome));
+            Assert.That(doc.FeeCollection[1].Amount, Is.EqualTo(sd2.ImportoNetto));
+            Assert.That(doc.FeeCollection[1].IsFromPayment, Is.EqualTo(sd2.IsPagamento));
+            Assert.That(doc.FeeCollection[1].Vat.Code, Is.EqualTo(sd2.CausaliIVARow.Codice));
+            Assert.That(doc.FeeCollection[1].Name, Is.EqualTo(sd2.SpeseRow.Nome));
             //Assert.That(doc.Shipping.Date.TimeOfDay, Is.EqualTo(d.OraTrasporto));
 
             //   cds.AcceptChanges();

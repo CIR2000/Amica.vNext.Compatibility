@@ -24,11 +24,11 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("RitenutaAccontoSuImponibile", new FieldMapping {PropertyName = "WithholdingTax.TaxableShare"});
             Fields.Add("RitenutaAccontoImporto", new FieldMapping {PropertyName = "WithholdingTax.Amount"});
             Fields.Add("IsRitenutaIncludeCassaPrevidenziale", new FieldMapping {PropertyName = "WithholdingTax.IsSocialSecurityIncluded"});
-            Fields.Add("CassaPrevidenziale", new FieldMapping { PropertyName = "SocialSecurity[0].Rate" });
-            Fields.Add("CassaPrevidenzialeImporto", new FieldMapping { PropertyName = "SocialSecurity[0].Amount" });
+            Fields.Add("CassaPrevidenziale", new FieldMapping { PropertyName = "SocialSecurityCollection[0].Rate" });
+            Fields.Add("CassaPrevidenzialeImporto", new FieldMapping { PropertyName = "SocialSecurityCollection[0].Amount" });
             Fields.Add("CassaPrevidenzialeNome", new FieldMapping
             {
-                PropertyName = "SocialSecurity[0].Category",
+                PropertyName = "SocialSecurityCollection[0].Category",
                 DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
                 UpstreamTransform = (x, obj) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
             });
@@ -53,19 +53,19 @@ namespace Amica.vNext.Compatibility.Maps
 
             Fields.Add("Sconto", new FieldMapping
             {
-                PropertyName = "Variation",
+                PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x),
 				UpstreamTransform = (x, o) => SetScontoVariation(x, o)
             });
             Fields.Add("ScontoIncondizionato", new FieldMapping
             {
-                PropertyName = "Variation",
+                PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetScontoIncondizionato(x),
 				UpstreamTransform = (x, o) => SetScontoIncondizionatoVariation(x, o)
             });
             Fields.Add("ScontoPagamento", new FieldMapping
             {
-                PropertyName = "Variation",
+                PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetScontoPagamento(x),
 				UpstreamTransform = (x, o) => SetScontoPagamentoVariation(x, o)
             });
@@ -143,7 +143,7 @@ namespace Amica.vNext.Compatibility.Maps
                 {
                     ParentColumn = "Nome",
                     ChildProperty = "Code",
-                    PropertyName = "SocialSecurity[0].Vat",
+                    PropertyName = "SocialSecurityCollection[0].Vat",
                     RelationName = "FK_CausaliIVA_IVACassaPrevidenziale",
                     ChildType = typeof(Vat),
                 });
@@ -183,14 +183,14 @@ namespace Amica.vNext.Compatibility.Maps
                     ChildType = typeof(Payment)
                 });
 
-            //         Children.Add(
-            //             new DataRelationMapping
-            //             {
-            //                 PropertyName = "Items",
-            //                 ChildType = typeof(DocumentItem),
-            //                 RelationName = "FK_Documenti_Righe",
-            //             }
-            //);
+
+            Children.Add(
+                new DataRelationMapping
+                {
+                    PropertyName = "FeeCollection",
+                    RelationName = "FK_Documenti_SpeseDocumenti",
+                    ChildType = typeof(DocumentFee),
+                });
         }
 
 		internal static object SetScontoVariation(object value, object obj)
@@ -199,14 +199,14 @@ namespace Amica.vNext.Compatibility.Maps
             var document = (Document)obj;
 			if (sconto != 0)
             {
-				document.Variation.Add(
+				document.VariationCollection.Add(
 					new Variation
 					{
 						Rate = sconto,
 						Category = new VariationCategory { Category = DocumentVariation.Discount }
 					});
             }
-            return document.Variation;
+            return document.VariationCollection;
         }
 
 		internal static object SetScontoIncondizionatoVariation(object value, object obj)
@@ -215,14 +215,14 @@ namespace Amica.vNext.Compatibility.Maps
             var document = (Document)obj;
 			if (sconto != 0)
             {
-				document.Variation.Add(
+				document.VariationCollection.Add(
 					new Variation
 					{
 						Amount = sconto,
 						Category = new VariationCategory { Category = DocumentVariation.Discount }
 					});
             }
-            return document.Variation;
+            return document.VariationCollection;
         }
 		internal static object SetScontoPagamentoVariation(object value, object obj)
         {
@@ -230,14 +230,14 @@ namespace Amica.vNext.Compatibility.Maps
             var document = (Document)obj;
 			if (sconto != 0)
             {
-				document.Variation.Add(
+				document.VariationCollection.Add(
 					new Variation
 					{
 						Rate = sconto,
 						Category = new VariationCategory { Category = DocumentVariation.PaymentDiscount }
 					});
             }
-            return document.Variation;
+            return document.VariationCollection;
         }
 		internal static object SetSconto(object c)
         {

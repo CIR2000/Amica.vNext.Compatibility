@@ -30,6 +30,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Fee), new FeeMapping());
             Topology.Add(typeof(Payment), new PaymentMapping());
             Topology.Add(typeof(ContactDetailsEx), new ContactDetailsExMapping());
+            Topology.Add(typeof(DocumentFee), new DocumentFeeMapping());
         }
 
 #region TO
@@ -296,6 +297,9 @@ namespace Amica.vNext.Compatibility
             foreach (var childMapping in mapping.Children)
             {
                 var childRelation = row.Table.ChildRelations[childMapping.RelationName];
+                if (childRelation == null)
+                    throw new ArgumentException("Unknown data relation.", childMapping.PropertyName);
+
                 var childTable = childRelation.ChildTable;
                 var childColumn = childRelation.ChildColumns[0];
 
