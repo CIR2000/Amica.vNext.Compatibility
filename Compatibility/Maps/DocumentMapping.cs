@@ -69,6 +69,7 @@ namespace Amica.vNext.Compatibility.Maps
                 DownstreamTransform = (x) => SetScontoPagamento(x),
 				UpstreamTransform = (x, o) => SetScontoPagamentoVariation(x, o)
             });
+            Fields.Add("Cambio", new FieldMapping { PropertyName = "Currency.ExchangeRate" });
 
             Parents.Add(
                 "Porto",
@@ -120,7 +121,7 @@ namespace Amica.vNext.Compatibility.Maps
             Parents.Add(
                 "IdValuta", 
 				new DataRelationMapping {
-					PropertyName="Currency",
+					PropertyName="Currency.Current",
 					ChildProperty = "Name",
 					ParentColumn = "Nome",
 					RelationName = "FK_Valute_Documenti",

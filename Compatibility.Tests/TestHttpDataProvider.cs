@@ -811,9 +811,9 @@ namespace Amica.vNext.Compatibility.Tests
             doc.Bank.IbanCode = "IT40S0542811101000000123456";
             doc.Bank.BicSwiftCode = "ABCOITMM";
 
-            doc.Currency = Factory<Currency>.Create();
-            doc.Currency.Name = "US Dollars";
-            doc.Currency.Code ="USD";
+            doc.Currency.Current = Factory<Currency>.Create();
+            doc.Currency.Current.Name = "US Dollars";
+            doc.Currency.Current.Code ="USD";
 
             doc.ShipTo = new ShippingAddress()
             {
@@ -887,7 +887,7 @@ namespace Amica.vNext.Compatibility.Tests
             var d = companyDs.Documenti[0];
             Assert.That(d.IdTipoDocumento, Is.EqualTo((int)doc.Category.Code));
             Assert.That(d.Stato, Is.EqualTo((int)doc.Status.Code));
-            Assert.That(d.ValuteRow.Sigla, Is.EqualTo(doc.Currency.Code));
+            Assert.That(d.ValuteRow.Sigla, Is.EqualTo(doc.Currency.Current.Code));
             Assert.That(d.CausaliDocumentiRow.Nome, Is.EqualTo(doc.Reason));
             Assert.That(d.NumeroParteNumerica, Is.EqualTo(doc.Number.Numeric));
             Assert.That(d.NumeroParteTesto, Is.EqualTo(doc.Number.String));
@@ -1759,7 +1759,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.ShipTo.PostalCode, Is.EqualTo(d.IndirizziRow.CAP));
             Assert.That(doc.ShipTo.StateOrProvince, Is.EqualTo(d.IndirizziRow.Provincia));
 
-            Assert.That(doc.Currency.Code, Is.EqualTo(d.ValuteRow.Sigla));
+            Assert.That(doc.Currency.Current.Code, Is.EqualTo(d.ValuteRow.Sigla));
             Assert.That(doc.Reason, Is.EqualTo(d.CausaliDocumentiRow.Nome));
 
             Assert.That(doc.WithholdingTax.Amount, Is.EqualTo(d.RitenutaAccontoImporto));
