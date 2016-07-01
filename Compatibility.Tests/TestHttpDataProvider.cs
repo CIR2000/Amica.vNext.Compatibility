@@ -872,6 +872,52 @@ namespace Amica.vNext.Compatibility.Tests
             doc.Payment.BaseDateForPayments = DateTime.Now;
             doc.Notes = "a document note";
 
+            var it = Factory<DocumentItem>.Create();
+            it.Vat = vat;
+            //it.Order = new OrderReference { Date = DateTime.Now, Number = new DocumentNumber { Numeric = 1 } };
+            it.Detail = new DocumentItemDetail {
+                Sku = "sku",
+                Description = "desc",
+                Color = "color",
+                Notes = "notes",
+                //SerialNumber = "serial",
+                //Lot = new DocumentItemLot { Date = DateTime.Now, Expiration = DateTime.Now.AddDays(1), Number = "ab" },
+                Size = new DocumentItemSize { Name = "size", Number = "S" },
+            };
+
+
+            it.VariationCollection.Add(new Variation {
+                Rate = 0.1,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            });
+            it.VariationCollection.Add(new Variation {
+                Rate = 0.2,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            });
+            it.VariationCollection.Add(new Variation {
+                Rate = 0.3,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            });
+            it.VariationCollection.Add(new Variation {
+                Rate = 0.4,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            });
+            it.VariationCollection.Add(new Variation {
+                Amount = 1,
+                Category = DocumentHelpers.Variations[DocumentVariation.Discount]
+            });
+
+            it.Price = 10;
+            it.NetPrice = 9;
+            it.Quantity = 2;
+            it.Total = 18;
+            it.PriceVatInclusive = 11;
+            it.ProcessedQuantity = 1;
+            //it.SourcePriceList = "pricelist";
+            //it.UniqueId = "551137c2f9e1fac808a5f572"; // not mapped to any Amica field
+            it.WithholdingTax = false;
+            doc.ItemCollection.Add(it);
+
             adam.ResourceName = "documents";
             doc = await adam.PostAsync<Invoice>(doc);
 
@@ -976,134 +1022,32 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(spese[1].ImportoNetto, Is.EqualTo(doc.FeeCollection[1].Amount));
             Assert.That(spese[1].IsPagamento, Is.EqualTo(doc.FeeCollection[1].IsFromPayment));
             Assert.That(spese[1].CausaliIVARow.Codice, Is.EqualTo(doc.FeeCollection[1].Vat.Code));
-            //         var d2 = companyDs.Documenti[1];
-            //         var ri1 = companyDs.Righe[0];
-            //         var ri2 = companyDs.Righe[1];
-            //         var n = companyDs.Nazioni[0];
-            //         var ag = companyDs.AreeGeografiche[0];
 
-            //         Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
-            //         Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
+            var righe = d.GetRigheRowsByFK_Documenti_Righe();
+            Assert.That(righe.Length, Is.EqualTo(1));
 
-            //         Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
-            //         Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
-            //         Assert.That(ri1.Descrizione, Is.EqualTo(doc.Items[0].Description));
-            //         Assert.That(ri2.IdDocumento, Is.EqualTo(d2.Id));
-            //         Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc2.Items[0].Sku));
-            //         Assert.That(ri2.Descrizione, Is.EqualTo(doc2.Items[0].Description));
+            var riga = righe[0];
+            Assert.That(riga.CodiceArticolo, Is.EqualTo(it.Detail.Sku));
+            Assert.That(riga.Descrizione, Is.EqualTo(it.Detail.Description));
+            Assert.That(riga.Quantità, Is.EqualTo(it.Quantity));
+            Assert.That(riga.QuantitàEvasa, Is.EqualTo(it.ProcessedQuantity));
+            Assert.That(riga.Prezzo, Is.EqualTo(it.Price));
+            Assert.That(riga.PrezzoNetto, Is.EqualTo(it.NetPrice));
+            Assert.That(riga.PrezzoIvato, Is.EqualTo(it.PriceVatInclusive));
+            Assert.That(riga.ImportoNetto, Is.EqualTo(it.Total));
+            Assert.That(riga.IsRitenuta, Is.EqualTo(it.WithholdingTax));
+            Assert.That(riga.CausaliIVARow.Codice, Is.EqualTo(it.Vat.Code));
+            Assert.That(riga.Colore, Is.EqualTo(it.Detail.Color));
+            Assert.That(riga.Sconto1, Is.EqualTo(it.VariationCollection[0].Rate));
+            Assert.That(riga.Sconto2, Is.EqualTo(it.VariationCollection[1].Rate));
+            Assert.That(riga.Sconto3, Is.EqualTo(it.VariationCollection[2].Rate));
+            Assert.That(riga.Sconto4, Is.EqualTo(it.VariationCollection[3].Rate));
+            Assert.That(riga.ScontoIncondizionato, Is.EqualTo(it.VariationCollection[4].Amount));
 
-            //         Assert.That(n.Nome, Is.EqualTo(doc.BillTo.Country));
-            //         Assert.That(ag.Nome, Is.EqualTo(contact.MarketArea));
-
-            //         // now remotely update the document by changing 1 item and adding a new one
-            //         doc.Items[0].Sku = "updated sku1";
-            //   item = new DocumentItem
-            //   {
-            //       Description = "new description",
-            //       Sku = "new sku"
-            //   };
-            //   doc.Items.Add(item);
-
-            //         doc = await adam.PutAsync<Invoice>(doc);
-
-            //// test that it syncs fine on Amica classic
-            //         await _httpDataProvider.GetAsync(companyDs);
-            //         Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
-            //         Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(1));
-            //         Assert.That(companyDs.Documenti.Count, Is.EqualTo(2));
-            //         Assert.That(companyDs.Righe.Count, Is.EqualTo(3));
-
-            //         a = companyDs.Anagrafiche[0];
-            //         d1 = companyDs.Documenti[0];
-            //         d2 = companyDs.Documenti[1];
-            //         var righe = companyDs.Righe.Select("", "IdDocumento");
-            //         ri1 = (companyDataSet.RigheRow)righe[0];
-            //         ri2 = (companyDataSet.RigheRow)righe[1];
-            //         var ri3 = (companyDataSet.RigheRow)righe[2];
-
-            //         Assert.That(a.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
-            //         Assert.That(a.Indirizzo, Is.EqualTo(doc.BillTo.Street));
-            //         Assert.That(a.PartitaIVA, Is.EqualTo(doc.BillTo.VatIdentificationNumber));
-
-            //         Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
-            //         Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
-            //         Assert.That(d1.IdTipoDocumento, Is.EqualTo(doc.Category.Code));
-
-            //         Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
-            //         Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
-            //         Assert.That(ri1.Descrizione, Is.EqualTo(doc.Items[0].Description));
-            //         Assert.That(ri2.IdDocumento, Is.EqualTo(d1.Id));
-            //         Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
-            //         Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
-            //         Assert.That(ri3.IdDocumento, Is.EqualTo(d2.Id));
-            //         Assert.That(ri3.CodiceArticolo, Is.EqualTo(doc2.Items[0].Sku));
-            //         Assert.That(ri3.Descrizione, Is.EqualTo(doc2.Items[0].Description));
-
-            //         // On remote, add a new contact and update the document with it
-            //         // create vnext contact and post it
-            //         var newContact = new Contact
-            //         {
-            //             CompanyId = company.UniqueId,
-            //       Name = "new name",
-            //       VatIdentificationNumber = "IT02182030391",
-            //       Address = new AddressEx
-            //             {
-            //                 Street = "Street",
-            //		Country = "Russia"
-            //             }
-            //   };
-            //   newContact = await adam.PostAsync<Contact>("contacts", newContact);
-            //         doc.BillTo = new BillingAddress(newContact);
-            //         doc = await adam.PutAsync<Invoice>(doc);
-
-            //System.Threading.Thread.Sleep(SleepLength);
-
-            //// test that it syncs fine on Amica classic
-            //         await _httpDataProvider.GetAsync(companyDs);
-            //         Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
-            //         Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(2));
-            //         Assert.That(companyDs.Documenti.Count, Is.EqualTo(2));
-            //         Assert.That(companyDs.Righe.Count, Is.EqualTo(3));
-            //         Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
-
-            //         var anagrafiche = companyDs.Anagrafiche.Select("", "Id");
-            //         a = (companyDataSet.AnagraficheRow)anagrafiche[1];
-            //         var docs = companyDs.Documenti.Select("", "Id");
-            //         d1 = (companyDataSet.DocumentiRow)docs[0];
-            //         righe = companyDs.Righe.Select("", "IdDocumento");
-            //         ri1 = (companyDataSet.RigheRow)righe[0];
-            //         ri2 = (companyDataSet.RigheRow)righe[1];
-
-            //         Assert.That(a.RagioneSociale1, Is.EqualTo(doc.BillTo.Name));
-            //         Assert.That(a.Indirizzo, Is.EqualTo(doc.BillTo.Street));
-            //         Assert.That(a.NazioniRow.Nome, Is.EqualTo(doc.BillTo.Country));
-            //         Assert.That(a.PartitaIVA, Is.EqualTo(doc.BillTo.VatIdentificationNumber));
-
-            //         Assert.That(d1.IdAnagrafica, Is.EqualTo(a.Id));
-            //         Assert.That(d1.TotaleFattura, Is.EqualTo(doc.Total));
-            //         Assert.That(d1.IdTipoDocumento, Is.EqualTo(doc.Category.Code));
-
-            //         Assert.That(ri1.IdDocumento, Is.EqualTo(d1.Id));
-            //         Assert.That(ri1.CodiceArticolo, Is.EqualTo(doc.Items[0].Sku));
-            //         Assert.That(ri1.Descrizione, Is.EqualTo(doc.Items[0].Description));
-            //         Assert.That(ri2.IdDocumento, Is.EqualTo(d1.Id));
-            //         Assert.That(ri2.CodiceArticolo, Is.EqualTo(doc.Items[1].Sku));
-            //         Assert.That(ri2.Descrizione, Is.EqualTo(doc.Items[1].Description));
-
-            //         // test that when a doc is deleted remotely, local sync
-            //         // gets rid of both main and child rows
-
-            //         await adam.DeleteAsync(doc);
-            //         Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-
-            //System.Threading.Thread.Sleep(SleepLength);
-
-            //         await _httpDataProvider.GetAsync(companyDs);
-            //         //Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
-            //         Assert.That(companyDs.Anagrafiche.Count, Is.EqualTo(2));
-            //         Assert.That(companyDs.Nazioni.Count, Is.EqualTo(2));
-            //         Assert.That(companyDs.Documenti.Count, Is.EqualTo(1));
-            //         Assert.That(companyDs.Righe.Count, Is.EqualTo(1));
+            //Assert.That(riga.Tag, Is.EqualTo(it.Detail.SerialNumber));
+            Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
+            //Assert.That(riga.Tag, Is.EqualTo(it.Detail.Lot.Number));
+            //Assert.That(riga.TagData.ToShortDateString(), Is.EqualTo(it.Detail.Lot.Expiration.ToShortDateString()));
         }
 
         [Test]

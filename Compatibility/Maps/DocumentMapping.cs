@@ -187,6 +187,14 @@ namespace Amica.vNext.Compatibility.Maps
             Children.Add(
                 new DataRelationMapping
                 {
+                    PropertyName = "ItemCollection",
+                    RelationName = "FK_Documenti_Righe",
+                    ChildType = typeof(DocumentItem),
+                });
+
+            Children.Add(
+                new DataRelationMapping
+                {
                     PropertyName = "FeeCollection",
                     RelationName = "FK_Documenti_SpeseDocumenti",
                     ChildType = typeof(DocumentFee),
