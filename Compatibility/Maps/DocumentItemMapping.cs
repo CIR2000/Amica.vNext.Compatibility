@@ -28,26 +28,31 @@ namespace Amica.vNext.Compatibility.Maps
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 1),
+                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
             });
             Fields.Add("Sconto2", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 2),
+                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
             });
             Fields.Add("Sconto3", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 3),
+                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
             });
             Fields.Add("Sconto4", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 4),
+                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
             });
             Fields.Add("ScontoIncondizionato", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetScontoIncondizionato(x),
+                UpstreamTransform = (x, obj) => SetScontoIncondizionatoVariation(x, obj),
             });
 
             Fields.Add("Quantità", new FieldMapping { PropertyName = "Quantity"});
@@ -68,6 +73,36 @@ namespace Amica.vNext.Compatibility.Maps
 					ChildType = typeof(Vat),
 					RelationName = "FK_CausaliIVA_Righe"
                 });
+        }
+		internal static object SetScontoIncondizionatoVariation(object value, object obj)
+        {
+            var sconto = Convert.ToDecimal(value);
+            var item = (DocumentItem)obj;
+			if (sconto != 0)
+            {
+				item.VariationCollection.Add(
+					new Variation
+					{
+						Amount = sconto,
+						Category = new VariationCategory { Category = DocumentVariation.Discount }
+					});
+            }
+            return item.VariationCollection;
+        }
+		internal static object SetScontoVariation(object value, object obj)
+        {
+            var sconto = (double)value;
+            var item = (DocumentItem)obj;
+			if (sconto != 0)
+            {
+				item.VariationCollection.Add(
+					new Variation
+					{
+						Rate = sconto,
+						Category = new VariationCategory { Category = DocumentVariation.Discount }
+					});
+            }
+            return item.VariationCollection;
         }
 		internal static object SetSconto(object o, int slot)
         {

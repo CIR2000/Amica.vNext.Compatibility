@@ -1866,6 +1866,12 @@ namespace Amica.vNext.Compatibility.Tests
             ri.IdDocumento = d.Id;
             ri.CodiceArticolo = "Sku";
             ri.Descrizione = "Description";
+            ri.IdCausaleIVA = i.Id;
+            ri.Sconto1 = 0.1;
+            ri.Sconto2 = 0.2;
+            ri.Sconto3 = 0.3;
+            ri.Sconto4 = 0.4;
+            ri.ScontoIncondizionato = 1;
             ds.Righe.AddRigheRow(ri);
 
 			// perform the operation
@@ -1968,58 +1974,15 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(doc.FeeCollection[1].IsFromPayment, Is.EqualTo(sd2.IsPagamento));
             Assert.That(doc.FeeCollection[1].Vat.Code, Is.EqualTo(sd2.CausaliIVARow.Codice));
             Assert.That(doc.FeeCollection[1].Name, Is.EqualTo(sd2.SpeseRow.Nome));
-            //Assert.That(doc.Shipping.Date.TimeOfDay, Is.EqualTo(d.OraTrasporto));
 
-            //   cds.AcceptChanges();
-            //   ds.AcceptChanges();
+            Assert.That(doc.ItemCollection.Count, Is.EqualTo(1));
 
-            //// Changing a Contact should not affect the ContatMinimal in the Document.
-            //         ds.Anagrafiche.Rows[0]["PartitaIVA"] = "IT02182030391";
-            //         ds.Nazioni.Rows[0]["Nome"] = "Russia";
-            //         await _httpDataProvider.UpdateAsync(ds);
-            //Assert.AreEqual(ActionPerformed.Modified, _httpDataProvider.ActionPerformed);
-            //Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
-            //         ValidateSyncDb(d, "documents");
-            //         ValidateSyncDb(ds.Anagrafiche.Rows[0], "contacts");
-
-            //         var adam = new EveClient (Service);
-            //   var contacts = await adam.GetAsync<Contact>("contacts");
-            //   var contact = contacts[0];
-            //   Assert.AreEqual("IT02182030391", contact.VatIdentificationNumber);
-            //   Assert.AreEqual(c.CodiceFiscale, contact.TaxIdentificationNumber);
-            //   Assert.AreEqual("Russia", contact.Address.Country);
-            //   Assert.AreEqual(ag.Nome, contact.MarketArea);
-            //   Assert.AreEqual(v.Nome, contact.Currency.Name);
-
-            //   var docs = await adam.GetAsync<Document>("documents");
-            //   var doc = docs[0];
-            //   Assert.AreEqual(contact.UniqueId, doc.Contact.UniqueId);
-            //   Assert.AreEqual("IT01180680397", doc.Contact.VatIdentificationNumber);
-            //   Assert.AreEqual("Italia", doc.Contact.Country);
-
-            //   Assert.That(doc.Items.Count, Is.EqualTo(1));
-            //   var docItem = doc.Items[0];
-            //   Assert.That(docItem.Sku, Is.EqualTo("Sku"));
-            //   Assert.That(docItem.Description, Is.EqualTo("Description"));
-
-
-            //         doc.Contact.VatIdentificationNumber = "IT92078790398";
-            //         doc.Contact.Country = "USA";
-            //         await adam.PutAsync("documents", doc);
-            //         Assert.AreEqual(HttpStatusCode.OK, _httpDataProvider.HttpResponse.StatusCode);
-            //         await _httpDataProvider.GetAsync(ds);
-            //         Assert.AreEqual(ActionPerformed.Read, _httpDataProvider.ActionPerformed);
-            //         // Anagrafiche field and document reference have not changed
-            //         Assert.AreEqual("IT02182030391", ds.Anagrafiche.Rows[0]["PartitaIva"]);
-            //         Assert.AreEqual("Russia", ds.Nazioni.Rows[0]["Nome"]);
-            //         Assert.AreEqual(ds.Anagrafiche.Rows[0]["Id"], ds.Documenti.Rows[0]["IdAnagrafica"]);
-
-            //         // test that a locally deleted object is deleted fine also remotely
-            //         ds.Documenti[0].Delete();
-            //         await _httpDataProvider.UpdateAsync(ds);
-            //         doc = await adam.GetAsync<Invoice>("documents", doc);
-            //         Assert.That(doc, Is.Null);
-            //         Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+			var item = doc.ItemCollection[0];
+            Assert.That(item.VariationCollection[0].Rate, Is.EqualTo(ri.Sconto1));
+            Assert.That(item.VariationCollection[1].Rate, Is.EqualTo(ri.Sconto2));
+            Assert.That(item.VariationCollection[2].Rate, Is.EqualTo(ri.Sconto3));
+            Assert.That(item.VariationCollection[3].Rate, Is.EqualTo(ri.Sconto4));
+            Assert.That(item.VariationCollection[4].Amount, Is.EqualTo(ri.ScontoIncondizionato));
         }
         /// <summary>
         /// Test that a new datarow is properly processed
