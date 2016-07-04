@@ -746,6 +746,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
             // add a company
@@ -971,7 +972,22 @@ namespace Amica.vNext.Compatibility.Tests
                 Size = new DocumentItemSize { Name = "size", Number = "S" },
             };
 
+            var warehouse = Factory<Warehouse>.Create();
+            warehouse.Name = "Warehouse";
+            warehouse.Notes = "Notes";
+            warehouse.CompanyId = company.UniqueId;
+            warehouse.Address = new Address
+            {
+				Street = "street",
+                PostalCode = "pc",
+				StateOrProvince = "sop",
+				Town = "town",
+				Country = "country"
+            };
+			warehouse = await adam.PostAsync<Warehouse>("warehouses", warehouse);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
+            it.Warehouse = warehouse;
             it.VariationCollection.Add(new Variation {
                 Rate = 0.1,
                 Category = DocumentHelpers.Variations[DocumentVariation.Discount]
@@ -1129,6 +1145,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(riga.Sconto3, Is.EqualTo(it.VariationCollection[2].Rate));
             Assert.That(riga.Sconto4, Is.EqualTo(it.VariationCollection[3].Rate));
             Assert.That(riga.ScontoIncondizionato, Is.EqualTo(it.VariationCollection[4].Amount));
+            Assert.That(riga.MagazziniRow.Nome, Is.EqualTo(it.Warehouse.Name));
 
             //Assert.That(riga.Tag, Is.EqualTo(it.Detail.SerialNumber));
             Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
@@ -1693,6 +1710,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payments")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -1862,11 +1880,17 @@ namespace Amica.vNext.Compatibility.Tests
             sd2.ImportoNetto = s1.Importo;
             ds.SpeseDocumenti.AddSpeseDocumentiRow(sd2);
 
+            var m = ds.Magazzini.NewMagazziniRow();
+			m.Nome = "Warehouse";
+			m.Indirizzo = "street";
+            ds.Magazzini.AddMagazziniRow(m);
+
             var ri = ds.Righe.NewRigheRow();
             ri.IdDocumento = d.Id;
             ri.CodiceArticolo = "Sku";
             ri.Descrizione = "Description";
             ri.IdCausaleIVA = i.Id;
+            ri.IdMagazzino = m.Id;
             ri.Sconto1 = 0.1;
             ri.Sconto2 = 0.2;
             ri.Sconto3 = 0.3;
@@ -1881,6 +1905,8 @@ namespace Amica.vNext.Compatibility.Tests
 			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
             ValidateSyncDb(d, "documents");
             ValidateSyncDb(c, "contacts");
+            ValidateSyncDb(ci, "vat");
+            ValidateSyncDb(m, "warehouses");
 
             var adam = new EveClient(Service) { ResourceName = "documents" };
             var docs = await adam.GetAsync<Document>();
@@ -1983,6 +2009,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(item.VariationCollection[2].Rate, Is.EqualTo(ri.Sconto3));
             Assert.That(item.VariationCollection[3].Rate, Is.EqualTo(ri.Sconto4));
             Assert.That(item.VariationCollection[4].Amount, Is.EqualTo(ri.ScontoIncondizionato));
+            Assert.That(item.Warehouse.Name, Is.EqualTo(ri.MagazziniRow.Nome));
+            Assert.That(item.Warehouse.Address.Street, Is.EqualTo(ri.MagazziniRow.Indirizzo));
         }
         /// <summary>
         /// Test that a new datarow is properly processed

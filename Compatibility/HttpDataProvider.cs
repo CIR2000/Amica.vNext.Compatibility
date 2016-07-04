@@ -9,7 +9,6 @@ using Amica.Data;
 using Amica.vNext.Models;
 using Amica.vNext.Storage;
 using SQLite;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Amica.vNext.Models.Documents;
@@ -54,15 +53,16 @@ namespace Amica.vNext.Compatibility
 
             Map.HttpDataProvider = this;
 
+			// ORDER DOES MATTER!!
             _resourcesMapping = new Dictionary<string, string> {
                 {"Aziende", "companies"},
-                {"Documenti", "documents"},
                 {"Anagrafiche", "contacts"},
                 {"CausaliIVA", "vat"},
                 {"ModalitàPagamento", "payment-methods"},
                 {"Spese", "fees"},
                 {"Pagamenti", "payments"},
                 {"Magazzini", "warehouses"},
+                {"Documenti", "documents"},
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -397,6 +397,20 @@ namespace Amica.vNext.Compatibility
 
 			var cache = new Dictionary<string, int>();
 
+            //foreach (var table in changes.Tables)
+            //{
+            //    var targetTable = (DataTable)table;
+
+            //    if (targetTable.Rows.Count == 0) continue;
+            //    //if (!_resourcesMapping.ContainsKey(targetTable.TableName)) continue;
+
+            //    UpdateParentTables(targetTable, 1, ref cache);
+            //    if (!cache.ContainsKey(targetTable.TableName))
+            //    {
+            //        cache.Add(targetTable.TableName, 1);
+            //    }
+
+            //}
             foreach (var tableName in _resourcesMapping.Keys)
             {
                 if (!changes.Tables.Contains(tableName)) continue;
@@ -411,7 +425,7 @@ namespace Amica.vNext.Compatibility
                 }
             }
 
-			var sortedCache = from entry in cache orderby entry.Value descending select entry;
+            var sortedCache = from entry in cache orderby entry.Value descending select entry;
 			foreach (var c in sortedCache)
 			{
                 await UpdateTable(dataSet.Tables[c.Key]);
