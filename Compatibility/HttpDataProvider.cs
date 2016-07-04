@@ -62,6 +62,7 @@ namespace Amica.vNext.Compatibility
                 {"ModalitàPagamento", "payment-methods"},
                 {"Spese", "fees"},
                 {"Pagamenti", "payments"},
+                {"Magazzini", "warehouses"},
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -342,6 +343,16 @@ namespace Amica.vNext.Compatibility
         public async Task UpdateSpeseAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<Fee>(row, batch);
+        }
+
+        /// <summary>
+        /// Stores a companyDataSet.MagazziniDataTable.MagazziniRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateMagazziniAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Warehouse>(row, batch);
         }
 
         /// <summary>
@@ -778,6 +789,15 @@ namespace Amica.vNext.Compatibility
         private async Task GetAndSyncPagamentiAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Payment>(dataSet.Pagamenti);
+        }
+
+        /// <summary>
+        /// Downloads Warehouses changes from the server and merges them to the Magazzini table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncMagazziniAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Warehouse>(dataSet.Magazzini);
         }
         #endregion
 

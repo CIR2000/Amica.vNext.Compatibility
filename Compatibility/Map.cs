@@ -31,6 +31,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Payment), new PaymentMapping());
             Topology.Add(typeof(ContactDetailsEx), new ContactDetailsExMapping());
             Topology.Add(typeof(DocumentFee), new DocumentFeeMapping());
+            Topology.Add(typeof(Warehouse), new WarehouseMapping());
         }
 
 #region TO

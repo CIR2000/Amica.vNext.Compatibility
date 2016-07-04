@@ -217,6 +217,92 @@ namespace Amica.vNext.Compatibility.Tests
 
 
 		[Test]
+        public async void DownloadWarehouse()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+            var warehouse = Factory<Warehouse>.Create();
+			warehouse.CompanyId = company.UniqueId;
+			warehouse.Name = "name";
+			warehouse.Notes = "notes";
+            warehouse.Address = new Address
+            {
+                Country = "country",
+                PostalCode = "postal",
+                StateOrProvince = "pr",
+                Street = "street",
+                Town = "town"
+            };
+		    warehouse = await adam.PostAsync<Warehouse>("warehouses", warehouse);
+
+			// try downloading the new warehouse into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Magazzini.Count, Is.EqualTo(1));
+
+            var m = companyDs.Magazzini[0];
+
+            Assert.That(m.Nome, Is.EqualTo(warehouse.Name));
+            Assert.That(m.Note, Is.EqualTo(warehouse.Notes));
+            Assert.That(m.Indirizzo, Is.EqualTo(warehouse.Address.Street));
+            Assert.That(m.CAP, Is.EqualTo(warehouse.Address.PostalCode));
+            Assert.That(m.Provincia, Is.EqualTo(warehouse.Address.StateOrProvince));
+            Assert.That(m.Località, Is.EqualTo(warehouse.Address.Town));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            adam.ResourceName = "warehouses";
+
+            warehouse.Name = "new name";
+            warehouse = await adam.PutAsync<Warehouse>(warehouse);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Magazzini.Count, Is.EqualTo(1));
+
+            m = companyDs.Magazzini[0];
+            Assert.That(m.Nome, Is.EqualTo(warehouse.Name));
+            Assert.That(m.Note, Is.EqualTo(warehouse.Notes));
+            Assert.That(m.Indirizzo, Is.EqualTo(warehouse.Address.Street));
+            Assert.That(m.CAP, Is.EqualTo(warehouse.Address.PostalCode));
+            Assert.That(m.Provincia, Is.EqualTo(warehouse.Address.StateOrProvince));
+            Assert.That(m.Località, Is.EqualTo(warehouse.Address.Town));
+
+            await adam.DeleteAsync(warehouse);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Magazzini.Count, Is.EqualTo(0));
+        }
+
+		[Test]
         public async void DownloadFee()
         {
             // make sure remote target remote endpoints are empty
@@ -1048,6 +1134,79 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
             //Assert.That(riga.Tag, Is.EqualTo(it.Detail.Lot.Number));
             //Assert.That(riga.TagData.ToShortDateString(), Is.EqualTo(it.Detail.Lot.Expiration.ToShortDateString()));
+        }
+
+        [Test]
+        public async void UploadWarehouse()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var m = ds.Magazzini.NewMagazziniRow();
+            m.Nome = "name";
+            m.Note = "notes";
+            m.Indirizzo = "street";
+            m.CAP = "cap";
+            m.Provincia = "ra";
+            m.Località = "loc";
+            ds.Magazzini.AddMagazziniRow(m);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(m, "warehouses");
+
+            var adam = new EveClient(Service) { ResourceName = "warehouses" };
+
+            var warehouses = await adam.GetAsync<Warehouse>();
+            Assert.That(warehouses.Count, Is.EqualTo(1));
+
+            var warehouse  = warehouses[0];
+            Assert.That(m.Nome, Is.EqualTo(warehouse.Name));
+            Assert.That(m.Note, Is.EqualTo(warehouse.Notes));
+            Assert.That(m.Indirizzo, Is.EqualTo(warehouse.Address.Street));
+            Assert.That(m.CAP, Is.EqualTo(warehouse.Address.PostalCode));
+            Assert.That(m.Provincia, Is.EqualTo(warehouse.Address.StateOrProvince));
+            Assert.That(m.Località, Is.EqualTo(warehouse.Address.Town));
+
+            ds.AcceptChanges();
+
+            // test that changing a row locally will sync fine upstream
+            m.Nome = "name1";
+            m.Indirizzo = "new street";
+            await _httpDataProvider.UpdateAsync(ds);
+
+            warehouse = await adam.GetAsync<Warehouse>(warehouse);
+            Assert.That(m.Nome, Is.EqualTo(warehouse.Name));
+            Assert.That(m.Indirizzo, Is.EqualTo(warehouse.Address.Street));
+
+            ds.AcceptChanges();
+
+            // test that deleting a Magazzino locally will also delete it upstream
+            m.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            warehouse = await adam.GetAsync<Warehouse>(warehouse);
+            Assert.That(warehouse, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
         [Test]
