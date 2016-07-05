@@ -32,6 +32,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(ContactDetailsEx), new ContactDetailsExMapping());
             Topology.Add(typeof(DocumentFee), new DocumentFeeMapping());
             Topology.Add(typeof(Warehouse), new WarehouseMapping());
+            Topology.Add(typeof(Size), new SizeMapping());
         }
 
 #region TO

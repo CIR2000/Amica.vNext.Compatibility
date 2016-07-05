@@ -215,6 +215,87 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(companyDs.Pagamenti.Count, Is.EqualTo(0));
         }
 
+		[Test]
+        public async void DownloadSize()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "sizes")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+            var size = Factory<Size>.Create();
+			size.CompanyId = company.UniqueId;
+			size.Name = "name";
+            size.NumberCollection = new List<string> { "S", "M", "L", "XL", "XXL" };
+		    size = await adam.PostAsync<Size>("sizes", size);
+
+			// try downloading the new warehouse into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Taglie.Count, Is.EqualTo(1));
+
+            var t = companyDs.Taglie[0];
+
+            Assert.That(t.Nome, Is.EqualTo(size.Name));
+            Assert.That(t.Taglia1, Is.EqualTo(size.NumberCollection[0]));
+            Assert.That(t.Taglia2, Is.EqualTo(size.NumberCollection[1]));
+            Assert.That(t.Taglia3, Is.EqualTo(size.NumberCollection[2]));
+            Assert.That(t.Taglia4, Is.EqualTo(size.NumberCollection[3]));
+            Assert.That(t.Taglia5, Is.EqualTo(size.NumberCollection[4]));
+            Assert.That(t.IsTaglia6Null, Is.True);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            adam.ResourceName = "sizes";
+
+            size.Name = "new name";
+            size = await adam.PutAsync<Size>(size);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Taglie.Count, Is.EqualTo(1));
+
+            t = companyDs.Taglie[0];
+            Assert.That(t.Nome, Is.EqualTo(size.Name));
+            Assert.That(t.Taglia1, Is.EqualTo(size.NumberCollection[0]));
+            Assert.That(t.Taglia2, Is.EqualTo(size.NumberCollection[1]));
+            Assert.That(t.Taglia3, Is.EqualTo(size.NumberCollection[2]));
+            Assert.That(t.Taglia4, Is.EqualTo(size.NumberCollection[3]));
+            Assert.That(t.Taglia5, Is.EqualTo(size.NumberCollection[4]));
+            Assert.That(t.IsTaglia6Null, Is.True);
+
+            await adam.DeleteAsync(size);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Taglie.Count, Is.EqualTo(0));
+        }
+
+
 
 		[Test]
         public async void DownloadWarehouse()
@@ -747,6 +828,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "sizes")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
             // add a company
@@ -1151,6 +1233,80 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
             //Assert.That(riga.Tag, Is.EqualTo(it.Detail.Lot.Number));
             //Assert.That(riga.TagData.ToShortDateString(), Is.EqualTo(it.Detail.Lot.Expiration.ToShortDateString()));
+        }
+
+        [Test]
+        public async void UploadSizes()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "sizes")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var t = ds.Taglie.NewTaglieRow();
+            t.Nome = "name";
+            t.Taglia1 = "S";
+            t.Taglia2 = "M";
+            t.Taglia3 = "L";
+            t.Taglia5 = "XL";
+            t.Taglia4 = "XXL";
+            ds.Taglie.AddTaglieRow(t);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(t, "sizes");
+
+            var adam = new EveClient(Service) { ResourceName = "sizes" };
+
+            var sizes = await adam.GetAsync<Size>();
+            Assert.That(sizes.Count, Is.EqualTo(1));
+
+            var size  = sizes[0];
+            Assert.That(t.Nome, Is.EqualTo(size.Name));
+            Assert.That(size.NumberCollection.Count, Is.EqualTo(5));
+            Assert.That(t.Taglia1, Is.EqualTo(size.NumberCollection[0]));
+            Assert.That(t.Taglia2, Is.EqualTo(size.NumberCollection[1]));
+            Assert.That(t.Taglia3, Is.EqualTo(size.NumberCollection[2]));
+            Assert.That(t.Taglia4, Is.EqualTo(size.NumberCollection[3]));
+            Assert.That(t.Taglia5, Is.EqualTo(size.NumberCollection[4]));
+
+            ds.AcceptChanges();
+
+            // test that changing a row locally will sync fine upstream
+            t.Nome = "name1";
+            t.Taglia1 = "XS";
+            await _httpDataProvider.UpdateAsync(ds);
+
+            size = await adam.GetAsync<Size>(size);
+            Assert.That(t.Nome, Is.EqualTo(size.Name));
+            Assert.That(t.Taglia1, Is.EqualTo(size.NumberCollection[0]));
+
+            ds.AcceptChanges();
+
+            // test that deleting a Magazzino locally will also delete it upstream
+            t.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            size = await adam.GetAsync<Size>(size);
+            Assert.That(size, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
         [Test]

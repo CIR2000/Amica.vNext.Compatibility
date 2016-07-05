@@ -62,6 +62,7 @@ namespace Amica.vNext.Compatibility
                 {"Spese", "fees"},
                 {"Pagamenti", "payments"},
                 {"Magazzini", "warehouses"},
+                {"Taglie", "sizes"},
                 {"Documenti", "documents"},
             };
 
@@ -343,6 +344,16 @@ namespace Amica.vNext.Compatibility
         public async Task UpdateSpeseAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<Fee>(row, batch);
+        }
+
+        /// <summary>
+        /// Stores a companyDataSet.TaglieDataTable.TagliaRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateTaglieAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<Size>(row, batch);
         }
 
         /// <summary>
@@ -812,6 +823,15 @@ namespace Amica.vNext.Compatibility
         private async Task GetAndSyncMagazziniAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Warehouse>(dataSet.Magazzini);
+        }
+
+        /// <summary>
+        /// Downloads Warehouses changes from the server and merges them to the Taglie table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncTaglieAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<Size>(dataSet.Taglie);
         }
         #endregion
 
