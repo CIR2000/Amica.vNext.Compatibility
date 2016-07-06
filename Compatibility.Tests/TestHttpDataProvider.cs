@@ -856,6 +856,11 @@ namespace Amica.vNext.Compatibility.Tests
             payMethod.ModalitaPagamentoPA = PAHelpers.ModalitaPagamentoPA["MP01"];
             payMethod = await adam.PostAsync<PaymentMethod>("payment-methods", payMethod);
 
+            var size = Factory<Size>.Create();
+            size.CompanyId = company.UniqueId;
+			size.Name ="size";
+            size = await adam.PostAsync<Size>("sizes", size);
+
             var fee = Factory<Fee>.Create();
 			fee.Name ="fee1";
 			fee.CompanyId = company.UniqueId;
@@ -1051,7 +1056,7 @@ namespace Amica.vNext.Compatibility.Tests
                 Notes = "notes",
                 //SerialNumber = "serial",
                 //Lot = new DocumentItemLot { Date = DateTime.Now, Expiration = DateTime.Now.AddDays(1), Number = "ab" },
-                Size = new DocumentItemSize { Name = "size", Number = "S" },
+                Size = new DocumentItemSize { Name = size.Name, Number = "S" },
             };
 
             var warehouse = Factory<Warehouse>.Create();
@@ -1228,6 +1233,8 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(riga.Sconto4, Is.EqualTo(it.VariationCollection[3].Rate));
             Assert.That(riga.ScontoIncondizionato, Is.EqualTo(it.VariationCollection[4].Amount));
             Assert.That(riga.MagazziniRow.Nome, Is.EqualTo(it.Warehouse.Name));
+            Assert.That(riga.TaglieRow.Nome, Is.EqualTo(it.Detail.Size.Name));
+            Assert.That(riga.TaglieRow.Taglia1, Is.EqualTo(it.Detail.Size.Number));
 
             //Assert.That(riga.Tag, Is.EqualTo(it.Detail.SerialNumber));
             Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
@@ -1867,6 +1874,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "payment-methods")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "sizes")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -2041,12 +2049,23 @@ namespace Amica.vNext.Compatibility.Tests
 			m.Indirizzo = "street";
             ds.Magazzini.AddMagazziniRow(m);
 
+            var t = ds.Taglie.NewTaglieRow();
+            t.Nome = "size";
+            t.Taglia1 = "S";
+            t.Taglia2 = "M";
+            ds.Taglie.AddTaglieRow(t);
+
             var ri = ds.Righe.NewRigheRow();
             ri.IdDocumento = d.Id;
+            ri.IdTaglia = t.Id;
             ri.CodiceArticolo = "Sku";
             ri.Descrizione = "Description";
             ri.IdCausaleIVA = i.Id;
             ri.IdMagazzino = m.Id;
+            ri.Tag = t.Taglia2;
+            ri.TagExtra = "notes";
+            ri.TagData = DateTime.Now;
+            ri.Colore = "color";
             ri.Sconto1 = 0.1;
             ri.Sconto2 = 0.2;
             ri.Sconto3 = 0.3;
@@ -2167,6 +2186,11 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(item.VariationCollection[4].Amount, Is.EqualTo(ri.ScontoIncondizionato));
             Assert.That(item.Warehouse.Name, Is.EqualTo(ri.MagazziniRow.Nome));
             Assert.That(item.Warehouse.Address.Street, Is.EqualTo(ri.MagazziniRow.Indirizzo));
+            //Assert.That(item.Detail.SerialNumber, Is.EqualTo(ri.Tag));
+            Assert.That(item.Detail.Size.Name, Is.EqualTo(ri.TaglieRow.Nome));
+            Assert.That(item.Detail.Color, Is.EqualTo(ri.Colore));
+            Assert.That(item.Detail.Notes, Is.EqualTo(ri.TagExtra));
+            Assert.That(item.Detail.Lot.Expiration.ToShortDateString(), Is.EqualTo(ri.TagData.ToShortDateString()));
         }
         /// <summary>
         /// Test that a new datarow is properly processed

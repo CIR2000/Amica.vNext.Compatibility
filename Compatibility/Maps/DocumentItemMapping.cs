@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using Amica.vNext.Models;
@@ -21,38 +22,38 @@ namespace Amica.vNext.Compatibility.Maps
             {
                 PropertyName = "Detail",
                 DownstreamTransform = (x) => SetTag(x),
-                //UpstreamTransform = (x, obj) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
+                UpstreamTransform = (key, row, obj) => SetDocumentItemSize(key, row, obj)
             });
 
             Fields.Add("Sconto1", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 1),
-                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
+                UpstreamTransform = (key, row, obj) => SetScontoVariation(row[key], obj),
             });
             Fields.Add("Sconto2", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 2),
-                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
+                UpstreamTransform = (key, row, obj) => SetScontoVariation(row[key], obj),
             });
             Fields.Add("Sconto3", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 3),
-                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
+                UpstreamTransform = (key, row, obj) => SetScontoVariation(row[key], obj),
             });
             Fields.Add("Sconto4", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x, 4),
-                UpstreamTransform = (x, obj) => SetScontoVariation(x, obj),
+                UpstreamTransform = (key, row, obj) => SetScontoVariation(row[key], obj),
             });
             Fields.Add("ScontoIncondizionato", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetScontoIncondizionato(x),
-                UpstreamTransform = (x, obj) => SetScontoIncondizionatoVariation(x, obj),
+                UpstreamTransform = (key, row, obj) => SetScontoIncondizionatoVariation(row[key], obj),
             });
 
             Fields.Add("Quantità", new FieldMapping { PropertyName = "Quantity"});
@@ -62,6 +63,17 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("PrezzoIvato", new FieldMapping { PropertyName = "PriceVatInclusive"});
             Fields.Add("ImportoNetto", new FieldMapping { PropertyName = "Total"});
             Fields.Add("IsRitenuta", new FieldMapping { PropertyName = "WithholdingTax"});
+
+            Parents.Add(
+                "IdTaglia",
+                new DataRelationMapping
+                {
+					ParentColumn = "Nome",
+					ChildProperty = "Name",
+                    PropertyName = "Detail.Size",
+					ChildType = typeof(DocumentItemSize),
+					RelationName = "FK_Taglie_Righe"
+                });
 
             Parents.Add(
                 "IdCausaleIVA",
@@ -154,6 +166,21 @@ namespace Amica.vNext.Compatibility.Maps
         {
             var detail = (DocumentItemDetail)o;
             return (detail.SerialNumber != null) ? detail.SerialNumber : (detail.Size != null) ? detail.Size.Number : detail.Lot.Number;
+        }
+		internal static object SetDocumentItemSize(string key, DataRow row, object obj)
+        {
+            var item = (DocumentItem)obj;
+            if (row["IdTaglia"] == DBNull.Value)
+            {
+                item.Detail.SerialNumber = (string)row[key];
+            }
+            else
+            {
+                if (item.Detail.Size == null) item.Detail.Size = new DocumentItemSize();
+				item.Detail.Size.Name = (string)row[key];
+            }
+
+            return item.Detail;
         }
     }
 }

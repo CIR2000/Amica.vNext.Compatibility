@@ -30,7 +30,7 @@ namespace Amica.vNext.Compatibility.Maps
             {
                 PropertyName = "SocialSecurityCollection[0].Category",
                 DownstreamTransform = (x) => SocialSecurityAdapter.GetAmicaDescription((SocialSecurityCategory)x),
-                UpstreamTransform = (x, obj) => SocialSecurityAdapter.GetSocialSecurityCategory((string)x)
+                UpstreamTransform = (key, row, obj) => SocialSecurityAdapter.GetSocialSecurityCategory((string)row[key])
             });
 
             Fields.Add("Abbuono", new FieldMapping {PropertyName = "Rebate"});
@@ -48,26 +48,26 @@ namespace Amica.vNext.Compatibility.Maps
             Fields.Add("OraTrasporto", new FieldMapping
             {
                 PropertyName = "Shipping.Date",
-                UpstreamTransform = (x, o) => SetOraTrasportoUpstream(x, o),
+                UpstreamTransform = (key, row, obj) => SetOraTrasportoUpstream(row[key], obj),
             });
 
             Fields.Add("Sconto", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetSconto(x),
-				UpstreamTransform = (x, o) => SetScontoVariation(x, o)
+				UpstreamTransform = (key, row, obj) => SetScontoVariation(row[key], obj)
             });
             Fields.Add("ScontoIncondizionato", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetScontoIncondizionato(x),
-				UpstreamTransform = (x, o) => SetScontoIncondizionatoVariation(x, o)
+				UpstreamTransform = (key, row, o) => SetScontoIncondizionatoVariation(row[key], o)
             });
             Fields.Add("ScontoPagamento", new FieldMapping
             {
                 PropertyName = "VariationCollection",
                 DownstreamTransform = (x) => SetScontoPagamento(x),
-				UpstreamTransform = (x, o) => SetScontoPagamentoVariation(x, o)
+				UpstreamTransform = (key, row, o) => SetScontoPagamentoVariation(row[key], o)
             });
             Fields.Add("Cambio", new FieldMapping { PropertyName = "Currency.ExchangeRate" });
             Fields.Add("Note", new FieldMapping { PropertyName = "Notes" });
@@ -79,7 +79,7 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "Shipping.Terms",
                     ParentColumn = "Porto",
                     ChildProperty = "Code",
-                    UpstreamTransform = (x, obj) => DocumentHelpers.TransportTerms[(DocumentShippingTerm)x]
+                    UpstreamTransform = (key, row, obj) => DocumentHelpers.TransportTerms[(DocumentShippingTerm)row[key]]
                 });
 
             Parents.Add(
@@ -89,7 +89,7 @@ namespace Amica.vNext.Compatibility.Maps
                     PropertyName = "Shipping.TransportMode",
                     ParentColumn = "MezzoTrasporto",
                     ChildProperty = "Code",
-                    UpstreamTransform = (x, obj) => DocumentHelpers.TransportModes[(DocumentTransportMode)x]
+                    UpstreamTransform = (key, row, obj) => DocumentHelpers.TransportModes[(DocumentTransportMode)row[key]]
                 });
 
             Parents.Add(
@@ -107,7 +107,7 @@ namespace Amica.vNext.Compatibility.Maps
 					PropertyName="Category",
 					ParentColumn = "IdTipoDocumento",
 					ChildProperty = "Code",
-                    UpstreamTransform = (x, obj) => DocumentHelpers.Categories[(DocumentCategory)x],
+                    UpstreamTransform = (key, row, obj) => DocumentHelpers.Categories[(DocumentCategory)row[key]],
                 });
 
             Parents.Add(
@@ -116,7 +116,7 @@ namespace Amica.vNext.Compatibility.Maps
 					PropertyName="Status",
 					ParentColumn = "Stato",
 					ChildProperty = "Code",
-                    UpstreamTransform = (x, obj) => DocumentHelpers.Statuses[(DocumentStatus)x],
+                    UpstreamTransform = (key, row, obj) => DocumentHelpers.Statuses[(DocumentStatus)row[key]],
                 });
 
             Parents.Add(

@@ -10,7 +10,7 @@ namespace Amica.vNext.Compatibility.Maps
 		public VatIdNumberFieldMapping()
         {
             PropertyName = "VatIdentificationNumber";
-            UpstreamTransform = (x, obj) => (x.ToString().ToUpper().StartsWith("IT")) ? x.ToString() : "IT" + x.ToString();
+            UpstreamTransform = (key, row, obj) => (row[key].ToString().ToUpper().StartsWith("IT")) ? row[key].ToString() : "IT" + row[key].ToString();
         }
     }
 }

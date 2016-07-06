@@ -33,6 +33,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(DocumentFee), new DocumentFeeMapping());
             Topology.Add(typeof(Warehouse), new WarehouseMapping());
             Topology.Add(typeof(Size), new SizeMapping());
+            Topology.Add(typeof(DocumentItemSize), new DocumentItemSizeMapping());
         }
 
 #region TO
@@ -76,8 +77,7 @@ namespace Amica.vNext.Compatibility
             foreach (var fieldMapping in mapping.Fields)
             {
                 object activeTarget;
-                var transformedSourceValue = fieldMapping.Value.UpstreamTransform(
-                    row[row.Table.Columns[fieldMapping.Key]], target);
+                var transformedSourceValue = fieldMapping.Value.UpstreamTransform(fieldMapping.Key, row, target);
                 if (transformedSourceValue == DBNull.Value) continue;
 
                 var prop = GetProperty(target, fieldMapping.Value.PropertyName, out activeTarget, appendToEmptyList: true);
@@ -99,7 +99,7 @@ namespace Amica.vNext.Compatibility
 
                 if (dataRelation.RelationName == null)
                 {
-                    value = dataRelation.UpstreamTransform(row[dataRelation.ParentColumn], target);
+                    value = dataRelation.UpstreamTransform(dataRelation.ParentColumn, row, target);
                 }
                 else
                 {
@@ -112,7 +112,7 @@ namespace Amica.vNext.Compatibility
                     {
 					if (parentMapping.Value.ChildType == null)
 					{
-						value = dataRelation.UpstreamTransform(parentRow[dataRelation.ParentColumn], target);
+						value = dataRelation.UpstreamTransform(dataRelation.ParentColumn, parentRow, target);
 						value = GetAdjustedColumnValue(parentRow, dataRelation.ParentColumn, value, prop);
 					}
 					else
