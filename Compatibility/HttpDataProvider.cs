@@ -64,6 +64,7 @@ namespace Amica.vNext.Compatibility
                 {"Magazzini", "warehouses"},
                 {"Taglie", "sizes"},
                 {"Documenti", "documents"},
+                {"Listini", "price-lists"},
             };
 
 			_db = new SQLiteConnection(DbName);
@@ -374,6 +375,16 @@ namespace Amica.vNext.Compatibility
         public async Task UpdatePagamentiAsync(DataRow row, bool batch = false) 
         {
             await UpdateRowAsync<Payment>(row, batch);
+        }
+
+        /// <summary>
+        /// Stores a companyDataSet.ListiniDataTable.ListiniRow to a remote API endpoint.
+        /// </summary>
+        /// <param name="row">Source DataRow</param>
+        /// <param name="batch">Wether this is part of a batch operation or not.</param>
+        public async Task UpdateListiniAsync(DataRow row, bool batch = false) 
+        {
+            await UpdateRowAsync<PriceList>(row, batch);
         }
         /// <summary>
         /// Stores a configDataSet.AziendeDataTable.AziendeRow to a remote API endpoint.
@@ -832,6 +843,15 @@ namespace Amica.vNext.Compatibility
         private async Task GetAndSyncTaglieAsync(companyDataSet dataSet)
         {
             await GetAndSyncCompanyTable<Size>(dataSet.Taglie);
+        }
+
+        /// <summary>
+        /// Downloads PriceList changes from the server and merges them to the Listini table on the local dataset.
+        /// </summary>
+        /// <param name="dataSet">companyDataSet instance.</param>
+        private async Task GetAndSyncListiniAsync(companyDataSet dataSet)
+        {
+            await GetAndSyncCompanyTable<PriceList>(dataSet.Listini);
         }
         #endregion
 

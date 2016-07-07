@@ -298,6 +298,73 @@ namespace Amica.vNext.Compatibility.Tests
 
 
 		[Test]
+        public async void DownloadPriceList()
+        {
+            // make sure remote target remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "price-lists")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company and post it to remote, then retrive the unique remote id
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var adam = new EveClient (Service);
+		    var companies = await adam.GetAsync<Company>("companies");
+            var company = companies[0];
+
+            var list = Factory<PriceList>.Create();
+			list.CompanyId = company.UniqueId;
+			list.Name = "name";
+		    list = await adam.PostAsync<PriceList>("price-lists", list);
+
+			// try downloading the new list into Amica companyDataSet
+			var companyDs = new companyDataSet();
+            _httpDataProvider.LocalCompanyId = r.Id;
+
+			await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Listini.Count, Is.EqualTo(1));
+
+            var m = companyDs.Listini[0];
+
+            Assert.That(m.Nome, Is.EqualTo(list.Name));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            adam.ResourceName = "price-lists";
+
+            list.Name = "new name";
+            list = await adam.PutAsync<PriceList>(list);
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Listini.Count, Is.EqualTo(1));
+
+            m = companyDs.Listini[0];
+            Assert.That(m.Nome, Is.EqualTo(list.Name));
+
+            await adam.DeleteAsync(list);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            System.Threading.Thread.Sleep(SleepLength);
+
+            await _httpDataProvider.GetAsync(companyDs);
+            Assert.That(_httpDataProvider.ActionPerformed, Is.EqualTo(ActionPerformed.Read));
+            Assert.That(companyDs.Listini.Count, Is.EqualTo(0));
+        }
+
+		[Test]
         public async void DownloadWarehouse()
         {
             // make sure remote target remote endpoints are empty
@@ -829,6 +896,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "vat")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "sizes")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "price-lists")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
             // add a company
@@ -1073,8 +1141,15 @@ namespace Amica.vNext.Compatibility.Tests
             };
 			warehouse = await adam.PostAsync<Warehouse>("warehouses", warehouse);
             Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-
             it.Warehouse = warehouse;
+
+            var list = Factory<PriceList>.Create();
+            list.CompanyId = company.UniqueId;
+            list.Name = "listino 1";
+			list = await adam.PostAsync<PriceList>("price-lists", list);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+            it.PriceList = list.Name;
+
             it.VariationCollection.Add(new Variation {
                 Rate = 0.1,
                 Category = DocumentHelpers.Variations[DocumentVariation.Discount]
@@ -1235,6 +1310,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(riga.MagazziniRow.Nome, Is.EqualTo(it.Warehouse.Name));
             Assert.That(riga.TaglieRow.Nome, Is.EqualTo(it.Detail.Size.Name));
             Assert.That(riga.TaglieRow.Taglia1, Is.EqualTo(it.Detail.Size.Number));
+            Assert.That(riga.ListiniRow.Nome, Is.EqualTo(it.PriceList));
 
             //Assert.That(riga.Tag, Is.EqualTo(it.Detail.SerialNumber));
             Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
@@ -1315,6 +1391,69 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(size, Is.Null);
             Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
+
+
+        [Test]
+        public async void UploadPriceList()
+        {
+            // make sure remote endpoints are empty
+            var rc = new HttpClient {BaseAddress = new Uri(Service)};
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "companies")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "price-lists")).Result.StatusCode == HttpStatusCode.NoContent);
+
+
+			// add a company
+            var cds = new configDataSet();
+            var r = cds.Aziende.NewAziendeRow();
+            r.Nome = "company";
+            r.Id = 99;
+            cds.Aziende.AddAziendeRow(r);
+
+			await _httpDataProvider.UpdateAziendeAsync(r);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+
+            var ds = new companyDataSet();
+
+            var l = ds.Listini.NewListiniRow();
+            l.Nome = "name";
+            ds.Listini.AddListiniRow(l);
+
+            _httpDataProvider.LocalCompanyId = 99;
+
+			// perform the operation
+            await _httpDataProvider.UpdateAsync(ds);
+			Assert.AreEqual(ActionPerformed.Added, _httpDataProvider.ActionPerformed);
+			Assert.AreEqual(HttpStatusCode.Created, _httpDataProvider.HttpResponse.StatusCode);
+            ValidateSyncDb(l, "price-lists");
+
+            var adam = new EveClient(Service) { ResourceName = "price-lists" };
+
+            var lists = await adam.GetAsync<PriceList>();
+            Assert.That(lists.Count, Is.EqualTo(1));
+
+            var list  = lists[0];
+            Assert.That(l.Nome, Is.EqualTo(list.Name));
+
+            ds.AcceptChanges();
+
+            // test that changing a row locally will sync fine upstream
+            l.Nome = "name1";
+            await _httpDataProvider.UpdateAsync(ds);
+
+            list = await adam.GetAsync<PriceList>(list);
+            Assert.That(l.Nome, Is.EqualTo(list.Name));
+
+            ds.AcceptChanges();
+
+            // test that deleting a Magazzino locally will also delete it upstream
+            l.Delete();
+            await _httpDataProvider.UpdateAsync(ds);
+            list = await adam.GetAsync<PriceList>(list);
+            Assert.That(list, Is.Null);
+            Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
 
         [Test]
         public async void UploadWarehouse()
@@ -1875,6 +2014,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "fees")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "warehouses")).Result.StatusCode == HttpStatusCode.NoContent);
             Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "sizes")).Result.StatusCode == HttpStatusCode.NoContent);
+            Assert.IsTrue(rc.DeleteAsync(string.Format("/{0}", "price-lists")).Result.StatusCode == HttpStatusCode.NoContent);
 
 
 			// add a company
@@ -2055,9 +2195,14 @@ namespace Amica.vNext.Compatibility.Tests
             t.Taglia2 = "M";
             ds.Taglie.AddTaglieRow(t);
 
+            var l = ds.Listini.NewListiniRow();
+            l.Nome = "listino1";
+            ds.Listini.AddListiniRow(l);
+
             var ri = ds.Righe.NewRigheRow();
             ri.IdDocumento = d.Id;
             ri.IdTaglia = t.Id;
+            ri.IdListino = l.Id;
             ri.CodiceArticolo = "Sku";
             ri.Descrizione = "Description";
             ri.IdCausaleIVA = i.Id;
@@ -2082,6 +2227,7 @@ namespace Amica.vNext.Compatibility.Tests
             ValidateSyncDb(c, "contacts");
             ValidateSyncDb(ci, "vat");
             ValidateSyncDb(m, "warehouses");
+            ValidateSyncDb(l, "price-lists");
 
             var adam = new EveClient(Service) { ResourceName = "documents" };
             var docs = await adam.GetAsync<Document>();
@@ -2191,6 +2337,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(item.Detail.Color, Is.EqualTo(ri.Colore));
             Assert.That(item.Detail.Notes, Is.EqualTo(ri.TagExtra));
             Assert.That(item.Detail.Lot.Expiration.ToShortDateString(), Is.EqualTo(ri.TagData.ToShortDateString()));
+            Assert.That(item.PriceList, Is.EqualTo(ri.ListiniRow.Nome));
         }
         /// <summary>
         /// Test that a new datarow is properly processed

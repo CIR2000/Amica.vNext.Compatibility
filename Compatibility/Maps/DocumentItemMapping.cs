@@ -97,6 +97,15 @@ namespace Amica.vNext.Compatibility.Maps
 					ChildType = typeof(Warehouse),
 					RelationName = "FK_Magazzini_Righe"
                 });
+
+            Parents.Add(
+                "IdListino",
+                new DataRelationMapping
+                {
+					ParentColumn = "Nome",
+                    PropertyName = "PriceList",
+					RelationName = "FK_Listini_Righe"
+                });
         }
 		internal static object SetScontoIncondizionatoVariation(object value, object obj)
         {
