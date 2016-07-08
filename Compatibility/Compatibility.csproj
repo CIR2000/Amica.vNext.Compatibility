@@ -59,6 +59,10 @@
       <HintPath>..\packages\NUnit.2.6.4\lib\nunit.framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="SimpleCache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=4186cdec8b7c3556, processorArchitecture=MSIL">
+      <HintPath>..\packages\SimpleCache.1.0.0\lib\Net4\SimpleCache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -134,10 +138,6 @@
     <ProjectReference Include="..\..\Models\Models.Net4\Models.Net4.csproj">
       <Project>{678d3308-5de9-4335-b0c8-1e0820b7515c}</Project>
       <Name>Models.Net4</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\SimpleCache\SimpleCache.Net4\SimpleCache.Net4.csproj">
-      <Project>{5A320348-7AE0-421A-B3EC-25FF8FED4243}</Project>
-      <Name>SimpleCache.Net4</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Storage\Storage.Remote\Storage.Remote.Net4\Storage.Remote.Net4.csproj">
       <Project>{e67bdb25-4234-4fca-be8b-21ad435bb0d3}</Project>
