@@ -34,7 +34,7 @@ namespace Amica.vNext.Compatibility
             Topology.Add(typeof(Warehouse), new WarehouseMapping());
             Topology.Add(typeof(Size), new SizeMapping());
             Topology.Add(typeof(DocumentItemSize), new DocumentItemSizeMapping());
-            Topology.Add(typeof(PriceList), new PriceListMapping());
+            //Topology.Add(typeof(PriceList), new PriceListMapping());
         }
 
 #region TO

@@ -12,7 +12,7 @@ using SQLite;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Amica.vNext.Models.Documents;
-using SimpleCache;
+using SimpleObjectCache;
 
 // TODO
 // Allow 'batch' uploads of data that has not changed? When an account joins the first time, what/if/how do we upload data?
@@ -384,7 +384,8 @@ namespace Amica.vNext.Compatibility
         /// <param name="batch">Wether this is part of a batch operation or not.</param>
         public async Task UpdateListiniAsync(DataRow row, bool batch = false) 
         {
-            await UpdateRowAsync<PriceList>(row, batch);
+            throw new NotSupportedException();
+            //await UpdateRowAsync<PriceList>(row, batch);
         }
         /// <summary>
         /// Stores a configDataSet.AziendeDataTable.AziendeRow to a remote API endpoint.
@@ -851,7 +852,8 @@ namespace Amica.vNext.Compatibility
         /// <param name="dataSet">companyDataSet instance.</param>
         private async Task GetAndSyncListiniAsync(companyDataSet dataSet)
         {
-            await GetAndSyncCompanyTable<PriceList>(dataSet.Listini);
+            throw new NotSupportedException();
+            //await GetAndSyncCompanyTable<PriceList>(dataSet.Listini);
         }
         #endregion
 

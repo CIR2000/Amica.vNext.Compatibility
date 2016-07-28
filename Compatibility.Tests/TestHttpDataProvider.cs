@@ -1148,7 +1148,7 @@ namespace Amica.vNext.Compatibility.Tests
             list.Name = "listino 1";
 			list = await adam.PostAsync<PriceList>("price-lists", list);
             Assert.That(adam.HttpResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-            it.PriceList = list.Name;
+            it.SourcePriceList = list.Name;
 
             it.VariationCollection.Add(new Variation {
                 Rate = 0.1,
@@ -1310,7 +1310,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(riga.MagazziniRow.Nome, Is.EqualTo(it.Warehouse.Name));
             Assert.That(riga.TaglieRow.Nome, Is.EqualTo(it.Detail.Size.Name));
             Assert.That(riga.TaglieRow.Taglia1, Is.EqualTo(it.Detail.Size.Number));
-            Assert.That(riga.ListiniRow.Nome, Is.EqualTo(it.PriceList));
+            Assert.That(riga.ListiniRow.Nome, Is.EqualTo(it.SourcePriceList));
 
             //Assert.That(riga.Tag, Is.EqualTo(it.Detail.SerialNumber));
             Assert.That(riga.Tag, Is.EqualTo(it.Detail.Size.Number));
@@ -2337,7 +2337,7 @@ namespace Amica.vNext.Compatibility.Tests
             Assert.That(item.Detail.Color, Is.EqualTo(ri.Colore));
             Assert.That(item.Detail.Notes, Is.EqualTo(ri.TagExtra));
             Assert.That(item.Detail.Lot.Expiration.ToShortDateString(), Is.EqualTo(ri.TagData.ToShortDateString()));
-            Assert.That(item.PriceList, Is.EqualTo(ri.ListiniRow.Nome));
+            Assert.That(item.SourcePriceList, Is.EqualTo(ri.ListiniRow.Nome));
         }
         /// <summary>
         /// Test that a new datarow is properly processed
